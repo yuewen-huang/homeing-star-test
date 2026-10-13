@@ -110,20 +110,28 @@ func run() -> void:
 	boss.receive_hit(1, player.global_position)
 	boss.receive_skill_hit(SkillHit.new(), player.global_position)
 	check(boss.combat_stats.health == health, "shielded aerial caster cannot be bypassed with melee or skills")
-	check(until(func() -> bool: return not vine.strikes.is_empty()), "production AI casts a real vine strike automatically")
+	check(until(func() -> bool: return not (vine.strikes.is_empty() and vine.stampedes.is_empty() and vine.treants.is_empty() and vine.wind == null)), "production AI casts a real vine-phase move automatically")
 	await capture("03_vine_spell_active")
 	var seen: Dictionary = {}
 	var previous: StringName = &""
 	var repeats := 0
 	var safe_repeats := true
-	for i in 60:
+	for i in 300:
 		boss.phase_ai.choose(500)
 		var id := boss.phase_ai.last_vine_sequence
 		seen[id] = true
 		repeats = repeats + 1 if id == previous else 1
 		if repeats > 2: safe_repeats = false
 		previous = id
-	check(seen.size() == 4 and safe_repeats, "AI uses triple pierce, ground lash, curtain and pincer without a third consecutive repeat")
+	check(seen.size() == DeerVinePhase.AI_CHOICES.size() and safe_repeats and not seen.has(&"ultimate"), "AI uses all %d vine moves without a third consecutive repeat and no ultimate at full health" % DeerVinePhase.AI_CHOICES.size())
+	boss.combat_stats.health = boss.combat_stats.max_health / 2
+	boss.phase_ai.choose(500)
+	check(vine.sequence_id == &"ultimate" and vine.ultimate_used, "AI opens with the ultimate once at half health")
+	vine.cancel()
+	vine._enter(DeerVinePhase.Step.HOVER)
+	boss.phase_ai.choose(500)
+	check(vine.sequence_id != &"ultimate", "the ultimate is used only once per fight")
+	boss.combat_stats.health = boss.combat_stats.max_health
 	if not output.is_empty():
 		reset_vine()
 		vine.start_sequence(&"curtain")
@@ -237,7 +245,7 @@ func run() -> void:
 	check(preview_boss.vine_phase.strikes.is_empty(), "development-room caster does not start production AI")
 	preview.play_action(2)
 	for i in 30: preview_boss._physics_process(1.0 / 60)
-	check(preview_boss.vine_phase.human and preview_boss.vine_phase.sequence_id == &"ground_lash", "development-room ground lash still runs through the shared vine phase")
+	check(preview_boss.vine_phase.human and preview_boss.vine_phase.sequence_id == &"stampede", "development-room stampede still runs through the shared vine phase")
 	check(FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) == saved, "development-room verification leaves the story save unchanged")
 	preview.queue_free()
 	await process_frame; await process_frame

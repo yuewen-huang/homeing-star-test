@@ -70,7 +70,7 @@ func run() -> void:
 	deer = room.adapter.deer; deer.set_physics_process(false); deer.vfx.set_process(false)
 	vine = deer.vine_phase
 	room.select_combo(4)
-	check(deer.phase == 4 and room.adapter.action_names().size() == 5 and room.deflect_toggle.visible, "Vine phase exposes five actions and the dummy deflect toggle")
+	check(deer.phase == 4 and room.adapter.action_names().size() == 5 and room.deflect_toggle.visible and room.library_picker.visible and room.library_picker.item_count == DeerVinePhase.LIBRARY.size(), "Vine phase exposes five actions, the combo library and the dummy deflect toggle")
 	check(not room.item_button.visible, "Vine phase shows no item button beside the fifth action")
 	var dummy_x: float = room.dummy.position.x
 
@@ -134,7 +134,8 @@ func run() -> void:
 	# Gold wiper: a tentacle from under the floor sweeps over the top onto the target's side.
 	room.deflect_toggle.button_pressed = true
 	room.dummy.begin_action()
-	room.play_action(2)
+	room.select_combo_library(DeerVinePhase.LIBRARY.find(&"ground_lash"))
+	room.play_action(4)
 	var lash := strike_of(&"ground_lash")
 	check(lash != null and lash.danger() == CombatAttackData.DangerType.UNPARRYABLE_DANGER and lash.origin.y > 555.0, "Wiper pivots under the floor and is gold")
 	check(absf(lash.warn - vine.release_time()) < 0.001, "Wiper warning lasts the whole wind-up (%.3f s)" % lash.warn)
@@ -186,6 +187,7 @@ func run() -> void:
 
 	# Pincer: the curtain is cast as the wiper is released, so both are out together.
 	room.deflect_toggle.button_pressed = false
+	room.select_combo_library(DeerVinePhase.LIBRARY.find(&"pincer"))
 	room.play_action(4)
 	var ground := strike_of(&"ground_lash")
 	tick_until(func() -> bool: return strike_of(&"curtain") != null, 120)
