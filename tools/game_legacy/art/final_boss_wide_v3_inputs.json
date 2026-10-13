@@ -1,0 +1,26 @@
+[
+  {
+    "name": "final_far_wide_v3",
+    "prompt": "Use case: precise-object-edit. Extend this EDIT TARGET horizontally into a TWO-SCREEN-WIDE 2D side-view fantasy deer boss arena layer. Output an ultra-wide 32:9 panorama, intended 2560x720. Preserve painterly style, scale of bark, roots, foliage and crystals; EXTEND the environment across twice the horizontal distance, do not stretch or duplicate the old image. Keep most of the arena empty and readable for battle. No characters, no text, no watermark. Full opaque atmospheric distant ancient forest, gold overhead daylight and teal mist. Two-screen continuous cathedral forest depth; dark edge trees only at extreme left/right, irregular distant trunk spacing across open center, subtle purple mineral glow off to sides. No walkable foreground terrain.",
+    "transparent": false,
+    "source": "C:\\Users\\P6063166\\.codex\\generated_images\\01a1235a-9d31-7b42-83b1-6f79271969ca\\exec-55ada977-8dae-462d-80c3-c33f563c3a14.png"
+  },
+  {
+    "name": "final_mid_wide_v3",
+    "prompt": "Use case: precise-object-edit. Extend this EDIT TARGET horizontally into a TWO-SCREEN-WIDE 2D side-view fantasy deer boss arena layer. Output an ultra-wide 32:9 panorama, intended 2560x720. Preserve painterly style, scale of bark, roots, foliage and crystals; EXTEND the environment across twice the horizontal distance, do not stretch or duplicate the old image. Keep most of the arena empty and readable for battle. No characters, no text, no watermark. Transparent middle layer. Ancient brown tree trunks only at very far left and far right (outermost 8% each), delicate overhead branches and vines in top 20%, amethyst crystals in edge bark. Central 80% COMPLETELY transparent, empty, open. No tree column in middle, no ground slab. Real alpha transparency.",
+    "transparent": true,
+    "source": "C:\\Users\\P6063166\\.codex\\generated_images\\01a1235a-9d31-7b42-83b1-6f79271969ca\\exec-411eb11f-fed7-4642-a89e-6ec47ea0b829.png"
+  },
+  {
+    "name": "final_fore_wide_v3",
+    "prompt": "Use case: precise-object-edit. Extend this EDIT TARGET horizontally into a TWO-SCREEN-WIDE 2D side-view fantasy deer boss arena layer. Output an ultra-wide 32:9 panorama, intended 2560x720. Preserve painterly style, scale of bark, roots, foliage and crystals; EXTEND the environment across twice the horizontal distance, do not stretch or duplicate the old image. Keep most of the arena empty and readable for battle. No characters, no text, no watermark. Transparent front edge layer. Crisp dark muted olive fern, roots at extreme bottom corners only, sparingly at very top corners; central 90% fully transparent and empty. No foliage frame halfway across panorama, no terrain slab. Real alpha transparency.",
+    "transparent": true,
+    "source": "C:\\Users\\P6063166\\.codex\\generated_images\\01a1235a-9d31-7b42-83b1-6f79271969ca\\exec-dc9022b7-516d-41ac-88a6-d8c4a464f32b.png"
+  },
+  {
+    "name": "final_ground_wide_v3",
+    "prompt": "Use case: precise-object-edit. Extend this EDIT TARGET horizontally into a TWO-SCREEN-WIDE 2D side-view fantasy deer boss arena layer. Output an ultra-wide 32:9 panorama, intended 2560x720. Preserve painterly style, scale of bark, roots, foliage and crystals; EXTEND the environment across twice the horizontal distance, do not stretch or duplicate the old image. Keep most of the arena empty and readable for battle. No characters, no text, no watermark. Transparent combat platform layer: long uninterrupted level mossy stone and brown earth platform running flush across entire wide canvas, with shallow top-down angle showing broad foreshortened upper walking plane (NOT a flat front elevation), below front rim a detailed vertical rock/root face fills down to bottom. Scale matches edit target. Rear rim at approximately 70% canvas height, top walking plane from70% to82%, face from82% to100%. Everything above rear rim transparent. Purple crystals only embedded below surface at distant outer ends. No obstacles, no gaps, no steps, no tall plants on walking plane. Both rear and front rims level across width, like town boss platform.",
+    "transparent": true,
+    "source": "C:\\Users\\P6063166\\.codex\\generated_images\\01a1235a-9d31-7b42-83b1-6f79271969ca\\exec-5cea8d8c-5525-4b63-bdff-b1f46041ccb5.png"
+  }
+]

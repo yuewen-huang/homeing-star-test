@@ -1,0 +1,50 @@
+[
+  {
+    "name": "wind_ground",
+    "prompt": "Use case: stylized-concept. Create a production PNG asset for a painterly 2D side-view fantasy platformer, the WIND REGION CORE BOSS arena ground. Single horizontal uninterrupted terrain cross-section, landscape 16:9 canvas. Actual transparent background. Top 77% of canvas completely transparent; bottom 23% contains solid earth and rock filling to bottom and extending flush to both side edges. Walkable top surface is a perfectly horizontal line at 77% image height, moss grass no higher than 5 pixels. Weathered warm grey rock, ochre bark roots embedded in soil, muted olive moss, tiny amethyst mineral flecks at far right only. Wind canopy high forest setting, soft warm daylight from upper left. Detailed hand-painted natural fantasy art, soft atmospheric brushwork but clear terrain silhouette. Orthographic front elevation, NO visible perspective plane, no floating island, no objects above floor, no tree trunks, no characters, no text, no watermark. Full width level combat surface, no gaps, no tall grass.",
+    "transparent": true,
+    "source": "C:\\Users\\P6063166\\.codex\\generated_images\\01a1235a-9d31-7b42-83b1-6f79271969ca\\exec-f55b7b01-f5e0-4451-a2af-711e487c7ff9.png"
+  },
+  {
+    "name": "vine_ground",
+    "prompt": "Use case: stylized-concept. Production hand-painted 2D side-view fantasy platformer PNG terrain asset. Landscape 16:9 canvas with genuine transparency. Top 77% completely empty transparent. Bottom 23% solid terrain cross-section filling bottom and extending flush to both side edges, uninterrupted perfectly level walkable surface at y=77% canvas height. Orthographic FRONT ELEVATION, no perspective plane, no island, no gaps. Detailed muted natural painterly art. Small moss fringe maximum 5px above surface. No trunks or characters above ground, no text, watermark, no horror anatomy. VINE REGION CORE arena: warm brown intertwined hardwood roots embedded horizontally in ochre loam, fern-green moss carpet, restrained amethyst mineral flecks on far LEFT only. Soft golden green forest daylight.",
+    "transparent": true,
+    "source": "C:\\Users\\P6063166\\.codex\\generated_images\\01a1235a-9d31-7b42-83b1-6f79271969ca\\exec-5b42b33a-2a3d-41d6-95f7-12054a875372.png"
+  },
+  {
+    "name": "mist_ground",
+    "prompt": "Use case: stylized-concept. Production hand-painted 2D side-view fantasy platformer PNG terrain asset. Landscape 16:9 canvas with genuine transparency. Top 77% completely empty transparent. Bottom 23% solid terrain cross-section filling bottom and extending flush to both side edges, uninterrupted perfectly level walkable surface at y=77% canvas height. Orthographic FRONT ELEVATION, no perspective plane, no island, no gaps. Detailed muted natural painterly art. Small moss fringe maximum 5px above surface. No trunks or characters above ground, no text, watermark, no horror anatomy. MIST REGION CORE arena: damp blue grey slate, pale sage moss, weathered grey-brown roots, subdued cool teal mist forest lighting, tiny muted lavender crystal fragments at far RIGHT only.",
+    "transparent": true,
+    "source": "C:\\Users\\P6063166\\.codex\\generated_images\\01a1235a-9d31-7b42-83b1-6f79271969ca\\exec-b32df6f9-f0fa-44b4-80ad-9e0b241422ba.png"
+  },
+  {
+    "name": "root_ground",
+    "prompt": "Use case: stylized-concept. Production hand-painted 2D side-view fantasy platformer PNG terrain asset. Landscape 16:9 canvas with genuine transparency. Top 77% completely empty transparent. Bottom 23% solid terrain cross-section filling bottom and extending flush to both side edges, uninterrupted perfectly level walkable surface at y=77% canvas height. Orthographic FRONT ELEVATION, no perspective plane, no island, no gaps. Detailed muted natural painterly art. Small moss fringe maximum 5px above surface. No trunks or characters above ground, no text, watermark, no horror anatomy. ROOT REGION CORE arena: dark blue slate and compact brown soil packed with twisted amber brown root cross sections, thin teal moss, tiny cyan glowing fungi tucked BELOW walking line and sparse amethyst mineral flecks at far LEFT only. Dim subterranean blue lighting, readable edges.",
+    "transparent": true,
+    "source": "C:\\Users\\P6063166\\.codex\\generated_images\\01a1235a-9d31-7b42-83b1-6f79271969ca\\exec-2bebb1f2-d22c-43ee-82c2-672e37bc5439.png"
+  },
+  {
+    "name": "final_far",
+    "prompt": "Use case: stylized-concept. Production background ONLY for a 2D side-view fantasy platformer final deer boss arena in ancient vine forest. Wide landscape 16:9 composition, detailed hand-painted atmospheric fantasy environment matching muted olive foliage, teal forest mist, brown bark and soft golden daylight of existing forest art. Deep cathedral-like old-growth forest, tall distant trunks form framing at outer edges, quiet pale teal mist at center, faint purple crystalline corruption in distant roots off to sides. Central 70 percent open and low contrast to show combatants. View at forest-floor height, not looking down, no walkable foreground ground, no foreground props, no deer or characters, no text, no watermark. Full opaque background. Airy mysterious grand scale, no horror anatomy.",
+    "transparent": false,
+    "source": "C:\\Users\\P6063166\\.codex\\generated_images\\01a1235a-9d31-7b42-83b1-6f79271969ca\\exec-857f2b4c-5db0-4b26-9105-cd94a797b8a8.png"
+  },
+  {
+    "name": "final_mid",
+    "prompt": "Use case: stylized-concept. Transparent production MIDDLE BACKGROUND layer for painterly 2D side-view ancient vine forest deer boss arena. Single wide landscape 16:9 canvas. Hand-painted muted brown ancient tree trunks rising exclusively along outermost 15 percent LEFT and RIGHT edges, sparse muted olive overhead branches in top 20 percent, dangling fine vines, small softly luminous amethyst crystals embedded in side trunk bark. Center 70 percent fully transparent and empty, lower central battle band empty. Ground absent. Soft teal rim lighting, golden green overhead daylight. Trees softer and lower contrast than gameplay sprites. No characters, deer, text, watermark, blood or faces. Genuine transparent alpha, no painted background or checkerboard.",
+    "transparent": true,
+    "source": "C:\\Users\\P6063166\\.codex\\generated_images\\01a1235a-9d31-7b42-83b1-6f79271969ca\\exec-3d662c87-dd76-4fcd-a359-a85e5c91b301.png"
+  },
+  {
+    "name": "final_fore",
+    "prompt": "Use case: stylized-concept. Transparent FOREGROUND framing layer for hand-painted 2D side-view ancient forest deer boss arena, landscape 16:9. ONLY small dark muted olive fern fronds and brown roots clustered at absolute lower-left and lower-right corners of canvas below 80 percent image height; a few small hanging leaves at outermost upper corners. Central 85 percent completely transparent and empty for gameplay. Edge motifs visually crisp with restrained teal and purple reflected light, detailed fantasy painting, no background, no ground slab, no characters, no text, no watermark. Genuine transparency.",
+    "transparent": true,
+    "source": "C:\\Users\\P6063166\\.codex\\generated_images\\01a1235a-9d31-7b42-83b1-6f79271969ca\\exec-916ba6c3-d89c-43d6-8c6d-820c6e865629.png"
+  },
+  {
+    "name": "final_ground",
+    "prompt": "Use case: stylized-concept. Production hand-painted 2D side-view fantasy platformer PNG terrain asset. Landscape 16:9 canvas with genuine transparency. Top 77% completely empty transparent. Bottom 23% solid terrain cross-section filling bottom and extending flush to both side edges, uninterrupted perfectly level walkable surface at y=77% canvas height. Orthographic FRONT ELEVATION, no perspective plane, no island, no gaps. Detailed muted natural painterly art. Small moss fringe maximum 5px above surface. No trunks or characters above ground, no text, watermark, no horror anatomy. FINAL DEER BOSS arena: broad grounded ancient forest clearing, mossy ochre stone and rich brown earth with interlocking ancient roots embedded BELOW level surface. Muted olive grass at very top edge, restrained amethyst mineral seams at outer ends below floor, pale golden light from upper center and teal shade. Large scale stately smooth continuous battle ground, no stairs.",
+    "transparent": true,
+    "source": "C:\\Users\\P6063166\\.codex\\generated_images\\01a1235a-9d31-7b42-83b1-6f79271969ca\\exec-cbf5e189-7f32-4f59-afbf-131058ed15eb.png"
+  }
+]

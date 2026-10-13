@@ -1,0 +1,19 @@
+{
+  "game_remote": "https://github.com/yuewen-huang/homeing-star-game.git",
+  "game_commit": "4ed1e3cfb4489c817f54653a15e8201a1b29eac3",
+  "godot_version": "4.7.2",
+  "migrated_on": "2026-10-13",
+  "entrypoints": 59,
+  "legacy_game_commit": "24156d168fc7ad23849ee8ed5161ff81319d553d",
+  "legacy_test_commit": "1139eb9",
+  "checks": {
+    "syntax_and_dependencies": {
+      "passed": 59,
+      "failures": 0
+    },
+    "representative_runtime": {
+      "passed": 11,
+      "failures": 0
+    }
+  }
+}
