@@ -60,6 +60,9 @@ func reset_vine() -> void:
 	boss.reset_phase()
 	boss.set_physics_process(false)
 	check(until(func() -> bool: return vine.step == DeerVinePhase.Step.HOVER), "production transform reaches the hovering human form")
+	# Manual simulation must synchronize the real phase-four view before screen-sized casts.
+	room._process(0)
+	(room.get_node("Camera2D") as Camera2D).force_update_scroll()
 ## A vine at full reach over the player on its first active frame.
 func contact(kind: StringName) -> DeerVineStrike:
 	var from := player.global_position + Vector2(-300, -250)
