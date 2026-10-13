@@ -3,7 +3,7 @@ extends SceneTree
 ## red king, treant summon (user's walk / cast sheets) with small root spikes, the four
 ## wind fields (push / pull / gust / downdraft with the player's jump block), and the
 ## ultimate 万鹿朝王 (centre blink, darkness, centre pull, three waves, curtains, giant
-## antler finale from the ground: 60 damage and a 6 s ground window). Reset clears all.
+## painted gold god finale: rise, green pulse, dissolution and dust). Reset clears all.
 ## Design: docs/design/chapter_1_deer_vine_phase_design.md.
 
 var room
@@ -171,55 +171,34 @@ func run() -> void:
 	check(vine.wind == null and not is_instance_valid(down) or down.is_queued_for_deletion(), "Wind leaves fade out and the field is removed")
 	await hover()
 
-	# Ultimate with the dummy parrying: centre, darkness, pull, three waves and the king finale.
+	# Entire opening remains intact; only the final red antler becomes a gold god.
 	room.deflect_toggle.button_pressed = true
 	vine.shield = DeerVinePhase.SHIELD_MAX
 	var health := deer.combat_stats.health
 	play_library(&"ultimate")
 	await run_until(func() -> bool: return vine.ultimate_active, 120)
-	check(is_equal_approx(deer.position.x, (deer.world_min_x + deer.world_max_x) * 0.5) and vine._darkness.target == 1.0 and vine.wind.mode == &"center", "Ultimate blinks to the centre, darkens the arena and pulls toward the middle")
-	tick(40)
-	await snapshot("ultimate_open")
-	var seen := {"waves": 0, "curtains": 0, "antler": null, "kings": 0, "shot": false}
-	var watch := func() -> void:
-		for s in vine.stampedes:
-			if not seen.has(s.get_instance_id()):
-				seen[s.get_instance_id()] = true
-				seen.waves += 1
-				seen.kings += s.plan.filter(func(p: Dictionary) -> bool: return p.king).size()
-		for strike in vine.strikes:
-			if seen.has(strike.get_instance_id()): continue
-			seen[strike.get_instance_id()] = true
-			if strike.kind == &"curtain": seen.curtains += 1
-			elif strike.kind == &"antler": seen.antler = strike
-		if seen.antler != null and not seen.shot and seen.antler._pierce_extension() > 0.6:
-			seen.shot = true
-			await snapshot("ultimate_antler")
+	check(is_equal_approx(deer.position.x, (deer.world_min_x + deer.world_max_x) * 0.5) and vine._darkness.target == 1.0 and vine.wind.mode == &"center", "Ultimate still centres, darkens the arena and pulls inward")
+	var seen := {"waves": 0, "curtains": 0, "kings": 0}
 	for i in 3000:
-		await watch.call()
-		if vine.step == DeerVinePhase.Step.FALL: break
+		for ultimate_wave in vine.stampedes:
+			if not seen.has(ultimate_wave.get_instance_id()):
+				seen[ultimate_wave.get_instance_id()] = true
+				seen.waves += 1
+				seen.kings += ultimate_wave.plan.filter(func(p: Dictionary) -> bool: return p.king).size()
+		for strike in vine.strikes:
+			if not seen.has(strike.get_instance_id()):
+				seen[strike.get_instance_id()] = true
+				if strike.kind == &"curtain": seen.curtains += 1
+		if is_instance_valid(vine.god_statue): break
 		tick(1)
 		await wait_hit_stop()
-	check(seen.waves == 3 and seen.kings == 0 and seen.curtains == 2, "Ultimate runs three king-less spirit waves and two curtains (waves %d, curtains %d)" % [seen.waves, seen.curtains])
-	var antler: DeerVineStrike = seen.antler
-	check(antler != null and antler.danger() == CombatAttackData.DangerType.COUNTERABLE_DANGER and absf(antler.origin.x - dummy_x) < 1.0 and antler.origin.y > 555.0 and antler.target.y < 555.0 - 400.0, "Finale is a red giant antler bursting up from the ground under the target")
-	check(antler != null and antler.warn >= 0.6, "Antler is warned with the red flash for %.2f s" % (antler.warn if antler != null else 0.0))
-	check(vine.step == DeerVinePhase.Step.FALL and deer.combat_stats.health == health - DeerVinePhase.ULTIMATE_DAMAGE, "Counter-parried antler strikes the caster for %d and knocks it down" % DeerVinePhase.ULTIMATE_DAMAGE)
-	check(not vine.ultimate_active and vine._darkness.target == 0.0, "Ultimate closes: darkness lifts and the pull ends")
-	tick_until(func() -> bool: return vine.step == DeerVinePhase.Step.STAGGER, 120)
-	await snapshot("ultimate_down")
-	var stagger := tick_until(func() -> bool: return vine.step != DeerVinePhase.Step.STAGGER, 900)
-	check(absf(stagger / 60.0 - DeerVinePhase.ULTIMATE_STAGGER_TIME) < 0.05, "Ultimate ground window lasts %.2f s" % (stagger / 60.0))
+	check(seen.waves == 3 and seen.kings == 0 and seen.curtains == 2, "All three spirit waves and both curtains remain")
+	var god := vine.god_statue
+	check(is_instance_valid(god) and god.danger() == CombatAttackData.DangerType.UNPARRYABLE_DANGER and not god.parryable(), "Finale is a gold painted god statue that cannot be parried")
+	check(await run_until(func() -> bool: return vine.step == DeerVinePhase.Step.HOVER, 1200), "Caster waits for rise, pulse, native dissolution and dust to finish")
+	check(deer.combat_stats.health == health and vine.shield == DeerVinePhase.SHIELD_MAX, "Auto-parry cannot counter the gold finale or break ultimate armour")
+	check(not vine.ultimate_active and vine._darkness.target == 0 and vine.wind == null and vine.god_statue == null, "Ultimate closes with no lingering statue, darkness or pull")
 	check(vine.ultimate_used, "Ultimate is marked used for this fight")
-	await hover()
-
-	# Unparried antler at full height for the visual record.
-	room.deflect_toggle.button_pressed = false
-	var shown := vine.spawn_strike(&"antler", dummy_x, deer.position.x, 0.3)
-	tick_until(func() -> bool: return shown._pierce_extension() >= 1.0, 120)
-	check(shown.capsules().size() == 3, "Full antler strikes with its trunk and two lowest tines")
-	await snapshot("antler_full")
-	await hover()
 
 	# Reset clears treants, wind, spirits, darkness and the player's wind and jump block.
 	play_library(&"wind_down")
