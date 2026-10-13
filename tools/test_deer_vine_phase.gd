@@ -98,7 +98,10 @@ func run() -> void:
 	await snapshot("blink_out")
 	tick(int(DeerVinePhase.BLINK_GAP * 60.0))
 	var landing := deer.position
-	check(is_equal_approx(landing.y, 555.0) and absf(landing.x - dummy_x) >= DeerVinePhase.BLINK_MIN_DISTANCE, "Ground blink lands beside the target (%.0f px away)" % absf(landing.x - dummy_x))
+	check(is_equal_approx(landing.y, 555.0) and absf(landing.x - dummy_x) >= DeerVinePhase.BLINK_MIN_DISTANCE - 0.5 and absf(landing.x - dummy_x) <= DeerVinePhase.BLINK_MAX_DISTANCE + 0.5, "Ground blink lands beside the target at a random distance (%.0f px away)" % absf(landing.x - dummy_x))
+	var distances := {}
+	for i in 40: distances[snappedf(absf(vine.blink_destination(&"ground").x - dummy_x), 10.0)] = true
+	check(distances.size() >= 10, "Ground blink distances vary (%d distinct in 40 blinks)" % distances.size())
 	check(vine.leaves.size() == 2 and vine.leaves.back().frame == 4 and vine.leaves.back().position == vine.navel(landing), "Arrival light F04 plays at the destination navel")
 	check(deer.animated_sprite.modulate.a == 0.0, "Caster stays hidden while the arrival light plays")
 	check(signf(dummy_x - landing.x) == deer.direction, "Caster faces the target on arrival")
@@ -110,7 +113,17 @@ func run() -> void:
 	var pierce := strike_of(&"pierce")
 	var gem := deer.global_position + deer._anchor_offset(DeerVinePhase.PIERCE_RELEASE_CLIP, 1, "staff")
 	check(pierce != null and pierce.origin.distance_to(gem) < 1.0 and pierce.origin.y < 555.0 - 200.0, "Pierce starts at the staff gem on the release frame")
-	check(pierce.target.y > pierce.origin.y + 150.0 and absf(pierce.target.x - dummy_x) < 60.0, "Pierce grows diagonally down to the target")
+	var aim := Vector2(dummy_x, 555.0 - DeerVinePhase.AIM_HEIGHT)
+	check(pierce.aim_direction.y > 0.4 and absf(pierce.target.distance_to(aim) - DeerVineStrike.PIERCE_OVERSHOOT) < 0.5, "Pierce aims diagonally down and its fully grown vine ends %.0f px past the target" % DeerVineStrike.PIERCE_OVERSHOOT)
+	check(pierce._sprite.texture == DeerVineStrike.PIERCE_TEXTURE and is_equal_approx(pierce._sprite.scale.y, 1.4) and is_equal_approx(pierce._sprite.scale.x, 1.4 * pierce.stretch) and pierce._sprite.position == pierce.origin, "Painted vine keeps its 1.4 thickness and is stretched ×%.2f along its length" % pierce.stretch)
+	check(pierce._circle.texture == DeerVineStrike.PIERCE_CIRCLE_TEXTURE and pierce._circle.scale == Vector2.ONE * 1.4 and pierce._circle.position == pierce.origin, "Magic circle stays at 1.4 scale on the staff gem")
+	for far in [250.0, 700.0]:
+		var probe := vine.spawn_strike(&"pierce", deer.position.x + deer.direction * far, deer.position.x, 0.3, pierce.origin)
+		var far_aim := Vector2(deer.position.x + deer.direction * far, 555.0 - DeerVinePhase.AIM_HEIGHT)
+		check(absf(probe.target.distance_to(far_aim) - DeerVineStrike.PIERCE_OVERSHOOT) < 0.5, "A target %.0f px away also gets a vine that ends just past it (×%.2f)" % [far, probe.stretch])
+		vine.strikes.erase(probe)
+		probe.queue_free()
+	check(is_equal_approx(pierce._sprite.rotation, pierce.aim_direction.angle() - (PI if pierce.aim_direction.x < 0.0 else 0.0)), "Painted vine is turned toward the target")
 	check(pierce.warn < 0.35, "Pierce wind-up is short (%.2f s)" % pierce.warn)
 	await snapshot("pierce_warning")
 	# Lambdas capture locals by value: record into a shared dictionary.
@@ -120,7 +133,9 @@ func run() -> void:
 		if vine.step == DeerVinePhase.Step.CAST and absf(deer.position.y - 555.0) < 1.0:
 			seen.sides[vine._step_index] = signf(deer.position.x - dummy_x)
 	watch.call()
-	tick_until(func() -> bool: return pierce._pierce_extension() > 0.6, 120)
+	tick_until(func() -> bool: return pierce.pierce_frame() >= 7, 120)
+	var tip: Array = pierce.capsules()[0]
+	check(is_equal_approx(tip[0].distance_to(tip[1]), 291.0 * 1.4 * pierce.stretch), "Damage reach follows the stretched painted frame F07 (%.0f px)" % tip[0].distance_to(tip[1]))
 	await snapshot("pierce_active")
 	await run_until(func() -> bool: return vine.step == DeerVinePhase.Step.HOVER, 900, watch)
 	var damages: Array = room.dummy.contacts.map(func(contact: Dictionary) -> int: return contact.damage)
@@ -131,24 +146,34 @@ func run() -> void:
 	check(is_equal_approx(deer.position.y, 555.0 - DeerVinePhase.PERCH_HEIGHT) and vine.perch == deer.position, "Sequence ends with a blink back to an aerial casting point")
 	check(vine.shield == DeerVinePhase.SHIELD_MAX, "Vines that are not parried leave the armour intact")
 
-	# Gold wiper: a tentacle from under the floor sweeps over the top onto the target's side.
+	# Gold slam: a vine rises upright behind the target, coils back and slams flat over it.
 	room.deflect_toggle.button_pressed = true
 	room.dummy.begin_action()
 	room.select_combo_library(DeerVinePhase.LIBRARY.find(&"ground_lash"))
 	room.play_action(4)
 	var lash := strike_of(&"ground_lash")
-	check(lash != null and lash.danger() == CombatAttackData.DangerType.UNPARRYABLE_DANGER and lash.origin.y > 555.0, "Wiper pivots under the floor and is gold")
-	check(absf(lash.warn - vine.release_time()) < 0.001, "Wiper warning lasts the whole wind-up (%.3f s)" % lash.warn)
-	await snapshot("wiper_warning")
-	tick_until(func() -> bool: return lash._age >= lash.warn + 0.01, 120)
-	var early: Array = lash.capsules()[0]
-	check((early[1] - early[0]).normalized().dot(Vector2(-lash.side, 0)) > 0.9, "Blade bursts out lying flat away from the target")
-	tick_until(func() -> bool: return lash._age >= lash.warn + float(DeerVineStrike.KINDS[&"ground_lash"].sweep) * 0.5, 120)
-	var mid: Array = lash.capsules()[0]
-	check((mid[1] - mid[0]).normalized().y < -0.95, "Blade stands upright halfway through the sweep")
-	await snapshot("wiper_sweep")
+	var toward := signf(dummy_x - lash.origin.x)
+	check(lash != null and lash.danger() == CombatAttackData.DangerType.UNPARRYABLE_DANGER and absf(absf(dummy_x - lash.origin.x) - 200.0) < 1.0 and toward == lash.side, "Slam vine roots 200 px behind the target on the caster's side and is gold")
+	check(absf(lash.warn - vine.release_time()) < 0.001, "Slam warning lasts the whole wind-up (%.3f s)" % lash.warn)
+	check(DeerVineLashArt.frames().size() == DeerVineLashArt.frame_count() and DeerVineLashArt.frames()[0].get_size() == Vector2(DeerVineLashArt.SIZE), "Procedural slam frames are generated once and cached (%d frames)" % DeerVineLashArt.frame_count())
+	await snapshot("slam_warning")
+	tick_until(func() -> bool: return lash.lash_frame() == 3, 120)
+	var upright: Array = lash.capsules().back()
+	check(upright[1].y < 555.0 - 400.0 and absf(upright[1].x - lash.origin.x) < 60.0, "Vine stands straight up out of the ground")
+	await snapshot("slam_rise")
+	tick_until(func() -> bool: return lash.lash_frame() == 5, 120)
+	var coiled: Array = lash.capsules().back()
+	check(signf(coiled[1].x - lash.origin.x) == -toward, "Vine coils back away from the target before the slam")
+	await snapshot("slam_coil")
+	tick_until(func() -> bool: return lash.lash_frame() == 7, 120)
+	await snapshot("slam_swing")
+	var shakes := {"n": 0}
+	tick_until(func() -> bool: return lash.lash_frame() == DeerVineLashArt.impact_frame(), 120)
+	var flat: Array = lash.capsules().back()
+	check(signf(flat[1].x - lash.origin.x) == toward and flat[1].y > 555.0 - 40.0 and lash._debris.size() > 0, "Vine slams flat onto the floor over the target and throws soil")
+	await snapshot("slam_impact")
 	await run_until(func() -> bool: return vine.step == DeerVinePhase.Step.HOVER and vine.strikes.is_empty(), 300)
-	check(room.dummy.contacts.size() == 1 and room.dummy.contacts[0].damage == 15 and vine.shield == 3, "Gold wiper strikes the dummy once for 15 and is never parried")
+	check(room.dummy.contacts.size() == 1 and room.dummy.contacts[0].damage == 15 and vine.shield == 3, "Gold slam strikes the dummy once for 15 and is never parried")
 
 	# 落幕: a dense red curtain across the screen, counter-parried for two cracks.
 	room.dummy.begin_action()

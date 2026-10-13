@@ -1,6 +1,6 @@
 extends SceneTree
 ## Vine phase v0.2 batches 2–3 on the development dummy: deer-spirit stampede and its
-## red king, treant summon (green block placeholder) with small root spikes, the four
+## red king, treant summon (user's walk / cast sheets) with small root spikes, the four
 ## wind fields (push / pull / gust / downdraft with the player's jump block), and the
 ## ultimate 万鹿朝王 (centre blink, darkness, centre pull, three waves, curtains, giant
 ## antler finale from the ground: 60 damage and a 6 s ground window). Reset clears all.
@@ -107,7 +107,7 @@ func run() -> void:
 	check(vine.shield == 1, "Counter-parried king cracks two armour arcs")
 	room.deflect_toggle.button_pressed = false
 
-	# Treants: two green blocks beside the target, small spike volleys, a kill cracks one arc.
+	# Treants: two painted treants beside the target, cast animation spikes, a kill cracks one arc.
 	vine.shield = DeerVinePhase.SHIELD_MAX
 	play_library(&"summon")
 	tick_until(func() -> bool: return not vine.treants.is_empty(), 120)
@@ -115,11 +115,16 @@ func run() -> void:
 	var xs: Array = vine.treants.map(func(t: DeerVineTreant) -> float: return t.position.x)
 	check(absf(xs[0] - dummy_x + DeerVinePhase.TREANT_SPREAD) < 1.0 and absf(xs[1] - dummy_x - DeerVinePhase.TREANT_SPREAD) < 1.0, "Treants rise %d px on both sides of the target" % DeerVinePhase.TREANT_SPREAD)
 	var treant: DeerVineTreant = vine.treants[0]
-	check(treant.get_node("Hurtbox").is_in_group(&"hurtbox") and treant.is_in_group(&"damageable") and treant.SIZE == Vector2(40, 56), "Treant is a damageable 40×56 green block")
+	check(treant.get_node("Hurtbox").is_in_group(&"hurtbox") and treant.is_in_group(&"damageable"), "Treant is damageable")
+	check(treant._sprite.texture == DeerVineTreant.WALK_TEXTURE and treant._sprite.hframes == 4 and treant._sprite.vframes == 4 and is_equal_approx(treant._sprite.scale.x, 1.4), "Treant uses the painted walk sheet at 1.4 world scale")
+	check(treant._sprite.flip_h == (player.position.x > treant.position.x), "Treant faces the player (sheet faces left, mirrored when the player is to the right)")
 	var start_x := treant.position.x
 	tick(int(DeerVineTreant.FIRST_CAST * 60.0) + 2)
+	check(treant.cast_age >= 0.0 and treant._sprite.texture == DeerVineTreant.CAST_TEXTURE and treant.casts == 0, "Treant starts its painted cast animation at %.1f s" % DeerVineTreant.FIRST_CAST)
+	await snapshot("treant_cast")
+	tick(int(float(DeerVineTreant.CAST_RELEASE) / DeerVineTreant.CAST_FPS * 60.0) + 1)
 	check(signf(treant.position.x - start_x) == signf(player.position.x - start_x) or absf(player.position.x - treant.position.x) <= DeerVineTreant.KEEP_DISTANCE, "Treant walks toward the player")
-	check(treant.casts == 1 and treant.volleys.size() == 1, "Treant casts its first spike volley after %.1f s" % DeerVineTreant.FIRST_CAST)
+	check(treant.casts == 1 and treant.volleys.size() == 1, "Spikes start when both arms reach out (cast frame F%02d)" % DeerVineTreant.CAST_RELEASE)
 	var volley: RootSpikeVolley = treant.volleys[0]
 	check(volley._spikes.size() == 3 and volley.attack.danger_type == CombatAttackData.DangerType.UNPARRYABLE_DANGER and volley.attack.health_damage == 8, "Volley is three small gold spikes for 8")
 	await snapshot("treants")
