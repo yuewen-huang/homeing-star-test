@@ -60,13 +60,15 @@ func reset_vine() -> void:
 	boss.reset_phase()
 	boss.set_physics_process(false)
 	check(until(func() -> bool: return vine.step == DeerVinePhase.Step.HOVER), "production transform reaches the hovering human form")
-func contact(kind: StringName) -> DeerSpellBolt:
-	vine._spawn(kind)
-	var bolt: DeerSpellBolt = vine.bolts.back()
-	bolt.global_position = player.get_node("Hurtbox/CollisionShape2D").global_position
-	bolt.velocity = Vector2.ZERO
-	bolt.step(1.0 / 60)
-	return bolt
+## A vine at full reach over the player on its first active frame.
+func contact(kind: StringName) -> DeerVineStrike:
+	var from := player.global_position + Vector2(-300, -250)
+	var strike := vine.spawn_strike(kind, player.position.x, player.position.x - 300.0, 0.0, from)
+	# Step until the vine first reaches the player (a wiper reaches late in its sweep).
+	for i in 120:
+		strike.step(1.0 / 60)
+		if strike.finished or strike.snapped or strike.hitbox.hit_targets.has(player.get_instance_id()) or qte.active: break
+	return strike
 func run() -> void:
 	if not OS.get_cmdline_user_args().is_empty():
 		output = OS.get_cmdline_user_args()[0]
@@ -108,7 +110,7 @@ func run() -> void:
 	boss.receive_hit(1, player.global_position)
 	boss.receive_skill_hit(SkillHit.new(), player.global_position)
 	check(boss.combat_stats.health == health, "shielded aerial caster cannot be bypassed with melee or skills")
-	check(until(func() -> bool: return not vine.bolts.is_empty()), "production AI casts a real projectile automatically")
+	check(until(func() -> bool: return not vine.strikes.is_empty()), "production AI casts a real vine strike automatically")
 	await capture("03_vine_spell_active")
 	var seen: Dictionary = {}
 	var previous: StringName = &""
@@ -121,29 +123,29 @@ func run() -> void:
 		repeats = repeats + 1 if id == previous else 1
 		if repeats > 2: safe_repeats = false
 		previous = id
-	check(seen.size() == 3 and safe_repeats, "AI uses bolt, heavy bolt and triple bolt without a third consecutive repeat")
+	check(seen.size() == 4 and safe_repeats, "AI uses triple pierce, ground lash, curtain and pincer without a third consecutive repeat")
 	if not output.is_empty():
 		reset_vine()
-		vine.start_sequence(&"heavy")
-		tick(ceili(maxf(0.0, vine._release_time() - DeerVinePhase.RED_LEAD + 0.02) * 60.0))
+		vine.start_sequence(&"curtain")
+		tick(ceili(maxf(0.0, vine.release_time() - DeerVinePhase.RED_LEAD + 0.02) * 60.0))
 		await capture("03b_vine_red_warning")
 	reset_vine()
 	player.air_state = LanPlayer.AirState.FALLING
 	tick(90)
-	check(vine.step == DeerVinePhase.Step.HOVER and vine.bolts.is_empty(), "new casts wait for a grounded player")
+	check(vine.step == DeerVinePhase.Step.HOVER and vine.strikes.is_empty(), "new casts wait for a grounded player")
 	reset_player()
 	check(until(func() -> bool: return vine.step == DeerVinePhase.Step.CAST), "casting resumes when the player returns to the ground")
 	reset_vine()
 	player.defense_state = LanPlayer.DefenseState.PARRY_ACTIVE
-	var normal := contact(&"bolt")
-	check(normal.reflected and normal.hitbox.attack == null, "actual normal parry reflects the projectile and disables player damage")
-	check(until(func() -> bool: return normal.finished), "reflected projectile homes back onto the caster")
-	check(vine.shield == 2 and boss.combat_stats.health == boss.combat_stats.max_health - 20, "normal return removes one shield segment and 20 boss HP")
+	var normal := contact(&"pierce")
+	check(normal.snapped and normal.hitbox.attack == null, "actual normal parry snaps the pierce and disables player damage")
+	check(until(func() -> bool: return normal.finished), "snapped vine clears itself")
+	check(vine.shield == 2 and boss.combat_stats.health == boss.combat_stats.max_health, "normal parry cracks one armour arc without bypassing the armour")
 	reset_player()
 	player.defense_state = LanPlayer.DefenseState.PARRY_ACTIVE
-	var heavy := contact(&"heavy")
-	check(heavy.reflected and player.defense_state == LanPlayer.DefenseState.RED_PARRY_SUCCESS, "actual red counter reflects a heavy spell")
-	check(until(func() -> bool: return vine.step == DeerVinePhase.Step.STAGGER), "heavy return breaks the remaining shield and drops the caster")
+	var heavy := contact(&"curtain")
+	check(heavy.snapped and player.defense_state == LanPlayer.DefenseState.RED_PARRY_SUCCESS, "actual red counter snaps the curtain")
+	check(until(func() -> bool: return vine.step == DeerVinePhase.Step.STAGGER), "red counter breaks the remaining two arcs and drops the caster")
 	check(vine.shield == 0 and boss.poise_broken and not boss.invulnerable and is_equal_approx(boss.position.y, 555), "grounded caster exposes the existing broken-poise damage window")
 	await capture("04_vine_ground_window")
 	health = boss.combat_stats.health
@@ -155,30 +157,38 @@ func run() -> void:
 	check(vine.shield == 3 and vine.cycle == 1 and is_equal_approx(vine.pace(), 1.15) and boss.invulnerable, "next round restores the shield and increases cast pace by 15 percent")
 	await capture("05_vine_recovery")
 	reset_vine()
-	vine.start_sequence(&"bolt")
+	vine.start_sequence(&"ground_lash")
 	var before := vine._time
 	tick(12, 0.25)
 	check(is_equal_approx(vine._time - before, 0.05), "vine casting advances on the quarter-speed action clock")
 	reset_vine()
 	assist.set_level(BattleAssistSettingsService.Level.STRONG)
-	var prompted := contact(&"bolt")
-	check(qte.active and qte.source == prompted, "projectile contact uses the complete existing assisted parry prompt")
-	var at := prompted.global_position
+	var prompted := contact(&"pierce")
+	check(qte.active and qte.source == prompted, "vine contact uses the complete existing assisted parry prompt")
+	var at: float = prompted._age
 	tick(30)
-	check(prompted.global_position == at, "assisted prompt pauses caster and projectile together")
+	check(prompted._age == at, "assisted prompt pauses caster and vine together")
 	qte.succeed(prompted)
-	check(prompted.reflected and not qte.active, "assisted success reflects the real projectile")
+	check(prompted.snapped and not qte.active and vine.shield == 2, "assisted success snaps the real vine and cracks the armour")
+	reset_vine()
+	assist.set_level(BattleAssistSettingsService.Level.STRONG)
+	var gold := contact(&"ground_lash")
+	check(not qte.active and gold.hitbox.hit_targets.has(player.get_instance_id()) and not gold.snapped, "gold ground lash offers no parry prompt and cannot be snapped")
 	reset_vine()
 	assist.set_player_invincible(false)
 	player.defense_state = LanPlayer.DefenseState.PARRY_NOTHING_EARLY
-	var guarded := contact(&"heavy")
-	check(player.combat_stats.health == player.combat_stats.max_health - 10 and guarded.finished and not guarded.reflected, "ordinary guard takes half heavy-spell damage without reflecting")
+	var guarded := contact(&"curtain")
+	check(player.combat_stats.health == player.combat_stats.max_health - 10 and not guarded.snapped and vine.shield == 3, "ordinary guard takes half curtain damage without snapping the vine")
 	reset_vine()
-	boss.combat_stats.health = 20
+	vine.shield = 1
 	player.defense_state = LanPlayer.DefenseState.PARRY_ACTIVE
-	var lethal := contact(&"bolt")
-	check(until(func() -> bool: return boss.state == DeerBoss.State.PHASE_END), "lethal reflected spell enters the final defeat flow")
-	check(vine.bolts.is_empty() and boss.invulnerable and boss.phase_transition.to_phase == 0, "final defeat immediately cancels spells and has no fifth phase")
+	contact(&"pierce")
+	check(until(func() -> bool: return vine.step == DeerVinePhase.Step.STAGGER), "last arc parried: caster grounded for the final blow")
+	boss.combat_stats.health = 20
+	vine.spawn_strike(&"ground_lash", player.position.x, player.position.x - 300.0, 1.0)
+	boss.receive_skill_hit(SkillHit.new(), player.global_position)
+	check(boss.state == DeerBoss.State.PHASE_END, "lethal ground-window hit enters the final defeat flow")
+	check(vine.strikes.is_empty() and boss.invulnerable and boss.phase_transition.to_phase == 0, "final defeat immediately cancels vines and has no fifth phase")
 	check(until(func() -> bool: return boss.state == DeerBoss.State.COMPLETE), "fourth-phase human fall finishes the encounter")
 	check(boss.animated_sprite.animation == &"human_fall_ING" and is_equal_approx(boss.position.y, 555), "defeated human stays on the ground without snapping back to a deer")
 	await capture("06_vine_defeat")
@@ -186,7 +196,7 @@ func run() -> void:
 	check(boss.root_phase.nodules.is_empty() and player.sloped_ground_surfaces.is_empty(), "final defeat clears permanent root terrain")
 	player.animated_sprite.animation = &"red_parry_success"
 	player.defense_state = LanPlayer.DefenseState.RED_PARRY_SUCCESS
-	var expired_source := DeerSpellBolt.new()
+	var expired_source := DeerVineStrike.new()
 	room.add_child(expired_source)
 	player.red_parry_source = expired_source
 	expired_source.queue_free()
@@ -197,17 +207,17 @@ func run() -> void:
 	reset_vine()
 	assist.set_player_invincible(false)
 	player.combat_stats.health = 1
-	var fatal := contact(&"bolt")
-	check(player.combat_stats.health == 0 and fatal.finished and fatal.is_queued_for_deletion() and vine.bolts.is_empty(), "lethal spell cancels itself safely from inside the player's death callback")
+	var fatal := contact(&"pierce")
+	check(player.combat_stats.health == 0 and fatal.finished and fatal.is_queued_for_deletion() and vine.strikes.is_empty(), "lethal vine cancels itself safely from inside the player's death callback")
 	await process_frame; await process_frame
 	boss.set_physics_process(false)
 	check(boss.phase == 1 and not vine.human and vine.step == DeerVinePhase.Step.NONE and player.combat_stats.health == player.combat_stats.max_health, "death in vine phase retries from mist with full health and no human state")
 	reset_vine()
 	assist.set_level(BattleAssistSettingsService.Level.STRONG)
-	var abandoned := contact(&"heavy")
-	check(qte.active, "retry cleanup fixture has an active spell prompt")
+	var abandoned := contact(&"curtain")
+	check(qte.active, "retry cleanup fixture has an active vine prompt")
 	room._revive()
-	check(not qte.active and abandoned.finished and vine.bolts.is_empty(), "retry immediately clears spell prompts and pending spell damage")
+	check(not qte.active and abandoned.finished and vine.strikes.is_empty() and vine.leaves.is_empty(), "retry immediately clears vine prompts, pending vine damage and leaves")
 	await process_frame; await process_frame
 	boss.set_physics_process(false)
 	check(FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) == saved, "production regression does not modify the user's story progress")
@@ -224,10 +234,10 @@ func run() -> void:
 	preview.play_action(0)
 	for i in 600: preview_boss._physics_process(1.0 / 60)
 	check(preview_boss.manual_control and preview_boss.vine_phase.human and preview_boss.vine_phase.step == DeerVinePhase.Step.HOVER, "development-room human preview still uses manual controls")
-	check(preview_boss.vine_phase.bolts.is_empty(), "development-room caster does not start production AI")
+	check(preview_boss.vine_phase.strikes.is_empty(), "development-room caster does not start production AI")
 	preview.play_action(2)
-	for i in 180: preview_boss._physics_process(1.0 / 60)
-	check(preview_boss.vine_phase.human, "development-room heavy spell still runs through the shared vine phase")
+	for i in 30: preview_boss._physics_process(1.0 / 60)
+	check(preview_boss.vine_phase.human and preview_boss.vine_phase.sequence_id == &"ground_lash", "development-room ground lash still runs through the shared vine phase")
 	check(FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) == saved, "development-room verification leaves the story save unchanged")
 	preview.queue_free()
 	await process_frame; await process_frame

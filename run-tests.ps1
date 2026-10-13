@@ -42,6 +42,7 @@ function Invoke-Engine([string[]]$Arguments, [string]$Label) {
   $stderr = Join-Path $runDir ($Label+'.errors.log')
   $quoted = @($Arguments | ForEach-Object { '"'+$_+'"' })
   $proc = Start-Process -FilePath $Godot -ArgumentList $quoted -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+  $null = $proc.Handle  # Windows PowerShell 5.1 reports a null ExitCode unless the handle is cached before exit.
   if (-not $proc.WaitForExit($TimeoutSeconds*1000)) {
     $proc.Kill(); $proc.WaitForExit()
     Write-Host "TIMEOUT $Label"
