@@ -70,6 +70,8 @@ func run() -> void:
 	check(deer.position==Vector2(820,555),"Standalone flick uses the standard manual starting position rather than the charge slot's carried position")
 	tick(150)
 	check(room.dummy.contacts.size()==1 and room.dummy.contacts[0].clip=="flick_lift_ING" and room.dummy.contacts[0].damage==14,"Standalone flick now opens one actual 14-damage upward contact")
+	# Key 5 defaults to the improvised combo (v0.3); this checks the authored pressure combo.
+	room.select_combo_library(DeerClashPhase.LIBRARY.find(&"pressure_flick_red"))
 	for target in [688,1000]:
 		room.dummy_x.value=target;room.play_action(4)
 		var locked_direction:=deer.direction
@@ -81,7 +83,8 @@ func run() -> void:
 		var last_position:=deer.position
 		for i in 340:
 			tick(1)
-			positions_stable=positions_stable and absf(deer.position.x-last_position.x)<=24.0/60.0+0.001 and deer.direction==locked_direction
+			# v0.3 steps in and lunges per strike; it must still never jump or turn around.
+			positions_stable=positions_stable and absf(deer.position.x-last_position.x)<=40.0 and deer.direction==locked_direction
 			last_position=deer.position
 			if deer.clash_phase.step_index>=0 and deer.clash_phase.step_index!=previous_step:
 				if deer.clash_phase.step_index==1:
@@ -94,7 +97,7 @@ func run() -> void:
 				red_cued=red_cued or room.dummy.contacts.size()==4
 			if i in [129,210,240]:await snapshot("combo_%d_%03d"%[target,i])
 		check(linked,"Full combo joins the low pressure pose directly to the authored sweep")
-		check(positions_stable,"Full combo neither teleports nor reverses between attacks")
+		check(positions_stable,"Full combo neither teleports nor turns around between attacks")
 		check(red_cued and normal_four,"Four ordinary parry contacts precede a clearly cued red finisher")
 		check(room.dummy.contacts.size()==5,"Full combo reaches five distinct real contacts in direction %d"%locked_direction)
 		if room.dummy.contacts.size()==5:

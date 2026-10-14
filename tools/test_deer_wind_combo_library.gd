@@ -74,7 +74,7 @@ func run() -> void:
 	deer = room.adapter.deer; deer.set_physics_process(false); deer.vfx.set_process(false)
 	room.select_combo(2)
 	check(room.library_picker.visible and room.library_picker.item_count == DeerClashPhase.LIBRARY.size(), "Wind phase shows the combo library picker with every combo")
-	check(room.adapter.action_names()[4].contains(DeerClashPhase.COMBOS[DeerClashPhase.LIBRARY[0]].label), "Key 5 defaults to the existing pressure combo")
+	check(room.adapter.action_names()[4].contains(DeerClashPhase.combo_label(DeerClashPhase.LIBRARY[0])) and DeerClashPhase.LIBRARY[0] == &"improv", "Key 5 defaults to the improvised combo (v0.3)")
 
 	# Probe three: thrust, low-linked sweep, held lift; fast, fast, slow.
 	play(&"probe_three", 688)
@@ -103,16 +103,16 @@ func run() -> void:
 	check(red_seen_before_strike, "Red flash appears during the hold, before the red strike")
 	clean_finish("Delayed gore")
 
-	# Crossover: thrust, leap over the dummy, thrust back from the other side.
-	play(&"crossover", 688)
-	check(contact_clips() == ["thrust_ING", "thrust_ING"] and dangers == [NORMAL, NORMAL], "Crossover hits the same dummy before and after the leap")
-	check(deer.position.x < 688 and deer.direction > 0, "Leap lands beyond the dummy and turns back to face it (x=%.0f, dir=%.0f)" % [deer.position.x, deer.direction])
-	check(clips_seen.has("leap_turn_ING") and clips_seen.has("leap_turn_END"), "Crossover plays the authored leap and turn")
-	clean_finish("Crossover")
+	# Gale in (v0.3, replaces the crossover leap): dash thrust, then a sweep.
+	play(&"gale_in", 400)
+	check(contact_clips() == ["thrust_ING", "flick_sweep_ING"] and dangers == [NORMAL, NORMAL], "Gale in dashes in, thrusts and sweeps the far dummy %s" % [contact_clips()])
+	check(clips_seen.has("bind_push_ING") and not clips_seen.has("leap_turn_ING"), "Gale in rushes in the low wind pose and never leaps")
+	clean_finish("Gale in")
 
-	# Sweep charge: from far away the sweep whiffs, the gold charge stops short and the uppercut connects.
+	# Sweep charge: from far away the sweep steps in (v0.3) and lands as an ordinary hit, then the
+	# gold charge stops short and the uppercut connects.
 	play(&"sweep_charge", 400)
-	check(dangers.size() >= 1 and dangers.all(func(d: int) -> bool: return d == GOLD), "Charge contacts are all gold, unparryable")
+	check(dangers.size() >= 2 and dangers[0] == NORMAL and dangers.slice(1).all(func(d: int) -> bool: return d == GOLD), "Stepped-in sweep is ordinary; charge contacts are all gold, unparryable")
 	check(contact_clips().has("uppercut_ING"), "Charge ends in a connecting uppercut")
 	check(deer.position.x >= 400 + DeerClashPhase.CHARGE_STOP_DISTANCE - 1.0, "Charge stops in front of the dummy instead of passing it (x=%.0f)" % deer.position.x)
 	check(clips_seen.has("charge_run_ING") and clips_seen.has("thrust_END"), "Sweep rises before the gold charge run")

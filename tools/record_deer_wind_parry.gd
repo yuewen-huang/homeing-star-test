@@ -1,7 +1,8 @@
 extends SceneTree
 ## Records the real final room's wind phase (phase 3) with the contact QTE OFF and
 ## player invincibility OFF, while a scripted player parries every normal/red hit and
-## back-dodges gold ones. Plays every wind combo in LIBRARY order (branch opener twice).
+## back-dodges gold ones. The production AI fights for DURATION seconds (v0.3: improvised
+## combos, gale dash and pull); every strike the improviser picks is logged.
 ## Run with Godot's movie writer for a video, e.g.:
 ##   Godot --path game --write-movie out.avi --fixed-fps 60 --resolution 1280x720 \
 ##         --script tools/record_deer_wind_parry.gd -- <output dir>
@@ -21,6 +22,7 @@ const PARRY_LEAD := 0.20
 const DODGE_LEAD := 0.12
 const GAP_AFTER_COMBO := 1.0
 const START_DISTANCE := 170.0
+const DURATION := 60.0
 
 var room: Chapter1DeerBossRoom
 var boss: DeerBoss
@@ -70,9 +72,7 @@ func setup() -> void:
 			await physics_frame
 	while boss.state not in [DeerBoss.State.IDLE, DeerBoss.State.WALK]:
 		await physics_frame
-	boss.manual_control = true
-	queue.assign(DeerClashPhase.LIBRARY)
-	queue.append(&"branch_opener")
+	boss.manual_control = false
 	_place_player()
 	clock = 0.0
 	running = true
@@ -92,11 +92,24 @@ func _physics_process(delta: float) -> bool:
 	if _release_dodge:
 		_key(KEY_L, false); _release_dodge = false
 	_log_changes()
-	if current.is_empty() or not clash.is_running() and boss.state != DeerBoss.State.CLASH:
-		_next_combo()
-	else:
+	if boss.state == DeerBoss.State.CLASH:
+		if current.is_empty():
+			current = &"improv"
+			pressed_keys.clear()
+			events.append({"t": clock, "f": Engine.get_frames_drawn(), "event": "combo", "combo": "improv", "branch": -1})
+		_log_beat()
 		_drive_player()
+	else:
+		current = &""
+		_last_step = -1
+	if clock >= DURATION: _finish()
 	return false
+
+var _last_step := -1
+func _log_beat() -> void:
+	if clash.step_index == _last_step or clash.step_index < 0 or clash.step_index >= clash.steps.size(): return
+	_last_step = clash.step_index
+	events.append({"t": clock, "f": Engine.get_frames_drawn(), "event": "beat", "move": String(clash.steps[clash.step_index].move), "distance": absf(player.position.x - boss.position.x)})
 
 func _next_combo() -> void:
 	var resting := boss.state in [DeerBoss.State.IDLE, DeerBoss.State.WALK]
