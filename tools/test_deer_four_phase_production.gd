@@ -90,6 +90,11 @@ func run() -> void:
 	boss.set_physics_process(false); boss.vfx.set_process(false); player.set_physics_process(false)
 	boss.phase_completed.connect(func(phase: int) -> void: completed.append(phase))
 	check(boss.auto_advance_phases and boss.playable_phase_count == 4 and not boss.manual_control, "real final room enables all four production phases")
+	var music := root.get_node("SceneTransition") as SceneTransitionService
+	check(music.current_music_path == Chapter1Music.FINAL_BOSS.resource_path and music.music_player.playing and (music.music_player.stream as AudioStreamMP3).loop, "deer entry loops Forest BOSS 1 for phase one")
+	check(Chapter1Music.FINAL_BOSS.get_length() > 0 and Chapter1Music.FINAL_BOSS_VINE.get_length() > 0, "both supplied forest boss MP3s decode with valid duration")
+	music.music_player.seek(12.0)
+	var first_stream := music.music_player.stream
 	var nodule := boss.root_phase.add_nodule(Vector2(2000, 555))
 	nodule._register_support()
 	for phase in [1, 2, 3]:
@@ -100,6 +105,10 @@ func run() -> void:
 		check(boss.phase == phase + 1 and boss.combat_stats.health == boss.combat_stats.max_health, "phase %d handoff restores the next health bar" % phase)
 		check(is_instance_valid(nodule) and nodule.support_registered, "phase %d handoff preserves permanent root terrain" % phase)
 		check(not player.boss_controlled, "phase %d roar releases player control" % phase)
+		if phase < 3:
+			check(music.music_player.stream == first_stream and music.current_music_path == Chapter1Music.FINAL_BOSS.resource_path and music.music_player.get_playback_position() >= 11.9, "phase %d handoff preserves Forest BOSS 1 playback" % phase)
+		else:
+			check(music.current_music_path == Chapter1Music.FINAL_BOSS_VINE.resource_path and music.music_player.playing and (music.music_player.stream as AudioStreamMP3).loop, "fourth-phase handoff switches to looping Forest BOSS 2")
 	check(boss.state == DeerBoss.State.VINE and vine.step == DeerVinePhase.Step.TRANSFORM, "wind defeat begins the existing vine transformation rather than ending the encounter")
 	reset_player()
 	await capture("01_vine_transform")
@@ -223,6 +232,7 @@ func run() -> void:
 	await process_frame; await process_frame
 	boss.set_physics_process(false)
 	check(boss.phase == 1 and not vine.human and vine.step == DeerVinePhase.Step.NONE and player.combat_stats.health == player.combat_stats.max_health, "death in vine phase retries from mist with full health and no human state")
+	check(music.current_music_path == Chapter1Music.FINAL_BOSS.resource_path and music.music_player.playing, "fourth-phase death restores Forest BOSS 1 on retry")
 	reset_vine()
 	assist.set_level(BattleAssistSettingsService.Level.STRONG)
 	var abandoned := contact(&"curtain")

@@ -1,18 +1,20 @@
 extends SceneTree
 
 ## Root water cavern behaviour checks. Drives the real player through every
-## water level's route, the vein-lamp puzzle, the combat waves and the seal.
+## water level's route, the vein-lamp puzzle, the ledge treants and core entry.
 ## Each section starts from a fixed position and water level, so one failure
 ## does not cascade.
 ##
 ##   "<godot>" --headless --path . --fixed-fps 60 --script res://tools/test_root_region.gd
 ##
-## It writes stele states through the SaveProgress autoload, which saves to
-## res://save/progress.cfg. Back that file up before running and restore it after.
+## Uses an in-memory SaveProgress fixture; real completion/checkpoints stay intact.
 
 class FullProgress extends SaveProgressService:
 	func _ready() -> void:
-		pass
+		_config = ConfigFile.new()
+		_loaded = true
+	func save_progress() -> bool: return true
+	func show_toast(_message: String) -> void: pass
 	func is_ability_unlocked(_ability: StringName) -> bool:
 		return true
 
@@ -125,6 +127,14 @@ func attack_right() -> void:
 
 
 func run_tests() -> void:
+	var save_exists := FileAccess.file_exists(SaveProgressService.SAVE_PATH)
+	var saved := FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) if save_exists else PackedByteArray()
+	var original := root.get_node("SaveProgress")
+	root.remove_child(original)
+	original.free()
+	var memory := FullProgress.new()
+	memory.name = "SaveProgress"
+	root.add_child(memory)
 	room = load("res://scenes/sideview/chapter_1_root_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
@@ -136,7 +146,7 @@ func run_tests() -> void:
 	player.save_progress_resolved = true
 	var save := root.get_node("SaveProgress") as SaveProgressService
 	for id in [Chapter1RootRoom.PUZZLE_ID, Chapter1RootRoom.COMBAT_ID]:
-		check(save.get_stele_state(id) == 0, "Root stele %s starts locked (restore save/progress.cfg if not)" % id)
+		check(save.get_stele_state(id) == 0, "Root stele %s starts locked in isolated fixture" % id)
 	await frames(5)
 	var puzzle := room.get_node("Steles/PuzzleStele") as MinigameStele
 	var combat := room.get_node("Steles/CombatStele") as MinigameStele
@@ -268,13 +278,13 @@ func run_tests() -> void:
 	for i in 1800:
 		await physics_frame
 		for enemy in room._enemies:
-			if is_instance_valid(enemy) and enemy.state not in [MistAmbusher.State.HIDDEN, MistAmbusher.State.DEAD]:
+			if is_instance_valid(enemy) and enemy.is_targetable():
 				enemy.receive_hit(5, player.position)
 				defeated += 1
 		player.combat_stats.health = player.combat_stats.max_health
 		if not room.combat_active:
 			break
-	check(defeated == 5, "Both waves spawned all five enemies: %d" % defeated)
+	check(defeated == 3, "Three ledge treants were spawned and defeated: %d" % defeated)
 	check(combat.state == MinigameStele.SteleState.COMPLETED, "Combat stele completed")
 	check(not east_winch.locked, "Winches unlock after combat")
 
@@ -321,5 +331,6 @@ func run_tests() -> void:
 	check(packed.pack(room) == OK, "Root room can be re-saved")
 	room.queue_free()
 	await process_frame
+	check(FileAccess.file_exists(SaveProgressService.SAVE_PATH) == save_exists and (not save_exists or FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) == saved), "Route regression preserves the real story save")
 	print("Root region checks: %d failures" % failures)
 	quit(1 if failures else 0)

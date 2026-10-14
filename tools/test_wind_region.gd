@@ -119,20 +119,14 @@ func run() -> void:
 	await frames()
 	room.player.reset_after_map_fall(room.combat.position)
 	await frames()
+	room.set_physics_process(false)
 	await key(KEY_E)
 	await key(KEY_E)
 	room._update_combat(1.0)
-	check(room.combat_active and room._enemies.size() == 2, "Combat still starts first wave")
-	for enemy in room._enemies.duplicate():
-		enemy.state = MistAmbusher.State.WARNING
-		enemy.receive_hit(99, room.player.position)
-	room._update_combat(2.0)
-	check(room.combat_active and room._enemies.size() == 3, "Combat starts second wave")
-	for enemy in room._enemies.duplicate():
-		enemy.state = MistAmbusher.State.WARNING
-		enemy.receive_hit(99, room.player.position)
-	room._update_combat(2.0)
-	check(room.combat.state == MinigameStele.SteleState.COMPLETED, "Both challenges record completion")
+	check(room.combat_active and is_instance_valid(room._combat_trial), "Combat starts the bird's wind trial")
+	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_player_invincible(true)
+	room._update_combat(80.0)
+	check(not room.combat_active and room.combat.state == MinigameStele.SteleState.COMPLETED, "Three wind rounds record combat completion")
 	room._open_puzzle()
 	await frames()
 	room.remove_child(room._puzzle_game)

@@ -49,6 +49,9 @@ func attack(receiver: DamageReceiver2D, red := false) -> CombatAttackData:
 
 
 func run() -> void:
+	var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
+	var prior_invincibility := assist.player_invincible
+	assist.set_player_invincible(false)
 	var saved_existed := FileAccess.file_exists(SaveProgressService.SAVE_PATH)
 	var saved := FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) if saved_existed else PackedByteArray()
 	room = Node2D.new()
@@ -252,4 +255,5 @@ func run() -> void:
 	await process_frame
 	await process_frame
 	print("SHARED COMBAT ART: ", checks, " checks, ", failures, " failures")
+	assist.set_player_invincible(prior_invincibility)
 	quit(1 if failures else 0)

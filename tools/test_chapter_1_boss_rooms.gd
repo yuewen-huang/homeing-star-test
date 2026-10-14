@@ -13,7 +13,7 @@ class TestProgress extends SaveProgressService:
 const CASES := [
 	["wind","HeartGate","chapter_1_wind_boss_room",&"wind_puzzle_directed_bells",&"wind_combat_high_branches"],
 	["vine","DeerGate","chapter_1_special_boss_upper_right_room",&"vine_puzzle_high_swing",&"vine_combat_branch_arena"],
-	["mist","PortalToSpecialBoss","chapter_1_special_boss_lower_left_room",&"mist_puzzle_entry",&"mist_combat_entry"],
+	["mist","PortalToSpecialBoss","chapter_1_special_boss_lower_left_room",&"mist_puzzle_entry",&"mist_combat_01"],
 	["root","HeartGate","chapter_1_root_heart_room",&"root_puzzle_water_veins",&"root_combat_sunken_roots"],
 	["vine","HeartGate","chapter_1_final_boss_room",&"",&""],
 ]
@@ -113,13 +113,17 @@ func run() -> void:
 		check(transition.current_music_path==Chapter1Music.boss_music_for_scene(boss.scene_file_path).resource_path and transition.music_player.playing,"Boss entry selects designated boss BGM")
 		await capture(data[2])
 		if data[3]!=&"":
+			check(boss.gold_shield_active and boss.blue_shield_active,"Both independent layers protect an uncleared region")
 			save.set_stele_state(data[4],2)
 			check(boss.core_invulnerable,"Completing combat alone does not remove core immunity")
+			check(not boss.gold_shield_active and boss.blue_shield_active,"Combat completion removes only deep gold")
 			save.set_stele_state(&"unrelated_puzzle",2)
 			check(boss.core_invulnerable,"Unrelated puzzle does not remove core immunity")
 			save._config.set_value("steles",String(data[4]),0)
 			save.set_stele_state(data[3],2)
-			check(not boss.core_invulnerable,"Corresponding puzzle alone removes immunity immediately")
+			check(boss.core_invulnerable and boss.gold_shield_active and not boss.blue_shield_active,"Puzzle completion removes only light blue; uncleared combat still protects core")
+			save.set_stele_state(data[4],2)
+			check(not boss.core_invulnerable and not boss.gold_shield_active and not boss.blue_shield_active,"Completing both regional challenges removes protection immediately")
 		if not await travel(boss.get_node("ReturnGate")):
 			continue
 		check(current_scene.scene_file_path==region_path,"Boss return reaches original region")

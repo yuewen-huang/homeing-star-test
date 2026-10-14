@@ -196,43 +196,26 @@ func run() -> void:
 	await frames(10)
 	await e()
 	await e()
-	check(room.combat_active, "combat stele starts existing waves")
-	await frames(40)
-	check(room._enemies.size() == 2, "first wave has two existing enemies")
-	# Exercise the actual J attack hitbox before using enemy damage interfaces
-	# to verify wave progression independently of an automated combat strategy.
-	for enemy in room._enemies:
-		enemy.set_physics_process(false)
-	var rat = room._enemies[0]
-	rat.position = player.position + Vector2(48, 0)
+	check(room.combat_active and room._enemies.size() == 3, "combat stele activates three existing map vines")
+	var ordinary := room._enemies[2]
+	for enemy in room._enemies: enemy.next_attack = INF
+	player.reset_after_map_fall(ordinary.home + Vector2(-48, 65))
 	player.facing_direction = 1
-	var before_health: int = rat.health
+	var before_health: int = ordinary.combat_stats.health
 	key(KEY_J, true)
 	await frames(3)
 	key(KEY_J, false)
 	await frames(55)
-	check(rat.health < before_health, "real J attack hitbox damages arena enemy")
-	for enemy in room._enemies.duplicate():
-		enemy.receive_hit(99, player.position)
-	await frames(75)
-	check(room._wave == 1 and room._enemies.size() == 3, "killing first wave starts three-enemy second wave")
-	for enemy in room._enemies.duplicate():
-		enemy.set_physics_process(false)
-		enemy.receive_hit(99, player.position)
-	await frames(75)
-	check(not room.combat_active and room.combat.state == MinigameStele.SteleState.COMPLETED, "two actual cleared waves complete combat stele")
-	room._challenge(room.COMBAT_ID, 0)
-	await frames(40)
-	player.reset_after_map_fall(Vector2(3600, 1500))
+	check(ordinary.combat_stats.health < before_health, "real J attack hitbox damages a living vine")
+	for enemy in room._enemies.duplicate(): enemy.receive_hit(99, player.position)
 	await frames(5)
-	check(not room.combat_active and room._enemies.is_empty(), "leaving arena cancels challenge and removes enemies")
-	player.reset_after_map_fall(room.combat.position + Vector2(-45, 0))
-	await frames(10)
+	check(not room.combat_active and room.combat.state == MinigameStele.SteleState.COMPLETED, "defeating all three vines completes combat stele")
 	room._challenge(room.COMBAT_ID, 0)
-	await frames(40)
+	await frames(5)
+	check(not room.combat_active and room._enemies.is_empty(), "completed combat stele cannot reactivate the vines")
 	room._on_death()
 	await frames(5)
-	check(not room.combat_active and room._enemies.is_empty() and player.combat_stats.health > 0, "death revives and cleans arena without revoking completion")
+	check(not room.combat_active and player.combat_stats.health > 0, "death revives without revoking completion")
 	room._open_flight()
 	game = room._flight_game
 	root.size = Vector2i(960, 540)
