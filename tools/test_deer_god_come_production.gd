@@ -94,7 +94,7 @@ func run() -> void:
 	room.player.defense_state = LanPlayer.DefenseState.NONE
 	assist.player_invincible = false
 	until(func() -> bool: return fatal.finished)
-	check(fatal.finished and fatal.hitbox.attack == null and fatal.flash.color.a == 0 and vine.god_statue == null, "lethal pulse immediately cancels statue and overlay inside death callback")
+	check(fatal.finished and fatal.hitbox.attack == null and not (root.get_node("CombatFeedback") as CombatFeedbackService).screen_fx.pulse_active() and vine.god_statue == null, "lethal pulse immediately cancels statue and screen pulse inside death callback")
 	await process_frame; await process_frame
 	boss.set_physics_process(false)
 	check(boss.phase == 1 and not vine.ultimate_active and vine.god_statue == null, "retry restarts mist with no finale state")

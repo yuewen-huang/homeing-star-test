@@ -58,7 +58,7 @@ func run() -> void:
 	tick(7)
 	check(deer.vfx.gold_warning.visible and deer.vfx.gold_warning.frame == 1, "Gold plays the supplied five-frame resource once")
 	check(deer.vfx.gold_warning.texture.resource_path.ends_with("gold_unparryable_warning_625x87_5f.png"), "Gold uses its dedicated asset, not the red texture or a line diamond")
-	check(deer.vfx.gold_warning.position.distance_to((deer.position + deer.charge_antler_offset(deer.animated_sprite.frame)).snapped(Vector2(2, 2))) < 0.01, "Gold cue is attached to the animated antler")
+	check(deer.vfx.gold_warning.position.distance_to(deer.vfx.chest().snapped(Vector2(2, 2))) < 0.01, "Gold cue plays on the chest light (2026-10-14: all danger cues on the chest)")
 	check(deer.vfx._body_material.get_shader_parameter("warning") == 0.0 and deer.animated_sprite.modulate.a == 1.0, "Development warning leaves body colors intact and specimen visible")
 	await snapshot("warning")
 	tick(16)

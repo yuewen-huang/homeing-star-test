@@ -150,7 +150,9 @@ func run() -> void:
 	for i in 6: await switch_to(i % 2)
 	var specimens: Array = room.get_children().filter(func(child: Node) -> bool: return child.name == &"Specimen")
 	check(specimens.size() == 1 and room.specimen.get_parent() == room, "Repeated selection keeps a single specimen subtree")
-	check(room.player.dodge_evaded_attack.get_connections().size() <= 1, "Boss switching does not accumulate player signal connections")
+	# The player's own global bullet-time visual listens permanently; bosses must not pile up.
+	var boss_listeners: Array = room.player.dodge_evaded_attack.get_connections().filter(func(c: Dictionary) -> bool: return not (c.callable.get_object() is DodgeBulletTimeVisual))
+	check(boss_listeners.size() <= 1, "Boss switching does not accumulate player signal connections")
 	room.speed_picker.item_selected.emit(0)
 	check(is_equal_approx(Engine.time_scale, 0.25), "Speed selector applies quarter-speed simulation")
 	room.show_hitboxes = true

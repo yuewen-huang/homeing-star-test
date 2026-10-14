@@ -81,7 +81,7 @@ func run() -> void:
 	await snapshot("03_rise_late")
 	check(until(func() -> bool: return statue.flashed), "exactly one flash begins after full emergence")
 	check(statue.hitbox.attack.attack_id == &"deer_god_flash" and not statue.hitbox.attack.guardable and statue.hitbox.attack.danger_type == CombatAttackData.DangerType.UNPARRYABLE_DANGER, "flash is unguardable gold damage")
-	check(statue.flash.color.a > 0 and statue.flash.color.a <= 0.18, "full-screen green flash stays subdued")
+	check((root.get_node("CombatFeedback") as CombatFeedbackService).screen_fx.pulse_active(), "screen-wide blast shows the shared green-tinted bullet-time vignette pulse (2026-10-14), not a flat overlay")
 	var ids: Array = room.dummy.contacts.map(func(c: Dictionary) -> StringName: return c.id)
 	check(ids.count(&"deer_god_rise") == 1 and ids.count(&"deer_god_flash") == 1, "dummy takes one launch and one independent flash despite automatic parry")
 	await snapshot("04_full_flash")
@@ -142,7 +142,7 @@ func run() -> void:
 	until(func() -> bool: return vine.god_statue.flashed)
 	var interrupted := vine.god_statue
 	room.reset_room()
-	check(interrupted.finished and interrupted.flash.color.a == 0 and interrupted.hitbox.attack == null, "reset cancels flash, contacts and dust together")
+	check(interrupted.finished and not (root.get_node("CombatFeedback") as CombatFeedbackService).screen_fx.pulse_active() and interrupted.hitbox.attack == null, "reset cancels the pulse, contacts and dust together")
 	await process_frame
 	check(not is_instance_valid(interrupted), "all statue nodes belong to the specimen and are freed on reset")
 	check(FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) == saved, "preview preserves story progress")

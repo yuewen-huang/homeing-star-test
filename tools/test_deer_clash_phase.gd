@@ -70,7 +70,7 @@ func run() -> void:
 	check(not deer.can_be_interrupted_by_special(), "Red finisher keeps its committed danger windup")
 	tick(35)
 	check(deer.vfx.red_warning.visible and room.dummy.contacts.is_empty(), "Red antler cue appears before contact")
-	check(deer.vfx.red_warning.position.distance_to((deer.position + deer.clash_phase.warning_offset()).snapped(Vector2(2,2))) < 0.01, "Red cue follows the antler, not the hoof")
+	check(deer.vfx.red_warning.position.distance_to(deer.vfx.chest().snapped(Vector2(2,2))) < 0.01, "Red cue plays on the chest light, like every danger cue")
 	await snapshot("red_left_warning")
 	tick(20)
 	check(room.dummy.contacts.size() == 1 and room.dummy.contacts[0].first_frame == 0, "Red finisher first contacts on F11")
