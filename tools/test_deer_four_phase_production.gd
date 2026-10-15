@@ -52,6 +52,11 @@ func reset_player() -> void:
 	player.combat_stats.restore_health()
 	player.velocity = Vector2.ZERO
 func reset_vine() -> void:
+	# This helper explicitly starts a fresh in-memory fight, including after victory.
+	if room.story._settled:
+		room.story._settled = false
+		room.story.victory_pending = false
+		room._save._config.set_value("progress", String(SaveProgressService.STORY_C1_DEER_DEFEATED), false)
 	qte.cancel()
 	assist.set_player_invincible(true)
 	assist.set_level(BattleAssistSettingsService.Level.NONE)
@@ -85,6 +90,8 @@ func run() -> void:
 	var memory := MemoryProgress.new(); memory.name = "SaveProgress"; root.add_child(memory)
 	room = load("res://scenes/sideview/chapter_1_final_boss_room.tscn").instantiate()
 	root.add_child(room); current_scene = room
+	# This suite validates production combat after the independently tested intro.
+	if room.story.comic != null: room.story.comic._request_finish(true)
 	await process_frame; await process_frame
 	boss = room.deer; player = room.player; vine = boss.vine_phase
 	boss.set_physics_process(false); boss.vfx.set_process(false); player.set_physics_process(false)
@@ -212,7 +219,7 @@ func run() -> void:
 	check(until(func() -> bool: return boss.state == DeerBoss.State.COMPLETE), "fourth-phase human fall finishes the encounter")
 	check(boss.animated_sprite.animation == &"human_fall_ING" and is_equal_approx(boss.position.y, 555), "defeated human stays on the ground without snapping back to a deer")
 	await capture("06_vine_defeat")
-	check(completed == [1, 2, 3, 4] and room._status.text.contains("四阶段击破"), "completion signals and room text cover all four phases exactly once")
+	check(completed == [1, 2, 3, 4] and room._status.text.contains("已击破") and room._save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED), "completion signals and saved victory cover all four phases exactly once")
 	check(boss.root_phase.nodules.is_empty() and player.sloped_ground_surfaces.is_empty(), "final defeat clears permanent root terrain")
 	player.animated_sprite.animation = &"red_parry_success"
 	player.defense_state = LanPlayer.DefenseState.RED_PARRY_SUCCESS
