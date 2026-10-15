@@ -119,7 +119,7 @@ func run() -> void:
 	check(boss.state == DeerBoss.State.VINE and vine.step == DeerVinePhase.Step.TRANSFORM, "wind defeat begins the existing vine transformation rather than ending the encounter")
 	reset_player()
 	await capture("01_vine_transform")
-	check(room._status.text.contains("藤") and player.contextual_special_item == &"", "fourth phase updates the HUD and restores the ordinary item slot")
+	check(room._status.text.contains("藤") and player.contextual_special_item == ItemCatalog.WIND_SHIELD, "Fourth phase updates the HUD and exposes the wind-shield essence skill")
 	check(until(func() -> bool: return vine.step == DeerVinePhase.Step.HOVER), "human transformation and ascent finish")
 	check(vine.human and vine.shield == 3 and boss.invulnerable and not vine.auto_deflect, "production caster starts shielded without dummy auto-deflect")
 	await capture("02_vine_hover")

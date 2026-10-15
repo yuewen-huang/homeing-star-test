@@ -64,6 +64,8 @@ func run() -> void:
 	check((sprite.position + Vector2(64, 152) * sprite.scale).length() < 0.01, "Approved feet anchor stays on map floor")
 	room.player.position = npc.position + Vector2(-45, 0)
 	await create_timer(0.1).timeout
+	room._save.set_stele_state(room.COMBAT_ID, MinigameStele.SteleState.UNLOCKED)
+	room._combat_stele_requested(room.COMBAT_ID, MinigameStele.SteleKind.COMBAT)
 	var enemy: MistParryEnemy = room.mist_enemies[0]
 	enemy._spawn_wait = 2.0
 	enemy._physics_process(0.5)

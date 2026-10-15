@@ -46,7 +46,7 @@ func key_space() -> void:
 	key.keycode = KEY_SPACE
 	key.pressed = true
 	Input.parse_input_event(key)
-	await frames(35)
+	await create_timer(0.6).timeout
 	key = InputEventKey.new()
 	key.physical_keycode = KEY_SPACE
 	key.keycode = KEY_SPACE
@@ -106,7 +106,7 @@ func run() -> void:
 	finish_dialogue(gift)
 	await frames()
 	check(not is_instance_valid(gift) and not player.input_frozen and save.has_completed(ForestCoreRelic.PRESENTED_ID), "Retry records presentation and restores input")
-	check(not save.equip_special_item(ItemCatalog.SPIRIT_PENDANT), "Carried relic does not replace the Q combat item")
+	check(save.equip_special_item(ItemCatalog.SPIRIT_PENDANT), "Pendant can be equipped in the Q item slot")
 
 	# Any order, independent absorption, duplicate events, and serialization.
 	for region in [3, 0, 2, 1]:
@@ -132,7 +132,7 @@ func run() -> void:
 	inventory._refresh()
 	inventory.visible = true
 	inventory._show_tooltip(ItemCatalog.SPIRIT_PENDANT)
-	check(inventory._tooltip_description.text.count("已吸收") == 4, "Backpack explains all four saved power states")
+	check(inventory._tooltip_description.text.count("已解锁") == 4, "Backpack explains all four saved power skills")
 	await capture("relic_backpack")
 	inventory.queue_free()
 	await frames()

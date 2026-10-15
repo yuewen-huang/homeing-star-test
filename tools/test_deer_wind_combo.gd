@@ -43,7 +43,7 @@ func run() -> void:
 	room.set_physics_process(false);room.player.set_physics_process(false)
 	deer=room.adapter.deer;deer.set_physics_process(false);deer.vfx.set_process(false)
 	room.select_combo(2)
-	check(room.adapter.action_names().size()==5 and room.charge_button.visible and room.ultimate_row.visible and not room.item_button.visible and not room.item_available.visible,"Wind has five manual actions and no inherited snare controls")
+	check(room.adapter.action_names().size()==5 and room.charge_button.visible and room.ultimate_row.visible and room.item_button.visible and room.item_available.visible and deer.contextual_item_id() == ItemCatalog.ROOT_ANCHOR,"Wind has five manual actions and the root-essence skill controls")
 	var fx:=deer.clash_phase.pressure_fx
 	check(DeerWindPressureFX.data().frames.size()==26 and (DeerWindPressureFX.ART.get_meta("texture") as Texture2D).resource_path.ends_with("deer_painted/wind_pressure.png"),"Wind uses the user's 26-frame texture rather than generated arcs")
 	room.play_action(2);tick(36)

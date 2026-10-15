@@ -346,6 +346,8 @@ func test_full_room_ambush() -> void:
 	var room = load("res://scenes/sideview/chapter_1_mist_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
+	room._save.set_stele_state(room.COMBAT_ID, MinigameStele.SteleState.UNLOCKED)
+	room._combat_stele_requested(room.COMBAT_ID, MinigameStele.SteleKind.COMBAT)
 	check(room.mist_enemies.size() == 3, "Mist has three persistent random opponents")
 	var target := room.player as LanPlayer
 	target.set_physics_process(false)

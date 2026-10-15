@@ -63,6 +63,7 @@ func run() -> void:
 	room = load("res://scenes/sideview/chapter_1_final_boss_room.tscn").instantiate()
 	root.add_child(room); current_scene = room
 	await process_frame; await process_frame
+	if room.story.comic != null: room.story._close_intro()
 	boss = room.deer; camera = room.get_node("Camera2D")
 	boss.set_physics_process(false); boss.vfx.set_process(false); room.player.set_physics_process(false)
 	room.player.reset_after_map_fall(Vector2(1250, 555))
@@ -137,6 +138,11 @@ func run() -> void:
 	boss.combat_stats.apply_health_damage(boss.combat_stats.health)
 	check(until(func() -> bool: return boss.state == DeerBoss.State.COMPLETE), "fourth-phase defeat completes")
 	check(camera.zoom.is_equal_approx(reference_zoom), "completed encounter retains the wide framing")
+	# A settled story victory deliberately rejects revive. Start a fresh in-memory
+	# attempt before exercising the death/retry camera contract.
+	room.story._settled = false
+	room.story.victory_pending = false
+	memory._config.set_value("progress", String(SaveProgressService.STORY_C1_DEER_DEFEATED), false)
 	room._revive()
 	await process_frame; await process_frame
 	boss.set_physics_process(false)

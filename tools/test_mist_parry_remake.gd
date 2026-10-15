@@ -75,6 +75,9 @@ func run() -> void:
 	root.add_child(room)
 	current_scene = room
 	room.player.set_physics_process(false)
+	check(room.mist_enemies.is_empty(), "Mist stays peaceful before combat stele interaction")
+	save.set_stele_state(room.COMBAT_ID, MinigameStele.SteleState.UNLOCKED)
+	room._combat_stele_requested(room.COMBAT_ID, MinigameStele.SteleKind.COMBAT)
 	for enemy: MistParryEnemy in room.mist_enemies:
 		enemy.set_physics_process(false)
 	check(room.ROOM_SIZE.x == 3840 and room.player.world_max_x == 3792, "Mist shortened from twelve screens to three")
@@ -110,7 +113,9 @@ func run() -> void:
 	key.keycode = KEY_K
 	key.pressed = true
 	Input.parse_input_event(key)
-	await frames(10)
+	for i in 120:
+		await frames(1)
+		if room.player.defense_state == LanPlayer.DefenseState.PARRY_ACTIVE: break
 	key = InputEventKey.new()
 	key.physical_keycode = KEY_K
 	key.keycode = KEY_K

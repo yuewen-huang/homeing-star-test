@@ -71,7 +71,7 @@ func run() -> void:
 	vine = deer.vine_phase
 	room.select_combo(4)
 	check(deer.phase == 4 and room.adapter.action_names().size() == 5 and room.deflect_toggle.visible and room.library_picker.visible and room.library_picker.item_count == DeerVinePhase.LIBRARY.size(), "Vine phase exposes five actions, the combo library and the dummy deflect toggle")
-	check(not room.item_button.visible, "Vine phase shows no item button beside the fifth action")
+	check(room.item_button.visible and deer.contextual_item_id() == ItemCatalog.WIND_SHIELD, "Vine phase exposes the wind-shield skill beside the fifth action")
 	var dummy_x: float = room.dummy.position.x
 
 	# Transform and rise.
@@ -94,7 +94,7 @@ func run() -> void:
 	tick(1)
 	check(vine.step == DeerVinePhase.Step.BLINK and deer.animated_sprite.modulate.a == 0.0, "Key 2 makes the caster vanish on the next frame")
 	check(vine.leaves.size() == 1 and vine.leaves[0].frame == 0 and vine.leaves[0].position == start_navel, "Scatter leaves F00 stay at the caster's navel where it vanished")
-	check(start_navel.y < start.y - 150.0 and is_equal_approx(vine.leaves[0].scale.x, 1.4) and vine.leaves[0].offset == -DeerVinePhase.DeerLeafTeleport.CENTER, "Leaves are centred on the navel (%.0f px above the feet) at 1.4 world scale" % (start.y - start_navel.y))
+	check(start_navel.y < start.y - 150.0 and is_equal_approx(vine.leaves[0].scale.x, 1.4) and vine.leaves[0].offset == -DeerVinePhase.DeerLeafTeleport.frame_center(0), "Visible leaf centre aligns to the body at retained 1.4 effect scale")
 	await snapshot("blink_out")
 	tick(int(DeerVinePhase.BLINK_GAP * 60.0))
 	var landing := deer.position

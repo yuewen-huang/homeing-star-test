@@ -49,6 +49,7 @@ func load_room() -> void:
 	room._stele_shortcut.set_physics_process(false)
 
 func tick() -> void:
+	await physics_frame
 	room._stele_shortcut._physics_process(1.0 / 60.0)
 	room.player._physics_process(1.0 / 60.0)
 
@@ -74,17 +75,17 @@ func run() -> void:
 	check(save.get_stele_state(Chapter1WindRoom.COMBAT_ID) == 0, "Shortcut requires no combat unlock")
 	room.player.reset_after_map_fall(room.puzzle.to_global(room.puzzle.checkpoint_offset))
 	for i in 30:
-		tick()
+		await tick()
 	check(absf(room.player.position.x - 468) < 2 and absf(room.player.position.y - 364) < 5, "Current leaves the puzzle checkpoint and interaction area at rest")
 	room.player.reset_after_map_fall(shortcut.route[0])
 	await capture("shortcut_launch")
 	var health := room.player.combat_stats.health
 	for i in 90:
-		tick()
+		await tick()
 	check(room.player.position.x > 1300 and room.player.position.y < 500, "Ordinary wind physics carries an idle player through the elevated channel")
 	await capture("shortcut_midflight")
 	for i in 210:
-		tick()
+		await tick()
 	var arena := room.get_node("Terrain/Arena") as TerrainPiece
 	check(room.player.position.x >= arena.position.x and room.player.position.x < arena.position.x + arena._walk_length(), "Player arrives inside combat platform's horizontal bounds")
 	check(absf(room.player.position.y - arena.position.y) < 4 and room.player.air_state in [LanPlayer.AirState.GROUNDED, LanPlayer.AirState.LANDING, LanPlayer.AirState.ROLL_LANDING], "Player exits current and lands safely on the combat platform")
@@ -103,7 +104,7 @@ func run() -> void:
 	check(room._stele_shortcut.enabled and room._stele_shortcut.visible, "Serialized puzzle completion restores shortcut on fresh room entry")
 	room.player.reset_after_map_fall(room._stele_shortcut.route[0])
 	for i in 300:
-		tick()
+		await tick()
 	check(absf(room.player.position.y - room.get_node("Terrain/Arena").position.y) < 4, "Restored current remains usable")
 	print("WIND SHORTCUT CHECKS: ", failures, " failures")
 	quit(1 if failures else 0)
