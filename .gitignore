@@ -1,3 +1,6 @@
 artifacts/
 .godot/
 __pycache__/
+
+# Local Python tool dependencies (installed per machine)
+tools_deps/
