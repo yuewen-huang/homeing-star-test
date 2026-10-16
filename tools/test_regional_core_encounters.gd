@@ -70,9 +70,9 @@ func run() -> void:
 	root.add_child(progress)
 	var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
 	var old_invincible := assist.player_invincible
-	var old_prompt := assist.contact_prompt_enabled
+	var old_difficulty := assist.difficulty
 	assist.set_player_invincible(false)
-	assist.set_contact_prompt_enabled(false)
+	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	for region in 4:
 		await select(region)
 		var hp := core.combat_stats.health
@@ -93,20 +93,6 @@ func run() -> void:
 		room.player.defense_state = LanPlayer.DefenseState.PARRY_ACTIVE
 		ring.step(0.01)
 		check(ring.resolved and ring.finished and core.combat_stats.poise == poise and not core.poise_broken, "Protected ring can be parried without breaking core shield")
-		if region == 0:
-			core._parry_pause = 0
-			room.player.finish_defense()
-			assist.set_contact_prompt_enabled(true)
-			ring = ring_at_player()
-			ring.step(0.01)
-			var qte := root.get_node("ParryQTE") as ContactParryQTE
-			check(qte.active and qte.is_owner(ring), "Ring offers the shared contact parry prompt")
-			var paused_clock := battle.clock
-			core._physics_process(0.1)
-			check(is_equal_approx(battle.clock, paused_clock), "Contact prompt freezes all concurrent regional attacks")
-			qte.succeed(ring)
-			check(not qte.active and ring.finished and core.combat_stats.poise == poise, "Assisted ring parry releases prompt without bypassing shield")
-			assist.set_contact_prompt_enabled(false)
 		unlock()
 		core._parry_pause = 0
 		core.red_parry_hold = false
@@ -199,7 +185,7 @@ func run() -> void:
 	progress.free()
 	root.add_child(original)
 	assist.player_invincible = old_invincible
-	assist.set_contact_prompt_enabled(old_prompt)
+	assist.set_difficulty(old_difficulty)
 	check(snapshot == FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH), "Production, preview and retry tests preserve user save bytes")
 	print("REGIONAL CORE ENCOUNTERS: ", checks, " checks, ", failures, " failures")
 	quit(1 if failures else 0)

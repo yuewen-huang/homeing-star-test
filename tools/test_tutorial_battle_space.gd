@@ -58,7 +58,7 @@ func run_test() -> void:
 	var dummy := room.get_node("TrainingDummy") as DamageReceiver2D
 	var camera := room.get_node("BattleCamera") as Camera2D
 	var battle_assist := root.get_node("BattleAssist") as BattleAssistSettingsService
-	battle_assist.set_level(BattleAssistSettingsService.Level.NONE)
+	battle_assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	var expected_timeline_frames := {
 		&"attack_1": 11,
 		&"attack_2": 19,
@@ -253,28 +253,13 @@ func run_test() -> void:
 	if not require(player.ground_knockback_active and not is_zero_approx(player.velocity.x) and is_zero_approx(player.velocity.y), "Attack 2 third segment did not apply ground-only knockback"):
 		return
 
-	battle_assist.set_level(BattleAssistSettingsService.Level.NONE)
-	if not require(battle_assist.get_red_slowdown() == Vector2(1.0, 0.0) and battle_assist.get_normal_slowdown() == Vector2(1.0, 0.0), "Assist level 1 unexpectedly slowed boss attacks"):
-		return
-	battle_assist.set_level(BattleAssistSettingsService.Level.LIGHT)
-	if not require(battle_assist.get_red_slowdown() == Vector2(0.70, 0.25) and battle_assist.get_normal_slowdown() == Vector2(1.0, 0.0), "Assist level 2 timings do not match the design"):
-		return
-	battle_assist.set_level(BattleAssistSettingsService.Level.STRONG)
-	if not require(battle_assist.uses_contact_parry_prompt() and battle_assist.get_red_slowdown() == Vector2(1.0, 0.0) and battle_assist.get_normal_slowdown() == Vector2(1.0, 0.0), "Assist level 3 still uses the obsolete percentage slowdown"):
-		return
-
-	battle_assist.set_level(BattleAssistSettingsService.Level.LIGHT)
+	battle_assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	boss.state = boss.State.ATTACK
 	drive_boss_timeline(boss, &"attack_3", 19)
 	if not require(boss.danger_warning.visible and boss.danger_warning.animation == &"red", "Attack 3 fourth segment did not emit its red warning"):
 		return
 	var red_warning_material := boss.animated_sprite.material as ShaderMaterial
 	if not require(is_zero_approx(float(red_warning_material.get_shader_parameter(&"flash_amount"))), "Red warning tinted the entire boss model"):
-		return
-	if not require(is_equal_approx(boss.combat_timeline.speed_scale, 0.70) and is_equal_approx(boss.assist_slow_remaining, 0.25), "Light assist did not apply the red 70% / 250ms slowdown"):
-		return
-	boss._update_assist_slowdown(0.36)
-	if not require(is_equal_approx(boss.combat_timeline.speed_scale, 1.0), "Red slowdown did not restore the boss animation speed"):
 		return
 
 	player.finish_hit_reaction()
@@ -308,109 +293,6 @@ func run_test() -> void:
 	player.finish_defense()
 	player.position = Vector2(0.0, SideviewMapLayout.GROUND_BASELINE_Y)
 	player.combat_stats.health = player.combat_stats.max_health
-	boss.position = Vector2(100.0, SideviewMapLayout.GROUND_BASELINE_Y)
-	boss.movement_direction = -1.0
-	boss.apply_facing_direction()
-	boss.state = boss.State.ATTACK
-	boss.attack_serial += 1
-	boss.active_hit_segment = -1
-	boss.assisted_segments.clear()
-	boss.attack_hitbox.deactivate()
-	battle_assist.set_level(BattleAssistSettingsService.Level.STRONG)
-	player.air_state = player.AirState.GROUNDED
-	player.attack_state = player.AttackState.DODGE_ATTACK_2X
-	drive_boss_timeline(boss, &"attack_1", 4)
-	if not require(not boss.contact_parry_active and boss.attack_hitbox.monitoring, "Dodge attack 2 startup incorrectly opened the contact parry prompt"):
-		return
-	boss.attack_hitbox.deactivate()
-	boss.active_hit_segment = -1
-	boss.assisted_segments.clear()
-	player.attack_state = player.AttackState.NONE
-	player.air_state = player.AirState.FALLING
-	player.velocity.y = 100.0
-	drive_boss_timeline(boss, &"attack_1", 4)
-	if not require(not boss.contact_parry_active and boss.attack_hitbox.monitoring, "Airborne Lan incorrectly opened the contact parry prompt"):
-		return
-	boss.attack_hitbox.deactivate()
-	boss.active_hit_segment = -1
-	boss.assisted_segments.clear()
-	player.air_state = player.AirState.GROUNDED
-	player.velocity.y = 0.0
-	drive_boss_timeline(boss, &"attack_1", 4)
-	if not require(boss.contact_parry_active and boss.parry_assist_prompt.visible and is_equal_approx(boss.combat_timeline.speed_scale, boss.CONTACT_PARRY_BOSS_SPEED), "Strong assist did not open the contact parry prompt for an overlapping attack"):
-		return
-	if not require(boss.parry_assist_key_label.text == "K" and is_equal_approx(boss.contact_parry_remaining, 1.0), "Contact parry prompt did not show the configured key and one-second timer"):
-		return
-	player.non_parry_action_requested.emit()
-	if not require(not boss.contact_parry_active and boss.attack_hitbox.monitoring and is_equal_approx(boss.combat_timeline.speed_scale, 1.0), "A non-parry action did not immediately dismiss the contact prompt"):
-		return
-	boss.attack_hitbox.deactivate()
-	boss.active_hit_segment = -1
-	boss.assisted_segments.clear()
-	drive_boss_timeline(boss, &"attack_1", 4)
-	if not require(boss.contact_parry_active, "Contact prompt did not reopen for the parry success check"):
-		return
-	var prompt_poise_before: int = int(boss.combat_stats.poise)
-	boss._resolve_contact_parry_success()
-	if not require(not boss.contact_parry_active and player.defense_state == player.DefenseState.PARRY_SUCCESS and boss.combat_stats.poise < prompt_poise_before, "Contact prompt input did not resolve as a guaranteed parry"):
-		return
-
-	boss._update_parry_feedback(boss.PARRY_PAUSE_DURATION)
-	player.finish_defense()
-	player.combat_stats.health = player.combat_stats.max_health
-	boss.attack_serial += 1
-	boss.active_hit_segment = -1
-	boss.assisted_segments.clear()
-	boss.attack_hitbox.deactivate()
-	drive_boss_timeline(boss, &"attack_1", 3)
-	drive_boss_timeline(boss, &"attack_1", 4)
-	if not require(boss.contact_parry_active, "Second attack did not create a fresh contact prompt"):
-		return
-	boss._resolve_contact_parry_timeout()
-	await physics_frame
-	await physics_frame
-	boss.attack_hitbox._physics_process(0.0)
-	if not require(player.combat_stats.health == player.combat_stats.max_health - boss.ATTACK_DAMAGE, "Expired contact prompt did not restore the real attack collision"):
-		return
-
-	player.position.x = 1000.0
-	boss.attack_serial += 1
-	boss.active_hit_segment = -1
-	boss.assisted_segments.clear()
-	boss.attack_hitbox.deactivate()
-	drive_boss_timeline(boss, &"attack_1", 3)
-	drive_boss_timeline(boss, &"attack_1", 4)
-	if not require(not boss.contact_parry_active and boss.attack_hitbox.monitoring, "Out-of-range attack incorrectly opened the contact prompt"):
-		return
-
-	player.position.x = 0.0
-	boss.attack_serial += 1
-	boss.active_hit_segment = -1
-	boss.assisted_segments.clear()
-	boss.attack_hitbox.deactivate()
-	drive_boss_timeline(boss, &"attack_3", 10)
-	if not require(not boss.contact_parry_active and boss.attack_hitbox.monitoring, "Attack 3 second segment incorrectly prompted before its FX reached Lan"):
-		return
-	drive_boss_timeline(boss, &"attack_3", 11)
-	if not require(boss.contact_parry_active, "Attack 3 second segment failed to prompt when its later FX frame swept into Lan"):
-		return
-	boss._cancel_contact_parry_prompt()
-
-	boss.attack_serial += 1
-	boss.active_hit_segment = -1
-	boss.assisted_segments.clear()
-	boss.attack_hitbox.deactivate()
-	drive_boss_timeline(boss, &"attack_3", 13)
-	if not require(not boss.contact_parry_active and boss.attack_hitbox.monitoring, "Attack 3 third segment incorrectly prompted before its FX reached Lan"):
-		return
-	drive_boss_timeline(boss, &"attack_3", 14)
-	if not require(boss.contact_parry_active, "Attack 3 third segment failed to prompt when its later FX frame swept into Lan"):
-		return
-	boss._cancel_contact_parry_prompt()
-
-	var gold_attack := CombatAttackData.new(&"gold_test", boss, 20, 12, 0.0, 0.0, CombatAttackData.DangerType.UNPARRYABLE_DANGER)
-	if not require(not boss._should_start_contact_parry(99, gold_attack), "Gold attack incorrectly allowed the parry prompt"):
-		return
 
 	if not require(
 		boss.has_node("BossStatusHUD")

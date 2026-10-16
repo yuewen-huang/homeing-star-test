@@ -79,7 +79,7 @@ func run() -> void:
 	check(not root.get_node("InventoryScreen").is_processing_unhandled_input(), "Inventory cannot change real loadout in development room")
 	check(room.player.is_ability_locked(SaveProgressService.ABILITY_JUMP) == false, "Preview player has local ability permissions")
 	check(room.player.is_invulnerable(), "Preview player is invulnerable")
-	check(not room.player.can_accept_parry_action(), "Contact QTE disabled for visual preview")
+	check(not room.player.can_accept_parry_action(), "Parry actions disabled for visual preview")
 	check(not room.player.get_node("SkillBar").visible, "Gameplay HUD does not cover the test stage")
 	var deer := room.adapter.boss as DeerBoss
 	check(deer.manual_control, "Deer uses opt-in manual AI mode")
@@ -99,7 +99,7 @@ func run() -> void:
 	room.player.position = deer.position + Vector2(-90, 0)
 	advance(0.3)
 	check(deer.attack_hitbox.attack != null and not painted("light_stomp").is_empty(), "Manual light attack runs its production hitbox and VFX")
-	check(room.player.combat_stats.health == 100 and not root.get_node("ParryQTE").active, "Overlapping light attack cannot damage player or start QTE")
+	check(room.player.combat_stats.health == 100, "Overlapping light attack cannot damage player")
 	await capture("deer_light_impact")
 	key(KEY_1, false)
 	check(deer.state == DeerBoss.State.LIGHT and is_zero_approx(deer._time) and painted("light_stomp").is_empty(), "Logical key fallback restarts cleanly from frame zero")

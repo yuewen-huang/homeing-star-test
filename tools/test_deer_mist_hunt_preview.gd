@@ -103,7 +103,7 @@ func run() -> void:
 	check(rounds.size() == 4 and deer._hunt_round == 5, "Full manual ultimate performs four ambushes then the final stomp")
 	check(attacks.size() == 5 and attacks.values().count(18) == 4 and attacks.values().count(20) == 1, "All five attack segments retain their distinct IDs and intended damage")
 	check(not deer._hunt_active and deer.state == DeerBoss.State.IDLE and not deer.poise_broken, "Uncountered hunt ends in recovery and manual idle")
-	check(room.player.combat_stats.health == 100 and not root.get_node("ParryQTE").active, "Full hunt cannot damage preview player or trigger QTE")
+	check(room.player.combat_stats.health == 100, "Full hunt cannot damage preview player")
 	await snapshot("complete")
 
 	room.ultimate_button.pressed.emit()

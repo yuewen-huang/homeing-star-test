@@ -246,7 +246,7 @@ func run() -> void:
 	deer.reset_phase()
 	check(not deer.wind_ultimate.used, "Retry restores the wind ultimate's once-per-attempt budget")
 	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_player_invincible(false)
-	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_level(BattleAssistSettingsService.Level.NONE)
+	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	deer.position = Vector2(1500, 555)
 	arena.player.reset_after_map_fall(Vector2(1200, 555))
 	deer.start_mist_hunt()
@@ -262,7 +262,7 @@ func run() -> void:
 	deer.position = Vector2(1500, 555)
 	arena.player.reset_after_map_fall(Vector2(1200, 555))
 	deer.start_mist_hunt()
-	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_level(BattleAssistSettingsService.Level.NONE)
+	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	check(until(func() -> bool: return deer.wind_ultimate.stage == DeerWindUltimate.Stage.CHARGE), "Unassisted formal wind hunt reaches its finisher")
 	var remaining_hp: int = arena.player.combat_stats.health
 	var evades := {"count": 0, "age": 0.0}

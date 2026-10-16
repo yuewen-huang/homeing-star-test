@@ -1,5 +1,5 @@
 extends SceneTree
-## Records the real final room's wind phase (phase 3) with the contact QTE OFF and
+## Records the real final room's wind phase (phase 3) on hard difficulty (every parry manual) and
 ## player invincibility OFF, while a scripted player parries every normal/red hit and
 ## back-dodges gold ones. The production AI fights for DURATION seconds (v0.3: improvised
 ## combos, gale dash and pull); every strike the improviser picks is logged.
@@ -53,7 +53,7 @@ func _initialize() -> void:
 
 func setup() -> void:
 	var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
-	assist.set_level(BattleAssistSettingsService.Level.NONE)
+	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	assist.set_player_invincible(false)
 	var original := root.get_node("SaveProgress")
 	root.remove_child(original); original.free()

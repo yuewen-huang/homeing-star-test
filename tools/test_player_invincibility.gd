@@ -50,7 +50,6 @@ func run() -> void:
 	var normal := CombatAttackData.new(&"practice_normal", room.deer, 20, 12, 180, 0)
 	check(room.player.receive_combat_hit(normal) == CombatHitResult.Type.EVADED and room.player.combat_stats.health == room.player.combat_stats.max_health, "failed/ordinary guard stays harmless during invincibility")
 	reset_player()
-	check((root.get_node("ParryQTE") as ContactParryQTE).can_offer(room.player), "invincibility keeps the existing assisted parry prompt available")
 	room.player.defense_state = LanPlayer.DefenseState.PARRY_ACTIVE
 	check(room.player.receive_combat_hit(normal) == CombatHitResult.Type.PARRY_SUCCESS and room.player.defense_state == LanPlayer.DefenseState.PARRY_SUCCESS, "ordinary parry still succeeds during invincibility")
 	reset_player()

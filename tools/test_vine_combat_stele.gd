@@ -16,7 +16,6 @@ var checks := 0
 var failures := 0
 var output := ""
 var assist: BattleAssistSettingsService
-var qte: ContactParryQTE
 
 func _initialize() -> void: call_deferred("run")
 
@@ -74,10 +73,9 @@ func run() -> void:
 	root.add_child(save)
 	assist = root.get_node("BattleAssist") as BattleAssistSettingsService
 	var was_invincible := assist.player_invincible
-	var previous_mode := assist.level
+	var previous_mode := assist.difficulty
 	assist.set_player_invincible(false)
-	assist.set_level(BattleAssistSettingsService.Level.NONE)
-	qte = root.get_node("ParryQTE") as ContactParryQTE
+	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	room = load("res://scenes/sideview/chapter_1_vine_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
@@ -183,24 +181,19 @@ func run() -> void:
 	check(player.combat_stats.health == 100 and pierce.combat_stats.poise == 5 and pierce.state == VineCombatEnemy.State.RECOVERY, "parry interrupts piercing and removes shared 25 poise")
 	hold_attacks()
 	at_stele()
-	assist.set_level(BattleAssistSettingsService.Level.STRONG)
+	player.defense_state = LanPlayer.DefenseState.PARRY_ACTIVE
 	pierce.begin_attack()
-	tick(1.2)
-	check(qte.active and qte.source == pierce and player.contact_qte_paused, "piercing offers the existing K contact assist")
-	qte.succeed(pierce)
-	check(pierce.is_poise_broken() and not qte.active and not player.contact_qte_paused, "assisted parry breaks poise and releases the contact pause")
-	assist.set_level(BattleAssistSettingsService.Level.NONE)
+	for frame in 72:
+		if pierce.is_poise_broken(): break
+		tick(1.0 / 60)
+	check(pierce.is_poise_broken() and player.combat_stats.health == 100, "second parry breaks the piercing vine's poise")
 	tick(2.1)
 	check(not pierce.is_poise_broken() and pierce.combat_stats.poise == 30, "poise recovery resumes attacks after the shared stagger")
 	hold_attacks()
 	at_stele()
-	assist.set_level(BattleAssistSettingsService.Level.STRONG)
 	pierce.begin_attack()
-	tick(1.2)
-	qte.fail(pierce)
-	tick(0.05)
-	check(not qte.active and player.combat_stats.health == 92, "failed contact assist settles the pending piercing contact instead of skipping damage")
-	assist.set_level(BattleAssistSettingsService.Level.NONE)
+	tick(1.25)
+	check(player.combat_stats.health == 92, "an unparried piercing contact deals its damage once")
 	# Max and actual skill damage are available against a broken vine.
 	pierce.receive_hit(1, player.position)
 	pierce.receive_hit(1, player.position)
@@ -271,7 +264,7 @@ func run() -> void:
 	current_scene = null
 	room.free()
 	await process_frame
-	check(not is_instance_valid(player) and not qte.active, "scene exit removes encounter and its contact prompt")
+	check(not is_instance_valid(player), "scene exit removes the encounter")
 	save.set_stele_state(Chapter1VineRoom.COMBAT_ID, 2)
 	room = load("res://scenes/sideview/chapter_1_vine_room.tscn").instantiate()
 	root.add_child(room)
@@ -281,7 +274,7 @@ func run() -> void:
 	current_scene = null
 	room.free()
 	assist.set_player_invincible(was_invincible)
-	assist.set_level(previous_mode)
+	assist.set_difficulty(previous_mode)
 	check(FileAccess.file_exists(SaveProgressService.SAVE_PATH) == save_exists and (not save_exists or FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) == saved), "all checks preserve the real story save bytes")
 	print("VINE COMBAT STELE: ", checks, " checks, ", failures, " failures")
 	quit(1 if failures else 0)

@@ -133,7 +133,7 @@ func run() -> void:
 				if contact.hitbox.hit_targets.has(room.player.get_instance_id()): break
 			check(contact.hitbox.hit_targets.has(room.player.get_instance_id()), label + " moving thin vine reaches the real player hurtbox")
 			var expected := room.player.combat_stats.max_health - (0 if dodging else 15)
-			check(room.player.combat_stats.health == expected and not (root.get_node("ParryQTE") as ContactParryQTE).active, label + (" roll evades real gold damage" if dodging else " real gold contact deals 15 without a parry prompt"))
+			check(room.player.combat_stats.health == expected, label + (" roll evades real gold damage" if dodging else " real gold contact deals 15"))
 			for i in 150: contact.step(1.0 / 60.0)
 			check(room.player.combat_stats.health == expected and contact.finished, label + " two vines resolve once and end without lingering damage")
 			vine.strikes.erase(contact); contact.queue_free()

@@ -178,7 +178,7 @@ func run_test() -> void:
 
 	var assisted_roll_player := spawn_player(room, "AssistedRoll")
 	await process_frame
-	if not require(assisted_roll_player.can_accept_parry_action() == assisted_roll_player.can_start_parry(), "Idle QTE eligibility differs from manual K"):
+	if not require(assisted_roll_player.can_accept_parry_action() == assisted_roll_player.can_start_parry(), "Idle chain-parry eligibility differs from manual K"):
 		return
 	for blocked_air_state in [
 		assisted_roll_player.AirState.LANDING,
@@ -189,20 +189,20 @@ func run_test() -> void:
 		assisted_roll_player.AirState.WALL_SLIDING,
 	]:
 		assisted_roll_player.air_state = blocked_air_state
-		if not require(not assisted_roll_player.can_accept_parry_action(), "A state that rejects manual K allowed the assisted parry prompt"):
+		if not require(not assisted_roll_player.can_accept_parry_action(), "A state that rejects manual K allowed an assisted parry"):
 			return
 	assisted_roll_player.air_state = assisted_roll_player.AirState.GROUNDED
 	assisted_roll_player.attack_state = assisted_roll_player.AttackState.DODGE_ATTACK_2X
-	if not require(not assisted_roll_player.can_accept_parry_action(), "Dodge attack 2 startup incorrectly allowed the assisted parry prompt"):
+	if not require(not assisted_roll_player.can_accept_parry_action(), "Dodge attack 2 startup incorrectly allowed an assisted parry"):
 		return
 	assisted_roll_player.attack_state = assisted_roll_player.AttackState.NONE
 	assisted_roll_player.start_attack_1x()
-	if not require(assisted_roll_player.can_accept_parry_action() == assisted_roll_player.can_interrupt_ground_action_with_parry(), "Ground attack QTE eligibility differs from manual K interrupt"):
+	if not require(assisted_roll_player.can_accept_parry_action() == assisted_roll_player.can_interrupt_ground_action_with_parry(), "Ground attack chain-parry eligibility differs from manual K interrupt"):
 		return
 	assisted_roll_player.finish_ground_attack()
 	assisted_roll_player.start_roll_landing(1.0)
 	assisted_roll_player.animated_sprite.frame = 4
-	var assisted_result := assisted_roll_player.resolve_assisted_parry(make_attack(source, &"assisted_roll"))
+	var assisted_result := assisted_roll_player.resolve_chain_parry(make_attack(source, &"assisted_roll"))
 	if not require(assisted_result == CombatHitResult.Type.PARRY_SUCCESS, "Assisted parry did not resolve from roll landing"):
 		return
 	if not require(
@@ -211,14 +211,6 @@ func run_test() -> void:
 		and assisted_roll_player.defense_state == assisted_roll_player.DefenseState.PARRY_SUCCESS,
 		"Assisted parry did not fully exit the interrupted roll landing",
 	):
-		return
-	Input.action_press(&"parry")
-	if not require(not assisted_roll_player.read_parry_input(), "The QTE key leaked into the normal parry input path"):
-		Input.action_release(&"parry")
-		return
-	Input.action_release(&"parry")
-	assisted_roll_player.read_parry_input()
-	if not require(not assisted_roll_player.suppress_parry_until_released, "Normal parry input remained suppressed after K was released"):
 		return
 	assisted_roll_player.finish_defense()
 	if not require(assisted_roll_player.can_start_ground_attack() and assisted_roll_player.can_start_parry(), "Assisted parry recovery left ground actions locked"):
@@ -234,7 +226,7 @@ func run_test() -> void:
 	await process_frame
 	assisted_landing_player.air_state = assisted_landing_player.AirState.LANDING
 	assisted_landing_player.animated_sprite.play(&"land")
-	assisted_landing_player.resolve_assisted_parry(make_attack(source, &"assisted_landing"))
+	assisted_landing_player.resolve_chain_parry(make_attack(source, &"assisted_landing"))
 	assisted_landing_player.finish_defense()
 	if not require(
 		assisted_landing_player.air_state == assisted_landing_player.AirState.GROUNDED

@@ -257,22 +257,22 @@ func run_test() -> void:
 	player.attack_state = player.AttackState.NONE
 	player.air_state = player.AirState.GROUNDED
 
-	if not require(player.can_accept_parry_action(), "Idle ground state must accept K and QTE"):
+	if not require(player.can_accept_parry_action(), "Idle ground state must accept K"):
 		return
 	player.start_attack_1x()
-	if not require(player.can_accept_parry_action(), "Interruptible ground attack must accept K and QTE"):
+	if not require(player.can_accept_parry_action(), "Interruptible ground attack must accept K"):
 		return
 	player.finish_ground_attack()
 	player.start_back_dodge()
-	if not require(not player.can_accept_parry_action(), "Back dodge must reject K and QTE"):
+	if not require(not player.can_accept_parry_action(), "Back dodge must reject K"):
 		return
 	player.ground_action_state = player.GroundActionState.NONE
 	player.attack_state = player.AttackState.DODGE_ATTACK_2X
-	if not require(not player.can_accept_parry_action(), "Dodge attack 2 must reject K and QTE"):
+	if not require(not player.can_accept_parry_action(), "Dodge attack 2 must reject K"):
 		return
 	player.attack_state = player.AttackState.NONE
 	player.air_state = player.AirState.FALLING
-	if not require(not player.can_accept_parry_action(), "Airborne state must reject K and QTE"):
+	if not require(not player.can_accept_parry_action(), "Airborne state must reject K"):
 		return
 
 	print("PASS: Lan migration frame, event, effect, and parry contracts are frozen")

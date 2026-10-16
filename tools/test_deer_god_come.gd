@@ -71,7 +71,7 @@ func run() -> void:
 	if not is_instance_valid(statue): quit(1); return
 	check(statue.sprite.scale.is_equal_approx(Vector2.ONE * 0.84) and statue.sprite.hframes == 1 and statue.sprite.texture.get_width() == int(statue.data.canvas[0]), "only unchanged F00 is exported at the retained 0.84 world scale")
 	check(absf(statue.position.x-room.dummy.position.x) < 1, "statue locks onto the target ground point")
-	check(deer.warning_kind == &"gold" and not statue.parryable(), "gold warning and no parry or contact QTE")
+	check(deer.warning_kind == &"gold" and not statue.parryable(), "gold warning and no parry")
 	await snapshot("01_warning")
 	check(until(func() -> bool: return statue.rise_progress() >= 0.25), "statue rises gradually")
 	check(statue.sprite.frame == 0 and statue.sprite.position.y > statue.pivot.y * DeerGodCome.WORLD_SCALE * 0.5, "rise translates full pose upward without changing its scale")
@@ -129,7 +129,6 @@ func run() -> void:
 	player.defense_state = LanPlayer.DefenseState.PARRY_NOTHING_EARLY
 	effect.step(DeerGodCome.RISE_TIME)
 	check(player.combat_stats.health == health - DeerGodCome.FLASH_DAMAGE, "ordinary guard cannot halve the flash damage")
-	check(not (root.get_node("ParryQTE") as ContactParryQTE).active, "gold finale never offers assisted parry")
 	effect.cancel(); effect.queue_free()
 	deer.combat_target = room.player
 	player.queue_free()

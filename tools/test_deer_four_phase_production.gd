@@ -15,7 +15,6 @@ var boss: DeerBoss
 var player: LanPlayer
 var vine: DeerVinePhase
 var assist: BattleAssistSettingsService
-var qte: ContactParryQTE
 var checks := 0
 var failures := 0
 var completed: Array[int] = []
@@ -57,9 +56,8 @@ func reset_vine() -> void:
 		room.story._settled = false
 		room.story.victory_pending = false
 		room._save._config.set_value("progress", String(SaveProgressService.STORY_C1_DEER_DEFEATED), false)
-	qte.cancel()
 	assist.set_player_invincible(true)
-	assist.set_level(BattleAssistSettingsService.Level.NONE)
+	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	reset_player()
 	boss.phase = 4
 	boss.reset_phase()
@@ -75,7 +73,7 @@ func contact(kind: StringName) -> DeerVineStrike:
 	# Step until the vine first reaches the player (a wiper reaches late in its sweep).
 	for i in 120:
 		strike.step(1.0 / 60)
-		if strike.finished or strike.snapped or strike.hitbox.hit_targets.has(player.get_instance_id()) or qte.active: break
+		if strike.finished or strike.snapped or strike.hitbox.hit_targets.has(player.get_instance_id()): break
 	return strike
 func run() -> void:
 	if not OS.get_cmdline_user_args().is_empty():
@@ -83,8 +81,7 @@ func run() -> void:
 		DirAccess.make_dir_recursive_absolute(output)
 	var saved := FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH)
 	assist = root.get_node("BattleAssist") as BattleAssistSettingsService
-	qte = root.get_node("ParryQTE") as ContactParryQTE
-	assist.set_level(BattleAssistSettingsService.Level.NONE)
+	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	var original := root.get_node("SaveProgress")
 	root.remove_child(original); original.free()
 	var memory := MemoryProgress.new(); memory.name = "SaveProgress"; root.add_child(memory)
@@ -189,18 +186,8 @@ func run() -> void:
 	tick(12, 0.25)
 	check(is_equal_approx(vine._time - before, 0.05), "vine casting advances on the quarter-speed action clock")
 	reset_vine()
-	assist.set_level(BattleAssistSettingsService.Level.STRONG)
-	var prompted := contact(&"pierce")
-	check(qte.active and qte.source == prompted, "vine contact uses the complete existing assisted parry prompt")
-	var at: float = prompted._age
-	tick(30)
-	check(prompted._age == at, "assisted prompt pauses caster and vine together")
-	qte.succeed(prompted)
-	check(prompted.snapped and not qte.active and vine.shield == 2, "assisted success snaps the real vine and cracks the armour")
-	reset_vine()
-	assist.set_level(BattleAssistSettingsService.Level.STRONG)
 	var gold := contact(&"ground_lash")
-	check(not qte.active and gold.hitbox.hit_targets.has(player.get_instance_id()) and not gold.snapped, "gold ground lash offers no parry prompt and cannot be snapped")
+	check(gold.hitbox.hit_targets.has(player.get_instance_id()) and not gold.snapped, "gold ground lash cannot be snapped")
 	reset_vine()
 	assist.set_player_invincible(false)
 	player.defense_state = LanPlayer.DefenseState.PARRY_NOTHING_EARLY
@@ -241,11 +228,10 @@ func run() -> void:
 	check(boss.phase == 1 and not vine.human and vine.step == DeerVinePhase.Step.NONE and player.combat_stats.health == player.combat_stats.max_health, "death in vine phase retries from mist with full health and no human state")
 	check(music.current_music_path == Chapter1Music.FINAL_BOSS.resource_path and music.music_player.playing, "fourth-phase death restores Forest BOSS 1 on retry")
 	reset_vine()
-	assist.set_level(BattleAssistSettingsService.Level.STRONG)
-	var abandoned := contact(&"curtain")
-	check(qte.active, "retry cleanup fixture has an active vine prompt")
+	var abandoned := vine.spawn_strike(&"curtain", player.position.x, player.position.x - 300.0, 0.0, player.global_position + Vector2(-300, -250))
+	check(not abandoned.finished, "retry cleanup fixture has a pending vine")
 	room._revive()
-	check(not qte.active and abandoned.finished and vine.strikes.is_empty() and vine.leaves.is_empty(), "retry immediately clears vine prompts, pending vine damage and leaves")
+	check(abandoned.finished and vine.strikes.is_empty() and vine.leaves.is_empty(), "retry immediately clears pending vine damage and leaves")
 	await process_frame; await process_frame
 	boss.set_physics_process(false)
 	check(FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) == saved, "production regression does not modify the user's story progress")

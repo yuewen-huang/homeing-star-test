@@ -65,7 +65,7 @@ func run() -> void:
 	check(not deer.vfx.gold_warning.visible and deer.position == start, "Gold flash ends before the charge and never holds its last frame")
 	tick(17)
 	check(deer.position.x < start.x and is_instance_valid(deer.vfx._painted_rush), "Rush moves physically with the authored painted rush")
-	check(deer.attack_hitbox.attack.danger_type == CombatAttackData.DangerType.UNPARRYABLE_DANGER, "Rush is gold and cannot offer parry QTE")
+	check(deer.attack_hitbox.attack.danger_type == CombatAttackData.DangerType.UNPARRYABLE_DANGER, "Rush is gold and cannot be parried")
 	check(room.dummy.contacts.size() == 1 and room.dummy.contacts[0].damage == 18, "Dummy samples exactly one 18-damage rush contact")
 	check(deer.vfx._trails.is_empty(), "Regular charge no longer stacks full-body ghosts")
 	await snapshot("rush")

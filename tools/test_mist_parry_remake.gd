@@ -17,7 +17,6 @@ var failures := 0
 var save: TestProgress
 var room: Node2D
 var user_save: PackedByteArray
-var qte: ContactParryQTE
 
 func _initialize() -> void:
 	user_save = FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH)
@@ -32,25 +31,18 @@ func frames(n: int) -> void:
 	for i in n:
 		await physics_frame
 
-func press_k() -> void:
-	var key := InputEventKey.new()
-	key.physical_keycode = KEY_K
-	key.keycode = KEY_K
-	key.pressed = true
-	root.push_input(key)
-	key = InputEventKey.new()
-	key.physical_keycode = KEY_K
-	key.keycode = KEY_K
-	root.push_input(key)
-	await frames(2)
+## Lets the charging hitbox meet Lan's open parry window on real physics frames.
+func settle_parry() -> void:
+	await frames(3)
 
+## Lan holds an open parry window while the enemy charges into her.
 func prepare_contact(enemy: MistParryEnemy) -> void:
-	qte.cancel()
 	var target: LanPlayer = room.player
 	target.finish_defense()
 	target.combat_stats.restore_health()
 	target.resync_held_input_state()
 	target.play_idle()
+	target.start_parry(true)
 	enemy.global_position = target.global_position + Vector2(24, 0)
 	enemy.floor_y = target.position.y
 	enemy._begin_warning()
@@ -67,8 +59,7 @@ func run() -> void:
 	save = TestProgress.new()
 	save.name = "SaveProgress"
 	root.add_child(save)
-	qte = root.get_node("ParryQTE") as ContactParryQTE
-	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_level(BattleAssistSettingsService.Level.STRONG)
+	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	var transition := root.get_node("SceneTransition") as SceneTransitionService
 	transition.set_scene_entry_position(Vector2(1800, 555))
 	room = load("res://scenes/sideview/chapter_1_mist_room.tscn").instantiate()
@@ -101,8 +92,7 @@ func run() -> void:
 		check(room.mist_enemies.all(func(e): return e.state == MistAmbusher.State.WARNING), "Three simultaneous appearances allowed")
 	check(room.player.position == initial and sides.size() == 2 and waits.size() > 1, "Random delays and left/right spawns without moving")
 
-		# Physical K input also works without assisted contact prompts.
-	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_level(BattleAssistSettingsService.Level.NONE)
+	# Physical K input parries a real charge.
 	var manual := MistParryEnemy.new()
 	manual.setup(room.player, MistAmbusher.Species.BOAR, room.player.position + Vector2(24,0))
 	room.add_child(manual)
@@ -123,15 +113,14 @@ func run() -> void:
 	manual._begin_warning()
 	manual._begin_charge()
 	await frames(3)
-	check(manual.parry_count == 1 and manual.state == MistAmbusher.State.RECOVERY, "Physical K manually parries without QTE assistance")
+	check(manual.parry_count == 1 and manual.state == MistAmbusher.State.RECOVERY, "Physical K manually parries a real charge")
 	manual.queue_free()
 	room.player.set_physics_process(false)
 	room.player.finish_defense()
 	room.player.resync_held_input_state()
 	await frames(10)
-	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_level(BattleAssistSettingsService.Level.STRONG)
 
-	# All standard damage interfaces are immune, including while charging / in QTE.
+	# All standard damage interfaces are immune, including while charging.
 	var defeated_counts := {}
 	for enemy: MistParryEnemy in room.mist_enemies:
 		defeated_counts[enemy.species] = 0
@@ -143,12 +132,11 @@ func run() -> void:
 		enemy.receive_skill_hit(SkillHit.new(), room.player.position)
 		check(enemy.health == before and enemy.parry_count == 0 and enemy.state == MistAmbusher.State.WARNING, "J / skill / ultimate damage cannot interrupt or hurt species %d" % enemy.species)
 		prepare_contact(enemy)
-		check(enemy.state == MistAmbusher.State.QTE and qte.is_owner(enemy), "Real contact opens K prompt")
 		enemy.receive_hit(9999, room.player.position)
-		check(qte.is_owner(enemy) and enemy.health == before, "Normal damage does not cancel K prompt")
+		check(enemy.state == MistAmbusher.State.CHARGE and enemy.health == before, "Normal damage does not interrupt a charge")
 		var attack: CombatAttackData = enemy.attack_data
+		await settle_parry()
 		var stopped_at := enemy.position
-		await press_k()
 		check(enemy.parry_count == 1 and enemy.health == before - 1 and enemy.state == MistAmbusher.State.RECOVERY, "Actual K counts one parry and stops species %d" % enemy.species)
 		enemy.on_attack_parried(attack, room.player.position)
 		enemy._on_attack_hit_resolved(room.player, CombatHitResult.Type.PARRY_SUCCESS)
@@ -159,7 +147,7 @@ func run() -> void:
 		check(enemy.state == MistAmbusher.State.HIDDEN and not enemy.animated_sprite.visible and enemy.parry_count == 1, "Disappears in place and retains cumulative parries")
 
 	# A missed attack must continue past its original duration and vanish off-view.
-	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_level(BattleAssistSettingsService.Level.NONE)
+	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	for enemy: MistParryEnemy in room.mist_enemies:
 		enemy.position = room.player.position + Vector2(200, 0)
 		enemy.floor_y = 555
@@ -176,30 +164,12 @@ func run() -> void:
 		check(enemy.state == MistAmbusher.State.HIDDEN and enemy._outside_visibility() and enemy.parry_count == before, "Miss disappears outside visibility without counting")
 		room.player.position.y = 555
 
-	# Two overlapping contacts share one prompt and can be parried sequentially.
-	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_level(BattleAssistSettingsService.Level.STRONG)
-	var first: MistParryEnemy = room.mist_enemies[0]
-	var second: MistParryEnemy = room.mist_enemies[1]
-	prepare_contact(first)
-	second.position = room.player.position + Vector2(-24, 0)
-	second._begin_warning()
-	second._begin_charge()
-	second._physics_process(0.016)
-	check(qte.is_owner(first) and second.state == MistAmbusher.State.CHARGE and not second.attack_hitbox.monitoring, "Overlap preserves one prompt and blocks other hitbox")
-	await press_k()
-	room.player.finish_defense()
-	second._physics_process(0.016)
-	check(qte.is_owner(second), "Second overlapping enemy can offer next K prompt")
-	await press_k()
-	finish_appearance(first)
-	finish_appearance(second)
-
 	save.fail_writes = true
 	for enemy: MistParryEnemy in room.mist_enemies:
 		var target: int = MistParryEnemy.REQUIRED_PARRIES[enemy.species]
 		while enemy.parry_count < target:
 			prepare_contact(enemy)
-			await press_k()
+			await settle_parry()
 			if enemy.parry_count == target:
 				check(enemy.state == MistAmbusher.State.RECOVERY and defeated_counts[enemy.species] == 0, "Final K pauses before reporting defeat")
 			finish_appearance(enemy)

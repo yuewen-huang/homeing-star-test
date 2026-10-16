@@ -26,19 +26,7 @@ func attack(danger: CombatAttackData.DangerType) -> CombatAttackData:
 
 func run() -> void:
 	var saved := FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) if FileAccess.file_exists(SaveProgressService.SAVE_PATH) else PackedByteArray()
-	var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
 	var feedback := root.get_node("CombatFeedback") as CombatFeedbackService
-
-	# F11 switch (F10 already clears the save and must stay untouched).
-	check(assist.contact_prompt_enabled and assist.uses_contact_parry_prompt(), "Contact prompt is on by default")
-	var clear_key := InputEventKey.new(); clear_key.keycode = KEY_F10; clear_key.pressed = true
-	assist._input(clear_key)
-	check(assist.contact_prompt_enabled, "F10 does not touch the contact prompt")
-	var key := InputEventKey.new(); key.keycode = KEY_F11; key.pressed = true
-	assist._input(key)
-	check(not assist.contact_prompt_enabled and not assist.uses_contact_parry_prompt() and assist._prompt_label.text.contains("F11 开启"), "F11 turns the contact prompt off and the HUD says so")
-	assist._input(key)
-	check(assist.contact_prompt_enabled and assist._prompt_label.text.contains("F11 关闭"), "F11 turns it back on")
 
 	room = load("res://scenes/dev/boss_development_room.tscn").instantiate()
 	root.add_child(room); current_scene = room

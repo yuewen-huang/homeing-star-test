@@ -133,7 +133,7 @@ func run() -> void:
 	root.remove_child(original); original.free()
 	var memory := MemoryProgress.new(); memory.name = "SaveProgress"; root.add_child(memory)
 	var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
-	assist.set_player_invincible(true); assist.set_level(BattleAssistSettingsService.Level.NONE)
+	assist.set_player_invincible(true); assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	check(DeerVineCurtainArt.data().frame_count == 14 and DeerVineCurtainArt.fade_start() == 11 and is_equal_approx(DeerVineCurtainArt.fade_time(),0.3), "approved four clips have 14 native frames and a three-frame 300ms dissolution")
 	await verify_room(false)
 	await verify_room(true)

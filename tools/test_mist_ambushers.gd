@@ -107,7 +107,7 @@ func run_tests() -> void:
 		check(enemy._rearmed, "Leaving trigger margin does not rearm")
 		for direction in [-1.0,1.0]:
 			await new_arena()
-			(root.get_node("BattleAssist") as BattleAssistSettingsService).set_level(BattleAssistSettingsService.Level.NONE)
+			(root.get_node("BattleAssist") as BattleAssistSettingsService).set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 			enemy = spawn_enemy(kind, direction * 25.0)
 			prepare_charge(enemy)
 			await settle()
@@ -130,111 +130,13 @@ func run_tests() -> void:
 			await settle()
 			check(player.combat_stats.health == player.combat_stats.max_health, "Roll invulnerability did not evade charge")
 
-			await new_arena()
-			(root.get_node("BattleAssist") as BattleAssistSettingsService).set_level(BattleAssistSettingsService.Level.STRONG)
-			enemy = spawn_enemy(kind, direction * 25.0)
-			prepare_charge(enemy)
-			enemy._physics_process(0.016)
-			check(enemy.state == MistAmbusher.State.QTE and enemy.qte_panel.visible and not enemy.attack_hitbox.monitoring, "Contact QTE did not intercept hit")
-			enemy.resolve_qte_success()
-			await settle()
-			check(player.combat_stats.health == player.combat_stats.max_health and enemy.state == MistAmbusher.State.RECOVERY and not enemy.qte_panel.visible, "QTE success did not parry safely")
-
-			await new_arena()
-			enemy = spawn_enemy(kind, direction * 25.0)
-			prepare_charge(enemy)
-			enemy._physics_process(0.016)
-			enemy.contact_qte.tick(1.1)
-			await settle()
-			check(player.combat_stats.health < player.combat_stats.max_health, "QTE timeout did not resume collision")
-
-			await new_arena()
-			enemy = spawn_enemy(kind, direction * 25.0)
-			prepare_charge(enemy)
-			enemy._physics_process(0.016)
-			player.non_parry_action_requested.emit()
-			player.start_back_dodge(-direction)
-			await settle()
-			check(player.combat_stats.health == player.combat_stats.max_health and not enemy.qte_panel.visible, "Roll during QTE failed to evade")
-
-		# Real viewport input covers keys absent from the player's action signal.
-		for key in [KEY_X, KEY_A, KEY_J, KEY_L, KEY_K]:
-			await new_arena()
-			enemy = spawn_enemy(kind, 25.0)
-			prepare_charge(enemy)
-			enemy._physics_process(0.016)
-			var event := InputEventKey.new()
-			event.physical_keycode = key
-			event.keycode = key
-			event.pressed = false
-			root.push_input(event)
-			check(enemy.state == MistAmbusher.State.QTE, "Key release incorrectly cancelled QTE")
-			event.pressed = true
-			event.echo = true
-			root.push_input(event)
-			check(enemy.state == MistAmbusher.State.QTE, "Held-key echo incorrectly cancelled QTE")
-			event.echo = false
-			root.push_input(event)
-			check(not enemy.qte_panel.visible and not enemy.contact_qte.active, "Pressed key did not immediately close QTE")
-			if key == KEY_L:
-				player.start_back_dodge(-1.0)
-			await settle()
-			if key in [KEY_K, KEY_L]:
-				check(player.combat_stats.health == player.combat_stats.max_health, "K parry / L roll took damage")
-			else:
-				check(player.combat_stats.health == player.combat_stats.max_health - enemy.attack_data.health_damage, "Wrong key did not settle exactly one normal hit")
-
 		await new_arena()
 		enemy = spawn_enemy(kind)
 		prepare_charge(enemy)
 		enemy._physics_process(0.016)
 		enemy.receive_hit(enemy.health, player.global_position)
 		await settle()
-		check(enemy.state == MistAmbusher.State.DEAD and not enemy.attack_hitbox.monitoring and not enemy.contact_qte.active, "Death did not cancel attack/QTE")
-
-	# Reproduce movement held BEFORE contact: no fresh direction-key event occurs in QTE.
-	for kind in [MistAmbusher.Species.BOAR, MistAmbusher.Species.RAT, MistAmbusher.Species.BEE]:
-		for direction in [-1.0, 1.0]:
-			for outcome in ["timeout", "K", "X", "external"]:
-				await new_arena()
-				var action := &"ui_left" if direction < 0 else &"ui_right"
-				Input.action_press(action)
-				player.input_direction = direction
-				player.latest_pressed_direction = direction
-				player.play_run()
-				player.set_physics_process(true)
-				var running_start := player.position
-				for i in range(4):
-					await physics_frame
-				check(absf(player.position.x - running_start.x) > 1.0, "Held direction did not reproduce real running")
-				var running_enemy := spawn_enemy(kind, direction * 25.0)
-				prepare_charge(running_enemy)
-				running_enemy._physics_process(0.016)
-				check(running_enemy.state == MistAmbusher.State.QTE and player.contact_qte_paused, "Running contact did not pause Lan")
-				var held_position := player.position
-				var held_frame := player.animated_sprite.frame
-				for i in range(12):
-					await physics_frame
-				check(player.position.is_equal_approx(held_position) and player.animated_sprite.frame == held_frame, "Held direction escaped QTE / animation kept advancing")
-				check(running_enemy.contact_qte.active, "Holding the existing direction wrongly dismissed QTE")
-				if outcome == "timeout":
-					running_enemy.contact_qte.tick(1.1)
-				elif outcome == "external":
-					player.position.x += 1000.0
-					running_enemy.contact_qte.tick(0.016)
-				else:
-					var event := InputEventKey.new()
-					event.physical_keycode = KEY_K if outcome == "K" else KEY_X
-					event.keycode = event.physical_keycode
-					event.pressed = true
-					root.push_input(event)
-				check(not running_enemy.contact_qte.active and not player.contact_qte_paused and running_enemy.state != MistAmbusher.State.QTE and running_enemy.animated_sprite.is_playing(), "QTE exit left Lan / enemy paused")
-				await settle()
-				if outcome in ["timeout", "X"]:
-					check(player.combat_stats.health < player.combat_stats.max_health, "Running QTE failure did not restore ordinary damage")
-				elif outcome == "K":
-					check(player.combat_stats.health == player.combat_stats.max_health, "Running QTE K failed parry")
-				Input.action_release(action)
+		check(enemy.state == MistAmbusher.State.DEAD and not enemy.attack_hitbox.monitoring, "Death did not cancel attack")
 
 	for kind in [MistAmbusher.Species.BOAR, MistAmbusher.Species.RAT, MistAmbusher.Species.BEE]:
 		await new_arena()
@@ -245,35 +147,18 @@ func run_tests() -> void:
 		var locked_enemy := spawn_enemy(kind,25.0)
 		prepare_charge(locked_enemy)
 		locked_enemy._physics_process(0.016)
-		check(locked_enemy.state == MistAmbusher.State.CHARGE and not locked_enemy.contact_qte.active and not locked_enemy.qte_panel.visible, "Locked K opened mist QTE")
-		locked_enemy._begin_qte()
-		check(not locked_enemy.contact_qte.active, "Direct request bypassed locked K")
+		check(locked_enemy.state == MistAmbusher.State.CHARGE, "Locked K interrupted the charge")
 		await settle()
 		check(player.combat_stats.health < player.combat_stats.max_health, "Locked K suppressed ordinary damage")
 		story._config.set_value(SaveProgressService.PROGRESS_SECTION, String(SaveProgressService.STORY_MASTER_PARRY_LEARNED), true)
 		player.finish_hit_reaction()
 		check(not player.is_ability_locked(SaveProgressService.ABILITY_PARRY), "Story milestone did not unlock K")
-		locked_enemy._begin_warning()
-		locked_enemy._begin_charge()
-		locked_enemy._begin_qte()
-		check(locked_enemy.contact_qte.is_owner(locked_enemy), "Story unlock did not enable QTE")
 		locked_enemy._begin_recovery()
 
-	await new_arena()
-	var first := spawn_enemy(MistAmbusher.Species.BOAR,25.0)
-	var second := spawn_enemy(MistAmbusher.Species.RAT,-25.0)
-	prepare_charge(first)
-	prepare_charge(second)
-	first._physics_process(0.016)
-	second._physics_process(0.016)
-	await settle()
-	check(first.state == MistAmbusher.State.QTE and second.state == MistAmbusher.State.CHARGE and not second.contact_qte.is_owner(second) and player.combat_stats.health == player.combat_stats.max_health, "Overlapping QTEs or damage behind another prompt")
-	first.resolve_qte_success()
-	await settle()
 	arena.queue_free()
 	await process_frame
 	await test_full_room_ambush()
-	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_level(BattleAssistSettingsService.Level.STRONG)
+	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_difficulty(BattleAssistSettingsService.Difficulty.NORMAL)
 	Engine.time_scale = 1.0
 	for i in range(10):
 		await physics_frame
@@ -281,7 +166,7 @@ func run_tests() -> void:
 	(root.get_node("CombatFeedback") as CombatFeedbackService).impact_player.stop()
 	await process_frame
 	if failures == 0:
-		print("PASS: held running / frozen position and animation / K, wrong key, timeout and external displacement release both actors; three species / both directions; concealment, 400px audio warning, committed attack, rearm, one hit, manual defense, roll, QTE success/timeout/roll, death and prompt arbitration")
+		print("PASS: three species / both directions; concealment, 400px audio warning, committed attack, rearm, one hit, manual defense, roll, locked K and death")
 	quit(1 if failures else 0)
 
 
@@ -302,8 +187,7 @@ func capture_gameplay() -> void:
 	for enemy: MistAmbusher in room.mist_enemies:
 		enemy.set_physics_process(false)
 		enemy.attack_hitbox.deactivate()
-	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_level(BattleAssistSettingsService.Level.STRONG)
-	for sample in ["hidden", "boar", "boar_qte", "rat", "bee", "bee_qte"]:
+	for sample in ["hidden", "boar", "rat", "bee"]:
 		for other: MistAmbusher in room.mist_enemies:
 			other._hide_in_bush()
 		var index := 2
@@ -318,21 +202,15 @@ func capture_gameplay() -> void:
 		room.camera.reset_smoothing()
 		room.camera.force_update_scroll()
 		if sample != "hidden":
-			enemy.position = target.position + Vector2(25.0 if sample.ends_with("qte") else 70.0, -22.0 if index == 2 else 0.0)
+			enemy.position = target.position + Vector2(70.0, -22.0 if index == 2 else 0.0)
 			enemy._begin_warning()
 			enemy._begin_charge()
-			if sample.ends_with("qte"):
-				enemy._physics_process(0.016)
-				check(enemy.state == MistAmbusher.State.QTE, "Rendered contact must show QTE")
-			else:
-				enemy.attack_hitbox.deactivate()
-				enemy.animated_sprite.pause()
-				enemy.animated_sprite.frame = 2
+			enemy.attack_hitbox.deactivate()
+			enemy.animated_sprite.pause()
+			enemy.animated_sprite.frame = 2
 			enemy._update_visibility()
 		for i in range(5):
 			await process_frame
-		if sample.ends_with("qte"):
-			enemy.contact_qte._update_prompt()
 		await RenderingServer.frame_post_draw
 		var result := root.get_texture().get_image().save_png(output.path_join(sample + ".png"))
 		check(result == OK, "Gameplay capture failed")
@@ -364,13 +242,13 @@ func test_full_room_ambush() -> void:
 	check(boar.state == MistAmbusher.State.WARNING and boar.warning_count == 1, "Stationary player triggers random warning")
 	boar._physics_process(boar.warning_duration + 0.01)
 	check(boar.state == MistAmbusher.State.CHARGE, "Real map warning launches charge")
+	target.start_parry(true)
 	for i in range(120):
 		boar._physics_process(1.0 / 60)
-		if boar.state == MistAmbusher.State.QTE:
+		await physics_frame
+		if boar.state != MistAmbusher.State.CHARGE:
 			break
-	check(boar.state == MistAmbusher.State.QTE and boar.qte_panel.visible, "Real charge offers contact QTE")
-	check(target.combat_stats.health == target.combat_stats.max_health, "Charge cannot damage player before QTE")
-	boar.resolve_qte_success()
+	check(target.combat_stats.health == target.combat_stats.max_health, "Parried charge cannot damage player")
 	check(boar.state == MistAmbusher.State.RECOVERY and boar.parry_count == 1, "Real map K parry stops and counts")
 	boar._physics_process(MistParryEnemy.PARRY_PAUSE + 0.01)
 	check(boar.state == MistAmbusher.State.HIDDEN and boar.parry_count == 1, "Parry disappears in place with count retained")

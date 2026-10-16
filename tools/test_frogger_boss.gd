@@ -139,7 +139,7 @@ func run() -> void:
 	room.player.position = Vector2(688, 555)
 	start(0)
 	tick(90)
-	check(room.player.combat_stats.health == player_health and not root.get_node("ParryQTE").active, "preview remains no-damage and no contact-QTE")
+	check(room.player.combat_stats.health == player_health, "preview remains no-damage")
 	start(1)
 	tick(46)
 	room.select_boss(2)
@@ -234,9 +234,9 @@ func test_encounter() -> void:
 	room.add_child(frog)
 	frog.set_physics_process(false)
 	var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
-	var prior_level := assist.level
+	var prior_difficulty := assist.difficulty
 	var prior_invincible := assist.player_invincible
-	assist.set_level(BattleAssistSettingsService.Level.NONE)
+	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	assist.set_player_invincible(false)
 	frog.start_action(&"tongue")
 	frog._physics_process(0.35)
@@ -262,19 +262,7 @@ func test_encounter() -> void:
 		frog.start_action(&"tongue")
 		frog._physics_process(0.35)
 	check(frog.poise_broken and frog.action == &"hurt" and frog.attack_hitbox.attack == null, "four shared parries break frog poise and cancel the attack")
-	player.reset_after_map_fall(Vector2(500,555))
-	frog.finish_stagger()
-	frog._parry_pause = 0
-	assist.set_level(BattleAssistSettingsService.Level.STRONG)
-	frog.start_action(&"tongue")
-	frog._physics_process(0.35)
-	check(root.get_node("ParryQTE").is_owner(frog), "production frog offers the existing contact parry prompt")
-	var frozen_time := frog.action_time
-	frog._physics_process(0.2)
-	check(is_equal_approx(frog.action_time, frozen_time), "contact QTE pauses body and damage on the same action clock")
-	frog.close_attack()
-	check(not root.get_node("ParryQTE").active and not player.contact_qte_paused, "interrupt clears contact prompt and releases player")
-	assist.set_level(prior_level)
+	assist.set_difficulty(prior_difficulty)
 	assist.set_player_invincible(prior_invincible)
 	frog.free()
 	player.free()

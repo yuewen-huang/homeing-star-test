@@ -61,9 +61,6 @@ func test_difficulty_switch() -> void:
 	var held := InputEventKey.new(); held.physical_keycode = KEY_F11; held.pressed = true; held.echo = true
 	assist._input(held)
 	check(assist.difficulty == BattleAssistSettingsService.Difficulty.NORMAL, "held-key repeat does not switch")
-	for d in BattleAssistSettingsService.Difficulty.size():
-		assist.set_difficulty(d)
-		check(not assist.uses_contact_parry_prompt(), "contact prompt retired (difficulty %d)" % d)
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.NORMAL)
 
 func test_chain_rules() -> void:

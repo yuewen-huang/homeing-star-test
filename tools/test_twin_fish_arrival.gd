@@ -139,7 +139,7 @@ func run() -> void:
 	frame = twin.white_frame
 	twin.advance_action(0.35)
 	check(twin.white_frame != frame and twin.white_sprite.get_instance_id() == white_id and handoffs == 1, "phase one resumes authored horizontal swimming without respawning the fish")
-	check(room.dummy.contacts.is_empty() and room.player.combat_stats.health == 100 and not root.get_node("ParryQTE").active, "the entire entrance has no damage, dummy hit or contact QTE")
+	check(room.dummy.contacts.is_empty() and room.player.combat_stats.health == 100, "the entire entrance has no damage or dummy hit")
 	room.play_action(0)
 	check(twin.state == TwinFishBoss.State.ARRIVAL and twin.entry_blend == 0 and twin.black_sprite.visible and twin.black_sprite.modulate == Color.WHITE, "replay completely restores the two fish after the dive")
 	var old_tween := twin._timeline

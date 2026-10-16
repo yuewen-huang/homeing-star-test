@@ -55,7 +55,7 @@ func run() -> void:
 	root.remove_child(original); original.free()
 	var memory := MemoryProgress.new(); memory.name = "SaveProgress"; root.add_child(memory)
 	feedback = root.get_node("CombatFeedback") as CombatFeedbackService
-	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_level(BattleAssistSettingsService.Level.NONE)
+	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	var vine_reference = load("res://scenes/sideview/chapter_1_vine_room.tscn").instantiate()
 	var reference_zoom: Vector2 = vine_reference.get_node("Camera2D").zoom
 	vine_reference.free()
