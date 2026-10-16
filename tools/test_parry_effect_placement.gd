@@ -1,7 +1,7 @@
 extends SceneTree
-## Guard effect placement (2026-10-14): parry, red parry and blocked-hit art lands on Lan's
-## blade toward the attacker (not the hurtbox origin at her feet), and the red-counter slash
-## first made for the master is a global LanPlayer effect landing on any attacker.
+## Guard effect placement (2026-10-14): parry, red parry and blocked-hit impacts land on Lan's
+## blade toward the attacker (not the hurtbox origin at her feet), and the red counter (global,
+## LanClashVisual since 2026-10-16) lands on any attacker's counter point.
 
 var checks := 0
 var failures := 0
@@ -55,8 +55,8 @@ func run() -> void:
 	var result := hurtbox.receive_attack(normal)
 	hitbox._complete_hit(guard, hurtbox.global_position, normal, result)
 	var spawned := effects()
-	check(result == CombatHitResult.Type.PARRY_SUCCESS and spawned.size() == 1 and spawned[0].kind == CombatImpactEffect.Kind.PARRY, "Normal parry spawns the parry art")
-	check(not spawned.is_empty() and spawned[0].global_position == right, "Parry art lands on the blade, not at Lan's feet (%s)" % (spawned[0].global_position if not spawned.is_empty() else Vector2.ZERO))
+	check(result == CombatHitResult.Type.PARRY_SUCCESS and spawned.size() == 1 and spawned[0].kind == CombatImpactEffect.Kind.PARRY, "Normal parry spawns the parry impact")
+	check(not spawned.is_empty() and spawned[0].global_position == right, "Parry impact lands on the blade, not at Lan's feet (%s)" % (spawned[0].global_position if not spawned.is_empty() else Vector2.ZERO))
 	while Engine.time_scale < 1.0: await process_frame
 
 	# Guard failure (early parry): the blocked-hit spark is also on the blade.
@@ -68,32 +68,16 @@ func run() -> void:
 	check(result == CombatHitResult.Type.PARRY_FAILURE and spawned.size() == 1 and spawned[0].global_position == right, "Blocked-hit spark lands on the blade")
 	while Engine.time_scale < 1.0: await process_frame
 
-	# Red counter slash: global, follows red_parry_success frames 2-3, on the deer's chest.
-	var slash := player.red_counter_slash_visual
-	check(slash != null and slash.get_parent() == player and slash.top_level, "Every player owns a red-counter slash")
-	player.start_red_parry_success(deer)
-	player.red_parry_frame_changed.emit(deer, 1)
-	check(not slash.visible, "Slash hidden before the counter frames")
-	player.red_parry_frame_changed.emit(deer, 2)
-	check(slash.visible and slash.frame == 0 and slash.global_position == deer.get_counter_slash_point(), "Frame 2 shows slash frame 0 on the deer")
+	# Red counter: global (every Lan's clash visual), landing on the deer's chest light.
+	check(player.get(&"red_counter_slash_visual") == null and player.clash_visual != null and player.clash_visual.get_parent() == player, "Every player owns the clash visual; the painted counter slash is gone")
+	check(LanClashVisual.counter_point(deer) == deer.get_counter_slash_point(), "The counter lands on the deer's own counter point")
 	check(deer.get_counter_slash_point().distance_to(deer.get_parent().to_global(deer.vfx.chest())) < 0.01, "Deer counter point is its chest light")
-	player.red_parry_frame_changed.emit(deer, 3)
-	check(slash.visible and slash.frame == 1, "Frame 3 shows slash frame 1")
-	player.red_parry_frame_changed.emit(deer, 4)
-	check(not slash.visible, "Slash hidden after the counter frames")
-	player.red_parry_frame_changed.emit(deer, 2)
-	player.play_idle()
-	slash._process(0.0)
-	check(not slash.visible, "An interrupted counter never leaves the slash up")
-	player.red_parry_frame_changed.emit(deer, 2)
-	player.red_parry_finished.emit(deer)
-	check(not slash.visible, "Slash hidden when the counter finishes")
 
 	# An attacker without a counter point gets the middle of its sprite.
 	var plain := Node2D.new()
 	room.add_child(plain)
 	plain.global_position = Vector2(500, 500)
-	check(RedCounterSlashVisual.counter_point(plain) == Vector2(500, 500 - RedCounterSlashVisual.FALLBACK_HEIGHT), "Bare attacker falls back above its origin")
+	check(LanClashVisual.counter_point(plain) == Vector2(500, 500 - LanClashVisual.FALLBACK_HEIGHT), "Bare attacker falls back above its origin")
 	plain.free()
 
 	# The master keeps its old slash position but no longer owns a copy.

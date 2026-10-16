@@ -1,5 +1,6 @@
 extends SceneTree
-## Real receiver paths plus native SpriteFrames timing and owner cleanup.
+## Real receiver paths to the one shared procedural impact (2026-10-16), its colours by
+## event, scaled-time playback and owner cleanup.
 
 var room: Node2D
 var feedback: CombatFeedbackService
@@ -32,12 +33,12 @@ func clear_feedback() -> void:
 
 func expect_effect(kind: CombatImpactEffect.Kind, receiver: Node = null) -> CombatImpactEffect:
 	var effects := get_nodes_in_group(CombatImpactEffect.GROUP)
-	check(effects.size() == 1, "One painted effect per event without old overlay")
+	check(effects.size() == 1, "One shared impact per event, nothing stacked")
 	if effects.size() != 1:
 		return null
 	var effect := effects[0] as CombatImpactEffect
-	check(effect.kind == kind, "Correct shared artwork for event %d" % kind)
-	check(effect.frame == 0 and effect.is_playing(), "Immediate first impact frame")
+	check(effect.kind == kind, "Correct impact look for event %d" % kind)
+	check(effect.star != null and effect.star.age >= effect.star.duration - 0.0001, "Star already open for the hit-stop frame")
 	if receiver != null:
 		check(effect.get_parent() == receiver, "Receiver owns effect for scene/specimen cleanup")
 	return effect
@@ -68,19 +69,31 @@ func run() -> void:
 	room.add_child(player)
 	player.set_physics_process(false)
 	await process_frame
-	var counts := [3, 4, 6, 8, 8]
-	var durations := [0.13, 0.26, 0.26, 0.34, 0.34]
-	for kind in counts.size():
-		var animation_name: StringName = CombatImpactEffect.ANIMATIONS[kind]
-		var frames := CombatImpactEffect.FRAMES
-		check(frames.get_frame_count(animation_name) == counts[kind], "Authored frame count for %s" % animation_name)
-		var duration := 0.0
-		for frame in frames.get_frame_count(animation_name):
-			duration += frames.get_frame_duration(animation_name, frame) / frames.get_animation_speed(animation_name)
-		check(is_equal_approx(duration, durations[kind]) and not frames.get_animation_loop(animation_name), "Authored duration/non-loop for %s" % animation_name)
+	# Colour follows the event (user 2026-10-16); only poise breaks and the red counter's
+	# close get the finisher (ring, all-round shards, shockwave).
+	var palettes := {CombatImpactEffect.Kind.NORMAL_HIT: &"normal", CombatImpactEffect.Kind.PARRY: &"normal",
+		CombatImpactEffect.Kind.RED_PARRY: &"red", CombatImpactEffect.Kind.PLAYER_HURT: &"red",
+		CombatImpactEffect.Kind.POISE_BREAK: &"gold", CombatImpactEffect.Kind.BROKEN_HIT: &"gold",
+		CombatImpactEffect.Kind.COUNTER_CUT: &"gold", CombatImpactEffect.Kind.COUNTER_FINISH: &"gold"}
+	for kind: int in palettes:
+		check(CombatImpactEffect.LOOKS[kind].palette == palettes[kind], "Event %d uses the %s palette" % [kind, palettes[kind]])
+		var finisher: bool = CombatImpactEffect.LOOKS[kind].get("finisher", false)
+		check(finisher == (kind in [CombatImpactEffect.Kind.POISE_BREAK, CombatImpactEffect.Kind.COUNTER_FINISH]), "Finisher look only for event %d when it closes a break or counter" % kind)
+	var sizes: Array[float] = []
+	for run in CombatFeedbackService.PARRY_CHAIN_MAX + 1:
+		var probe := CombatImpactEffect.new()
+		probe.setup(CombatImpactEffect.Kind.PARRY, 1.0, Vector2.ZERO, run)
+		sizes.append(float(probe.look().spark))
+		probe.free()
+	var capped := CombatImpactEffect.new()
+	capped.setup(CombatImpactEffect.Kind.PARRY, 1.0, Vector2.ZERO, CombatFeedbackService.PARRY_CHAIN_MAX + 3)
+	var rising := true
+	for i in range(1, sizes.size()): rising = rising and sizes[i] > sizes[i - 1]
+	check(rising and float(capped.look().spark) == sizes[5] and sizes[5] < CombatImpactEffect.LOOKS[CombatImpactEffect.Kind.POISE_BREAK].spark, "Parry impact grows through a run, below the finisher %s" % str(sizes))
+	capped.free()
 	clear_feedback()
 	player.emit_received_hit_feedback(Vector2(-100, 0), 1.0)
-	expect_effect(CombatImpactEffect.Kind.NORMAL_HIT)
+	expect_effect(CombatImpactEffect.Kind.PLAYER_HURT)
 	clear_feedback()
 	var bat := load("res://scenes/sideview/back_alley_bat.tscn").instantiate() as BackAlleyBat
 	bat.health = 20
@@ -95,7 +108,7 @@ func run() -> void:
 	slime.set_process(false)
 	slime.receive_hit(1, Vector2(100, 0))
 	var left := expect_effect(CombatImpactEffect.Kind.NORMAL_HIT, slime)
-	check(left.flip_h, "Right-side source mirrors force toward the left")
+	check(left.facing < 0.0, "Right-side source mirrors force toward the left")
 	clear_feedback()
 	var mist := MistAmbusher.new()
 	mist.setup(player, MistAmbusher.Species.BOAR, Vector2(500, 555))
@@ -112,7 +125,8 @@ func run() -> void:
 	clear_feedback()
 	dummy.combat_stats.apply_poise_damage(dummy.combat_stats.poise - 10)
 	dummy.receive_hit(1, Vector2(-100, 0))
-	expect_effect(CombatImpactEffect.Kind.POISE_BREAK, dummy)
+	var breaking := expect_effect(CombatImpactEffect.Kind.POISE_BREAK, dummy)
+	check(breaking != null and breaking.pieces.size() == 4, "Poise break plays the full finisher: star, shards, ring and ground shockwave")
 	clear_feedback()
 	dummy.receive_hit(1, Vector2(-100, 0))
 	expect_effect(CombatImpactEffect.Kind.BROKEN_HIT, dummy)
@@ -167,7 +181,7 @@ func run() -> void:
 	var incoming := CombatAttackData.new(&"half_guard", bat, 20, 12, 180.0, 0.0)
 	var result := guard.receive_combat_hit(incoming)
 	check(result == CombatHitResult.Type.PARRY_FAILURE and guard.combat_stats.health == health_before - 10, "Existing ordinary guard still deals half damage")
-	expect_effect(CombatImpactEffect.Kind.NORMAL_HIT)
+	expect_effect(CombatImpactEffect.Kind.PLAYER_HURT)
 	clear_feedback()
 	# Settle real player defense through the common hurtbox/hitbox path.
 	var hitbox := CombatHitbox2D.new()
@@ -200,12 +214,12 @@ func run() -> void:
 	clear_feedback()
 	bat.on_attack_parried(attack(bat), bat.global_position + Vector2(-20, -32))
 	var parry := expect_effect(CombatImpactEffect.Kind.PARRY, bat)
-	check(not parry.flip_h, "Parry deflection points back toward a right-side attacker")
+	check(parry.facing > 0.0, "Parry deflection points back toward a right-side attacker")
 	check(is_equal_approx(feedback.punch_amount, 0.05), "Ordinary parry retains 5 percent camera punch")
 	clear_feedback()
 	bat.on_attack_parried(attack(bat, true), bat.global_position + Vector2(20, -32))
 	var red := expect_effect(CombatImpactEffect.Kind.RED_PARRY, bat)
-	check(red.flip_h and is_equal_approx(feedback.punch_amount, 0.11), "Red parry has distinct mirrored art and retains heavy camera punch")
+	check(red.facing < 0.0 and red.look().palette == &"red" and is_equal_approx(feedback.punch_amount, 0.11), "Red parry is red, mirrored, and retains heavy camera punch")
 	clear_feedback()
 	deer.on_attack_parried(attack(deer, true), deer.global_position + Vector2(-50, -120))
 	expect_effect(CombatImpactEffect.Kind.RED_PARRY, deer)
@@ -228,7 +242,7 @@ func run() -> void:
 	room.add_child(transformed)
 	var placed := feedback.spawn_impact_effect(CombatImpactEffect.Kind.PARRY, Vector2(400, 250), -1, transformed)
 	check(placed.global_position.is_equal_approx(Vector2(400, 250)), "World contact does not drift under a transformed owner")
-	check(placed.global_scale.is_equal_approx(Vector2.ONE * 1.4) and is_zero_approx(placed.global_rotation), "Owner scale/rotation does not deform authored impact art")
+	check(placed.global_scale.is_equal_approx(Vector2.ONE) and is_zero_approx(placed.global_rotation), "Owner scale/rotation does not deform the impact")
 	var weak_effect: WeakRef = weakref(placed)
 	transformed.free()
 	check(weak_effect.get_ref() == null, "Deleting receiver/specimen clears its feedback")
@@ -237,16 +251,20 @@ func run() -> void:
 	await process_frame
 	await process_frame
 	var timed := feedback.spawn_impact_effect(CombatImpactEffect.Kind.NORMAL_HIT, Vector2.ZERO, 0)
+	# Fixed-fps runs: each frame is 1/60 s of game time times the time scale.
+	var opened := timed.star.age
 	Engine.time_scale = 0.05
-	await create_timer(0.08, true, false, true).timeout
-	check(is_instance_valid(timed) and timed.frame == 0, "Hit-stop holds the first impact frame in scaled combat time")
+	for i in 10: await process_frame
+	var held := timed.star.age - opened
+	check(is_instance_valid(timed) and held > 0.0 and held < 10.0 / 60.0 * 0.2, "Hit-stop slows the impact to scaled combat time (%.4f s in 10 frames)" % held)
 	Engine.time_scale = 1.0
 	paused = true
-	await create_timer(0.08, true, false, true).timeout
-	check(is_instance_valid(timed) and timed.frame == 0, "Paused combat does not consume effect frames")
+	var paused_age := timed.star.age
+	for i in 10: await process_frame
+	check(is_instance_valid(timed) and timed.star.age == paused_age, "Paused combat does not advance the impact")
 	paused = false
-	await create_timer(0.22, true, false, true).timeout
-	check(not is_instance_valid(timed), "Non-looping native animation automatically releases effect")
+	await create_timer(0.5, true, false, true).timeout
+	check(not is_instance_valid(timed), "The impact frees itself once its pieces finish")
 	clear_feedback()
 	check(FileAccess.file_exists(SaveProgressService.SAVE_PATH) == saved_existed and (not saved_existed or FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) == saved), "Saved progress and inventory unchanged")
 	current_scene = null

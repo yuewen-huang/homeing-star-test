@@ -47,6 +47,10 @@ func normal_attack(n: int) -> CombatAttackData:
 func pieces_of(shape: StringName) -> Array:
 	return visual.pieces.filter(func(p) -> bool: return is_instance_valid(p) and p.shape == shape)
 
+## Live shared impacts (CombatImpactEffect) anywhere in the tree.
+func impacts() -> Array:
+	return get_nodes_in_group(CombatImpactEffect.GROUP).filter(func(e) -> bool: return is_instance_valid(e) and not e.is_queued_for_deletion())
+
 func snapshot(path: String) -> void:
 	if output.is_empty(): return
 	await process_frame
@@ -100,13 +104,17 @@ func run() -> void:
 	var radii: Array[float] = []
 	var sweeps: Array[float] = []
 	for n in range(1, 6):
+		var before := impacts()
 		check(parry(normal_attack(n)) == CombatHitResult.Type.PARRY_SUCCESS, "Parry %d succeeds" % n)
 		var answers := pieces_of(&"crescent").filter(func(p) -> bool: return p.get_parent() == lan)
-		check(not answers.is_empty(), "Parry %d: Lan answers with a crescent from her sword" % n)
+		check(not answers.is_empty() and answers.back().width <= LanClashVisual.CRESCENT_WIDTH and LanClashVisual.CRESCENT_WIDTH <= 24.0, "Parry %d: Lan answers with a thin crescent from her sword" % n)
 		if not answers.is_empty(): sweeps.append(signf(answers.back().end_angle - answers.back().start_angle))
-		var stars := pieces_of(&"star")
-		var star: PixelSlash = stars.back() if not stars.is_empty() else null
-		check(star != null and star.age >= star.duration - 0.0001 and star.center.distance_to(lan.defense_contact_point(deer.global_position)) < 1.0, "Parry %d: the clash star is already open on Lan's blade" % n)
+		var contact := lan.defense_contact_point(deer.global_position)
+		var fresh := impacts().filter(func(e) -> bool: return not before.has(e))
+		check(fresh.size() == 1 and fresh[0].kind in [CombatImpactEffect.Kind.PARRY, CombatImpactEffect.Kind.POISE_BREAK] and fresh[0].global_position.distance_to(contact) < 1.0, "Parry %d: exactly one shared impact, on Lan's blade (kinds %s)" % [n, str(fresh.map(func(e) -> int: return e.kind))])
+		var star: PixelSlash = fresh[0].star if fresh.size() == 1 else null
+		check(star != null and star.age >= star.duration - 0.0001, "Parry %d: its star is already open for the hit-stop frame" % n)
+		check(pieces_of(&"star").is_empty() and pieces_of(&"burst").is_empty() and pieces_of(&"sparks").is_empty(), "Parry %d: Lan adds no second burst at the contact" % n)
 		if star != null: radii.append(star.radius)
 		check(visual.chain == n, "Parry %d counts as clash %d" % [n, n])
 		if n == 1: await snapshot("clash_1")
@@ -116,7 +124,7 @@ func run() -> void:
 		lan.defense_state = LanPlayer.DefenseState.NONE
 	var rising := radii.size() == 5
 	for i in range(1, radii.size()): rising = rising and radii[i] >= radii[i - 1]
-	check(rising and radii[4] > radii[0], "Clash stars grow through the run %s" % str(radii))
+	check(rising and radii[4] > radii[0], "Parry impacts grow through the run %s" % str(radii))
 	var alternating := sweeps.size() == 5
 	for i in range(1, sweeps.size()): alternating = alternating and sweeps[i] == -sweeps[i - 1]
 	check(alternating, "Lan's answers alternate their sweep")
@@ -137,14 +145,18 @@ func run() -> void:
 	var red := CombatAttackData.new(&"test_clash_red", deer, 20, 12, 180.0, 0.0, CombatAttackData.DangerType.COUNTERABLE_DANGER)
 	check(parry(red) == CombatHitResult.Type.PARRY_SUCCESS and lan.defense_state == LanPlayer.DefenseState.RED_PARRY_SUCCESS, "A red strike is red-parried")
 	await wait_hit_stop()
-	lan.red_parry_frame_changed.emit(deer, RedCounterSlashVisual.FIRST_FRAME)
+	lan.red_parry_frame_changed.emit(deer, LanClashVisual.COUNTER_FRAME)
 	check(lan.global_position.x > deer.position.x + LanClashVisual.COUNTER_MIN_CROSS, "一闪 carries Lan through to the deer's far side")
 	await snapshot("flash_step")
 	var lines_before := pieces_of(&"line").size()
 	for i in 16: visual.advance(1.0 / 60.0)  # to just past the third cut
 	check(pieces_of(&"line").size() - lines_before == 3, "Three delayed cuts open on the deer")
+	var cut_impacts := visual.impacts.filter(func(e) -> bool: return is_instance_valid(e) and e.kind == CombatImpactEffect.Kind.COUNTER_CUT)
+	check(cut_impacts.size() == 3 and cut_impacts.all(func(e) -> bool: return e.get_parent() == deer and e.global_position.distance_to(LanClashVisual.counter_point(deer)) < 1.0), "Each delayed cut lands with the shared impact on the deer")
 	for i in 8: visual.advance(1.0 / 60.0)
-	check(pieces_of(&"star").any(func(s) -> bool: return s.radius >= 100.0), "The counter ends in a large burst")
+	var finish := visual.impacts.filter(func(e) -> bool: return is_instance_valid(e) and e.kind == CombatImpactEffect.Kind.COUNTER_FINISH)
+	check(finish.size() == 1 and finish[0].is_finisher() and finish[0].star.radius >= 100.0 and finish[0].look().palette == &"gold", "The counter ends in the gold finisher impact")
+	check(pieces_of(&"star").is_empty() and pieces_of(&"burst").is_empty(), "The counter adds no burst of its own beside the shared impact")
 	await snapshot("counter_burst")
 	lan.red_parry_finished.emit(deer)
 	await wait_hit_stop()
@@ -155,7 +167,7 @@ func run() -> void:
 	deer.position.x = lan.world_max_x - 40.0
 	lan.global_position.x = deer.position.x - 165.0
 	var stay_x := lan.global_position.x
-	lan.red_parry_frame_changed.emit(deer, RedCounterSlashVisual.FIRST_FRAME)
+	lan.red_parry_frame_changed.emit(deer, LanClashVisual.COUNTER_FRAME)
 	check(is_equal_approx(lan.global_position.x, stay_x), "Against a wall the counter does not move Lan")
 	visual._pending.clear()
 	lan.red_parry_finished.emit(deer)
@@ -174,7 +186,7 @@ func run() -> void:
 			# settlement then resolves the parry through the production path.
 			var red_emitted := false
 			var f := 0
-			while f < 240 and (deer.state == DeerBoss.State.CLASH or f < 10 or not visual.pieces.is_empty()):
+			while f < 240 and (deer.state == DeerBoss.State.CLASH or f < 10 or not visual.pieces.is_empty() or not visual.impacts.is_empty()):
 				var delta := Engine.time_scale / 60.0
 				var next := deer.clash_phase.next_parry_contact_in() if deer.state == DeerBoss.State.CLASH else -1.0
 				if next >= 0.0 and next <= 0.04 and lan.defense_state != LanPlayer.DefenseState.RED_PARRY_SUCCESS:
@@ -183,7 +195,7 @@ func run() -> void:
 				visual.advance(delta)
 				if lan.defense_state == LanPlayer.DefenseState.RED_PARRY_SUCCESS and not red_emitted:
 					red_emitted = true
-					lan.red_parry_frame_changed.emit(deer, RedCounterSlashVisual.FIRST_FRAME)
+					lan.red_parry_frame_changed.emit(deer, LanClashVisual.COUNTER_FRAME)
 				await snapshot("%s/frame_%03d" % [folder, f])
 				f += 1
 			lan.red_parry_finished.emit(deer)
