@@ -235,7 +235,7 @@ func mist_checks() -> void:
 	advance(6.0)
 	check(not is_instance_valid(battle.fog) and not battle.hazards.any(func(h): return h is RegionalMistSummon and h.kind == RegionalMistSummon.Kind.FROG), "Fog skill leaves no frog in room")
 	var phantom := battle.spawn_phantom()
-	check(phantom.sprite.scale == Vector2.ONE * 1.4 * 0.8 and phantom.sprite.modulate.a < 1 and phantom.current_clip == &"idle_ING", "Mist phantom uses smaller translucent deer form")
+	check((phantom.sprite.scale * DeerActionLibrary.frame_size(phantom.current_clip)).is_equal_approx(Vector2(256,256) * 1.4 * 0.8) and phantom.sprite.modulate.a < 1 and phantom.current_clip == &"idle_ING", "Mist phantom preserves its smaller logical size with native edited deer pixels")
 	phantom.preview_only = true
 	battle.preview_only = true
 	battle.preview_target = Vector2(640, 555)

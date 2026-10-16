@@ -46,7 +46,7 @@ func run() -> void:
 	deer.set_physics_process(false)
 	deer.vfx.set_process(false)
 	room.select_combo(2)
-	check(deer.phase == 3 and room.combo_button.visible and room.charge_button.visible and room.ultimate_row.visible and not room.item_button.visible, "Wind exposes independent pressure, flick and complete combo without item controls")
+	check(deer.phase == 3 and room.combo_button.visible and room.charge_button.visible and room.ultimate_row.visible and room.item_button.visible and room.item_button.text == "种下定风桩 · Q", "Wind exposes pressure, flick, combo and the current wind-stake preview control")
 	var health_before: int = room.player.combat_stats.health
 	for action: String in DeerActionLibrary.clips():
 		for frame in int(DeerActionLibrary.clip(StringName(action)).count):

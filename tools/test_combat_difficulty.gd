@@ -204,7 +204,7 @@ func test_wind_cue() -> void:
 	deer.position.x = 820.0
 	lan.global_position.x = 820.0 - 165.0
 	var serial := deer.clash_phase.combo_serial
-	deer.start_clash(&"probe_three", 820.0 - 165.0)
+	deer.start_clash(&"three_ding", 820.0 - 165.0)
 	check(deer.clash_phase.combo_serial == serial + 1 and deer.get_parry_chain_key() == StringName("deer_clash_%d" % (serial + 1)), "each wind combo gets its own parry-chain key")
 	var first := -1.0
 	for i in 120:

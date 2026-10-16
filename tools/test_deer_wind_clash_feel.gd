@@ -106,19 +106,20 @@ func run() -> void:
 	deer.start_clash(&"thrust", deer.position.x - 170.0)
 	var hit_time := -1.0
 	var slash_time := -1.0
-	var slash: DeerSlashTrail
+	var smear: PixelSlash
 	for i in 90:
 		tick(1)
-		if slash_time < 0.0 and not deer.clash_phase.slashes.is_empty():
+		if slash_time < 0.0 and not deer.clash_phase.smears.is_empty():
 			slash_time = deer.clash_phase.step_time
-			slash = deer.clash_phase.slashes[0]
+			smear = deer.clash_phase.smears[0]
 		if hit_time < 0.0 and deer.attack_hitbox.attack != null: hit_time = deer.clash_phase.step_time
-	check(slash != null and slash.code == "05_A" and is_equal_approx(slash.scale.x, 1.4) and slash.flip_h == (deer.direction < 0), "Thrust plays the olive horizontal thin slash at 1.4, mirrored with the deer")
-	check(slash_time >= 0.0 and hit_time >= 0.0 and absf((hit_time - slash_time) - DeerSlashTrail.lead("05_A")) <= 1.0 / 60.0 + 0.001, "Slash starts %.3f s before contact so its brightest frame meets the hit (got %.3f)" % [DeerSlashTrail.lead("05_A"), hit_time - slash_time])
-	# A finished (freed) trail must be dropped cleanly when the next one spawns.
-	for old in deer.clash_phase.slashes: old.free()
-	deer.clash_phase._spawn_slash("05_A", DeerClashPhase.MOVES[&"thrust"].hits[0])
-	check(deer.clash_phase.slashes.size() == 1 and is_instance_valid(deer.clash_phase.slashes[0]), "Freed slash trails are dropped without errors when a new one spawns")
+	check(smear != null and smear.shape == &"crescent" and smear.get_parent() == deer and smear.facing == deer.direction, "Thrust grows a crescent smear on the deer, mirrored with it")
+	check(slash_time >= 0.0 and hit_time >= 0.0 and absf((hit_time - slash_time) - DeerClashRhythm.SMEAR_OPEN) <= 1.0 / 60.0 + 0.001, "Smear starts %.3f s before contact so it is fully open on the hit (got %.3f)" % [DeerClashRhythm.SMEAR_OPEN, hit_time - slash_time])
+	# A smear freed elsewhere must be dropped cleanly on the next tick.
+	for old in deer.clash_phase.smears: old.free()
+	deer.clash_phase.tick_smears(1.0 / 60.0)
+	deer.clash_phase.add_smear("thrust", DeerClashPhase.MOVES[&"thrust"].hits[0].rect, &"green")
+	check(deer.clash_phase.smears.size() == 1 and is_instance_valid(deer.clash_phase.smears[0]), "Freed smears are dropped without errors when a new one spawns")
 	var ghosts := deer.get_parent().get_children().filter(func(n: Node) -> bool: return n is DeerBoss.DeerPoseGhost)
 	check(ghosts.size() > ghosts_before or deer.clash_phase.step_index >= 0, "Clip changes in the clash leave a fading pose ghost")
 	deer.enter_stagger(2.0)

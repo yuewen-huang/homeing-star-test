@@ -1,9 +1,8 @@
 extends SceneTree
-## Wind phase v0.3 batches 4–5: the leap is gone; gale dash closes to DASH_SPACING and
-## thrusts; gale pull drags the player in above the usual wind cap and releases them;
-## improvised combos pick 2–5 strikes one at a time (far → closer, airborne → flick,
-## parry streak → disruptor, finishers end it, no strike three times running); the
-## production AI uses them. Design: chapter_1_deer_wind_phase_design.md §8.
+## Wind phase: the leap is gone; gale dash closes to DASH_SPACING and thrusts; gale pull
+## drags the player in above the usual wind cap and releases them. Since 2026-10-16 the
+## AI composes 拼刀 rhythms: far → dash/pull first, one rhythm, never the same rhythm three
+## times running, a parry run sometimes adds a gold charge; the production AI uses it.
 
 var room
 var deer: DeerBoss
@@ -41,12 +40,10 @@ func run() -> void:
 
 	# The leap is gone everywhere.
 	var leaps := 0
-	for id in DeerClashPhase.COMBOS:
-		var combo: Dictionary = DeerClashPhase.COMBOS[id]
-		for chosen in combo.get("branches", [combo]):
-			for step in chosen.steps: if step.move == &"leap": leaps += 1
-	check(not DeerClashPhase.MOVES.has(&"leap") and not DeerClashPhase.COMBOS.has(&"crossover") and leaps == 0, "No combo or move uses the leap any more")
-	check(DeerClashPhase.LIBRARY[0] == &"improv" and room.library_picker.item_count == DeerClashPhase.LIBRARY.size(), "Development library starts with the improvised combo")
+	for id: StringName in DeerClashRhythm.RHYTHMS:
+		for slice: Array in DeerClashRhythm.RHYTHMS[id].slices: if String(slice[0]).begins_with("leap"): leaps += 1
+	check(not DeerClashPhase.MOVES.has(&"leap") and leaps == 0, "No rhythm or move uses the leap any more")
+	check(DeerClashPhase.LIBRARY[0] == &"improv" and room.library_picker.item_count == DeerClashPhase.LIBRARY.size(), "Development library starts with the AI rhythm picker")
 
 	# Gale dash: from far away to DASH_SPACING in front of the target, then a parryable thrust.
 	deer.position.x = 1400.0
@@ -71,19 +68,19 @@ func run() -> void:
 	deer.position.x = 1200.0
 	player.global_position = Vector2(700, player.global_position.y)
 	deer.direction = -1.0
-	clash.start(&"pull_in", player.global_position.x)
+	clash.start(&"pull", player.global_position.x)
 	tick(3)
 	var pull := player.horizontal_combat_wind()
 	check(pull > 140.0 and absf(pull - DeerClashPhase.PULL_SPEED) < 1.0, "Gale pull drags the player toward the deer at %.0f px/s (cap raised above 140)" % pull)
-	for i in 120:
+	for i in 240:
 		tick(1)
-		if clash.step_index >= 1: break
+		if deer.state != DeerBoss.State.CLASH: break
 	tick(2)
-	check(is_zero_approx(player.horizontal_combat_wind()), "The pull releases the player when the next strike starts")
+	check(is_zero_approx(player.horizontal_combat_wind()), "The pull releases the player when its step ends")
 	idle()
 	deer.position.x = 1200.0
 	player.global_position = Vector2(1200.0 - DeerGalePull.STOP_DISTANCE + 10.0, player.global_position.y)
-	clash.start(&"pull_in", player.global_position.x)
+	clash.start(&"pull", player.global_position.x)
 	tick(3)
 	check(is_zero_approx(player.horizontal_combat_wind()), "The pull lets go once the player is within %.0f px (striking range)" % DeerGalePull.STOP_DISTANCE)
 	idle()
@@ -96,44 +93,45 @@ func run() -> void:
 	check(deer.position.x > 820.0 + 40.0, "Pressed too close, the deer steps back before the thrust (now %.0f px away)" % (deer.position.x - 720.0))
 	idle()
 
-	# Improvised combos.
+	# AI rhythm combos.
 	seed(7)
-	var lengths := {}
+	var played := {}
 	var triples := 0
-	var finisher_end := true
+	var one_rhythm := true
+	var charge_last := true
 	var far_openers := {}
+	clash.rhythm_history.clear()
 	for trial in 40:
 		deer.position.x = 820.0
 		deer.direction = -1.0
 		var far := trial % 4 == 0
-		clash.parry_streak = 0
+		clash.parry_streak = DeerClashPhase.IMPROV_DISRUPT_STREAK if trial % 3 == 0 else 0
 		clash.last_result = -1
 		clash.start(&"improv", 820.0 - (520.0 if far else 170.0))
-		if far: far_openers[clash.steps[0].move] = true
+		var moves: Array = clash.steps.map(func(step: Dictionary) -> StringName: return step.move)
+		if far: far_openers[moves[0]] = true
+		one_rhythm = one_rhythm and moves.count(&"rhythm") == 1
+		if moves.has(&"charge"): charge_last = charge_last and moves.back() == &"charge"
+		for step: Dictionary in clash.steps: if step.move == &"rhythm": played[step.rhythm] = true
+		var history := clash.rhythm_history
+		if history.size() >= 3 and history[-1] == history[-2] and history[-2] == history[-3]: triples += 1
 		var guard := 0
 		while deer.state == DeerBoss.State.CLASH and guard < 1500:
 			tick(1); guard += 1
-		var moves: Array = clash.beat_history.duplicate()
-		lengths[moves.size()] = true
-		for i in range(2, moves.size()):
-			if moves[i] == moves[i - 1] and moves[i] == moves[i - 2]: triples += 1
-		for i in moves.size() - 1:
-			if moves[i] in DeerClashPhase.FINISHERS: finisher_end = false
 		idle()
-	check(far_openers.keys().all(func(m: StringName) -> bool: return m in [&"dash", &"pull", &"charge"]), "From far away the improviser opens by closing distance (%s)" % [far_openers.keys()])
-	check(lengths.keys().all(func(n: int) -> bool: return n >= 1 and n <= DeerClashPhase.IMPROV_MAX_BEATS + 1) and lengths.size() >= 3, "Improvised combos vary in length %s" % [lengths.keys()])
-	check(triples == 0, "No strike repeats three times in a row")
-	check(finisher_end, "Red and gold strikes only ever finish a combo")
+	check(far_openers.keys().all(func(m: StringName) -> bool: return m in [&"dash", &"pull"]) and not far_openers.is_empty(), "From far away the AI opens by closing distance (%s)" % [far_openers.keys()])
+	check(one_rhythm and played.size() >= 3, "Every AI combo plays exactly one rhythm, and the rhythms vary %s" % [played.keys()])
+	check(triples == 0, "No rhythm repeats three times in a row")
+	check(charge_last, "The gold charge only ever follows the rhythm")
 	var disrupted := 0
 	for i in 200:
-		clash.beats_left = 3
-		clash.beat_history.clear()
+		clash.rhythm_history.clear()
 		clash.parry_streak = DeerClashPhase.IMPROV_DISRUPT_STREAK
-		var disrupt: Dictionary = clash._next_beat()
-		if disrupt.move in [&"charge", &"heavy", &"rear_gore"] and clash.parry_streak == 0: disrupted += 1
+		var composed := clash._compose()
+		if composed.back().move == &"charge" and clash.parry_streak == 0: disrupted += 1
 	var rate := disrupted / 200.0
-	check(absf(rate - DeerClashPhase.IMPROV_DISRUPT_CHANCE) < 0.12, "A run of %d parries brings a gold/red disruptor about %.0f%% of the time (%.0f%%), so it cannot be timed" % [DeerClashPhase.IMPROV_DISRUPT_STREAK, DeerClashPhase.IMPROV_DISRUPT_CHANCE * 100.0, rate * 100.0])
-	clash.beats_left = 3
+	check(absf(rate - DeerClashPhase.IMPROV_DISRUPT_CHANCE) < 0.12, "A run of %d parries brings a gold charge about %.0f%% of the time (%.0f%%), so it cannot be timed" % [DeerClashPhase.IMPROV_DISRUPT_STREAK, DeerClashPhase.IMPROV_DISRUPT_CHANCE * 100.0, rate * 100.0])
+	clash.parry_streak = 0
 	clash._on_hit_resolved(player, CombatHitResult.Type.PARRY_SUCCESS)
 	check(clash.parry_streak == 0 or deer.state == DeerBoss.State.CLASH, "Parry streak only counts during a clash")
 	deer.state = DeerBoss.State.CLASH
@@ -148,7 +146,7 @@ func run() -> void:
 	# The production AI improvises.
 	deer.manual_control = false
 	deer.phase_ai.choose(150.0)
-	check(deer.state == DeerBoss.State.CLASH and clash.improv, "Production AI starts an improvised combo in the wind phase")
+	check(deer.state == DeerBoss.State.CLASH and clash.improv and clash.steps.any(func(step: Dictionary) -> bool: return step.move == &"rhythm"), "Production AI starts a rhythm combo in the wind phase")
 	clash.cancel(); deer._recover(0.0)
 
 	var after := FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) if FileAccess.file_exists(SaveProgressService.SAVE_PATH) else PackedByteArray()

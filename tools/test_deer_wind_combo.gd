@@ -71,52 +71,47 @@ func run() -> void:
 	tick(150)
 	check(room.dummy.contacts.size()==1 and room.dummy.contacts[0].clip=="flick_lift_ING" and room.dummy.contacts[0].damage==14,"Standalone flick now opens one actual 14-damage upward contact")
 	# Key 5 defaults to the improvised combo (v0.3); this checks the authored pressure combo.
-	room.select_combo_library(DeerClashPhase.LIBRARY.find(&"pressure_flick_red"))
+	# 2026-10-16: the wind AI plays 拼刀 rhythms; 红色终结 (red_finale) is the full five-beat chain.
+	room.select_combo_library(DeerClashPhase.LIBRARY.find(&"red_finale"))
 	for target in [688,1000]:
 		room.dummy_x.value=target;room.play_action(4)
 		var locked_direction:=deer.direction
-		var previous_step:=-1
-		var linked:=false
+		var clips_seen: Array[StringName]=[]
 		var red_cued:=false
 		var normal_four:=true
 		var positions_stable:=true
 		var last_position:=deer.position
 		for i in 340:
 			tick(1)
-			# v0.3 steps in and lunges per strike; it must still never jump or turn around.
 			positions_stable=positions_stable and absf(deer.position.x-last_position.x)<=40.0 and deer.direction==locked_direction
 			last_position=deer.position
-			if deer.clash_phase.step_index>=0 and deer.clash_phase.step_index!=previous_step:
-				if deer.clash_phase.step_index==1:
-					linked=deer.animated_sprite.animation==&"flick_sweep_ING" and not fx.visible
-					await snapshot("combo_%d_low_link"%target)
-				previous_step=deer.clash_phase.step_index
-			if deer.attack_hitbox.attack!=null and deer.clash_phase.step_index in [0,1]:
+			if clips_seen.is_empty() or clips_seen[-1]!=deer.animated_sprite.animation: clips_seen.append(deer.animated_sprite.animation)
+			if deer.attack_hitbox.attack!=null and room.dummy.contacts.size()<4:
 				normal_four=normal_four and deer.attack_hitbox.attack.danger_type==CombatAttackData.DangerType.NORMAL
-			if deer.clash_phase.step_index==2 and deer.vfx.red_warning.visible:
-				red_cued=red_cued or room.dummy.contacts.size()==4
-			if i in [129,210,240]:await snapshot("combo_%d_%03d"%[target,i])
-		check(linked,"Full combo joins the low pressure pose directly to the authored sweep")
-		check(positions_stable,"Full combo neither teleports nor turns around between attacks")
+			if deer.vfx.red_warning.visible: red_cued=red_cued or room.dummy.contacts.size()==4
+			if i in [40,75,118]:await snapshot("combo_%d_%03d"%[target,i])
+		var strikes:=clips_seen.slice(clips_seen.find(&"bind_push_ING"),clips_seen.find(&"rear_gore_START"))
+		check(strikes==[&"bind_push_ING",&"thrust_ING",&"flick_sweep_ING",&"thrust_END"],"Rhythm joins the low pressure pose, thrust and sweep directly (got %s)"%str(strikes))
+		check(positions_stable,"Full rhythm neither teleports nor turns around between strikes")
 		check(red_cued and normal_four,"Four ordinary parry contacts precede a clearly cued red finisher")
-		check(room.dummy.contacts.size()==5,"Full combo reaches five distinct real contacts in direction %d"%locked_direction)
+		check(room.dummy.contacts.size()==5,"Full rhythm reaches five distinct real contacts in direction %d"%locked_direction)
 		if room.dummy.contacts.size()==5:
 			var hits: Array=room.dummy.contacts
-			check([hits[0].damage,hits[1].damage,hits[2].damage,hits[3].damage,hits[4].damage]==[12,12,12,14,20],"Combo damage remains three pressure beats, one flick and one red finisher")
-			check(hits[3].clip=="flick_lift_ING" and hits[4].clip=="rear_gore_ING" and hits[3].first_time>hits[2].first_time+0.7 and hits[4].first_time>hits[3].first_time+1.3,"Delayed lift and red startup provide readable rhythm changes")
+			check(hits.map(func(h)->int: return h.damage)==[12,12,12,12,20],"Rhythm damage is four ordinary beats and one red finisher")
+			check(hits.map(func(h)->String: return h.clip)==["bind_push_ING","bind_push_ING","thrust_ING","flick_sweep_ING","rear_gore_ING"] and hits[4].first_time>hits[3].first_time+0.5,"Each beat lands on its fitted clip, with a held red startup before the finisher")
 			var ids: Array=[]
 			for hit in hits:
 				if not ids.has(hit.key):ids.append(hit.key)
-			check(ids.size()==5,"Every combo contact has its own single-hit attack ID")
+			check(ids.size()==5,"Every rhythm contact has its own single-hit attack ID")
 			print("COMBO CONTACTS ",target," ",JSON.stringify(hits))
-		check(deer.state==DeerBoss.State.IDLE and deer.attack_hitbox.attack==null and not fx.visible,"Full combo finishes in clean manual idle")
+		check(deer.state==DeerBoss.State.IDLE and deer.attack_hitbox.attack==null and not fx.visible,"Full rhythm finishes in clean manual idle")
 	room.dummy_x.value=688
 	for interrupt_time in [0.4,0.7,1.8,3.1]:
 		room.play_action(4);tick(roundi(interrupt_time*60))
 		var contacts: int=room.dummy.contacts.size()
 		deer.enter_stagger(2.0);tick(180)
 		check(room.dummy.contacts.size()==contacts and deer.clash_phase.steps.is_empty() and deer.attack_hitbox.attack==null and not fx.visible,"Stagger cancels all pending attacks at %.1fs"%interrupt_time)
-	room.play_action(4);tick(56)
+	room.play_action(4);tick(47)  # inside the second beat's window
 	deer.combat_stats.restore_poise()
 	var ordinary_attack:=deer.attack_hitbox.attack
 	deer.on_attack_parried(ordinary_attack,deer.position)
@@ -124,7 +119,7 @@ func run() -> void:
 	await wait_hit_stop()
 	tick(340)
 	check(room.dummy.contacts.size()==5 and deer.state==DeerBoss.State.IDLE,"An existing ordinary parry pauses then resumes the pending combo")
-	room.play_action(4);tick(240)
+	room.play_action(4);tick(117)  # inside the red beat's window
 	check(deer.attack_hitbox.attack!=null and deer.attack_hitbox.attack.danger_type==CombatAttackData.DangerType.COUNTERABLE_DANGER,"Combo finisher uses the existing red danger type")
 	if deer.attack_hitbox.attack!=null:
 		deer.on_attack_parried(deer.attack_hitbox.attack,deer.position)
@@ -145,7 +140,7 @@ func run() -> void:
 	check(deer.phase==1 and not fx.visible and deer.clash_phase.steps.is_empty(),"Changing phase clears pending wind attacks and art")
 	check(not room.adapter.telemetry().contains("雾阶段大招"),"Returning from wind combo cannot leave the adapter in mist-hunt preview mode")
 	room.select_combo(2)
-	check(deer.start_phase_combo() and deer.clash_phase.action_id==&"pressure_flick_red","Production phase-combo entry shares the same real three-stage chain")
+	check(deer.start_phase_combo() and deer.clash_phase.action_id==&"three_ding","Production phase-combo entry plays the 三连叮 rhythm")
 	room.reset_room();await process_frame;await process_frame
 	check(room.adapter.deer.phase==3 and room.adapter.deer.clash_phase.steps.is_empty(),"Reset preserves phase and removes queued wind steps")
 	room.select_boss(1);await process_frame;await process_frame
