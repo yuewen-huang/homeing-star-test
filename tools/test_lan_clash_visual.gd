@@ -120,7 +120,7 @@ func run() -> void:
 		if n == 1: await snapshot("clash_1")
 		await wait_hit_stop()
 		visual.advance(0.05)
-		if n == 2: check(visual.label.visible and visual.label.text == "2 拼刀", "The counter appears from the second clash")
+		if n == 2: check(visual.counter_view.panel.visible and visual.counter_view.digits.get_child_count() == 1, "Supplied digit and HIT art appear from the second clash")
 		lan.defense_state = LanPlayer.DefenseState.NONE
 	var rising := radii.size() == 5
 	for i in range(1, radii.size()): rising = rising and radii[i] >= radii[i - 1]
@@ -128,17 +128,41 @@ func run() -> void:
 	var alternating := sweeps.size() == 5
 	for i in range(1, sweeps.size()): alternating = alternating and sweeps[i] == -sweeps[i - 1]
 	check(alternating, "Lan's answers alternate their sweep")
-	check(visual.label.text == "5 拼刀" and visual.label.get_theme_color("font_color") == Color("ffe189"), "Five clashes turn the counter gold")
+	check(visual.counter_view.panel.visible and visual.counter_view.milestone == 0, "Five clashes use the original gold art without an extra milestone")
+	check(visual.counter_view.panel.global_position.x > 900 and visual.counter_view.word.get_global_rect().end.x <= 1241, "Clash counter stays on screen right")
 	await snapshot("clash_5")
 
-	# A hit that gets through breaks the run.
+	# User: taking damage does not break the existing clash count; only timeout does.
 	var hit := lan.receive_combat_hit(normal_attack(9))
-	check(hit == CombatHitResult.Type.NORMAL_HIT and visual.chain == 0, "A hit that gets through ends the run")
+	check(hit == CombatHitResult.Type.NORMAL_HIT and visual.chain == 5, "Taking damage preserves clash count")
 	visual.advance(0.01)
-	check(visual.label.visible and visual.label.text == "拼刀中断", "The broken run is announced")
+	check(visual.counter_view.panel.visible, "Counter remains visible after taking damage")
 	await wait_hit_stop()
-	visual.advance(1.0)
-	check(not visual.label.visible, "The announcement fades")
+	visual.advance(3.01)
+	check(visual.chain == 0 and not visual.counter_view.panel.visible, "Three seconds without a parry clears and hides the counter")
+	# Exercise the existing parry signal through the milestone values; no hit counter exists.
+	for threshold in [10, 20, 50]:
+		while visual.chain < threshold:
+			(root.get_node("CombatFeedback") as CombatFeedbackService).parry_landed.emit(deer, normal_attack(50 + visual.chain), lan.defense_contact_point(deer.global_position), false)
+			if visual.chain < threshold: visual.advance(0.3)
+		var view := visual.counter_view
+		check(view.milestone == threshold and view.digits.get_child_count() == 2, "Clash %d selects milestone and digit art" % threshold)
+		check(view.digits.scale.is_equal_approx(Vector2.ONE * 1.3), "Clash %d instantly scales digits to 1.3" % threshold)
+		check(view.panel.modulate != Color.WHITE, "Clash %d has a local milestone accent" % threshold)
+		await snapshot("clash_%d_pop" % threshold)
+		if threshold == 10 and not output.is_empty():
+			DirAccess.make_dir_recursive_absolute(output.path_join("pop"))
+			for frame in 24:
+				await snapshot("pop/frame_%03d" % frame)
+				visual.advance(1.0 / 60.0)
+			# Restart the same displayed value to check rebound timings below.
+			view.show_count(visual.chain)
+		visual.advance(0.08)
+		check(view.digits.scale.x < 1.3 and view.digits.position.length() <= 2.0, "Clash %d rebounds with small local shake" % threshold)
+		visual.advance(0.22)
+		check(view.digits.scale.is_equal_approx(Vector2.ONE) and view.digits.position == Vector2.ZERO and view.panel.modulate.is_equal_approx(Color.WHITE), "Clash %d returns to its original size and color" % threshold)
+		await snapshot("clash_%d_rest" % threshold)
+	visual.advance(3.01)
 
 	# Red parry → 一闪 through the attacker, delayed cuts and a burst on it.
 	place()
