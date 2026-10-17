@@ -19,14 +19,16 @@ func check(ok: bool, label: String) -> void:
 	print("OK " if ok else "FAIL ", label)
 func reset_player() -> void:
 	room.player.reset_after_map_fall(Vector2(600, 555))
+	room.player.parry_chain.cancel()
 	room.player.combat_stats.restore_health()
 	room.player.velocity = Vector2.ZERO
-func press(pressed := true, echo := false) -> void:
+func press(pressed := true, echo := false, keycode := KEY_F12) -> void:
 	var key := InputEventKey.new()
-	key.physical_keycode = KEY_F9
+	key.physical_keycode = keycode
 	key.pressed = pressed
 	key.echo = echo
-	assist._input(key)
+	Input.parse_input_event(key)
+	Input.flush_buffered_events()
 func run() -> void:
 	var saved := FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH)
 	assist = root.get_node("BattleAssist") as BattleAssistSettingsService
@@ -37,6 +39,9 @@ func run() -> void:
 	room = load("res://scenes/sideview/chapter_1_final_boss_room.tscn").instantiate()
 	root.add_child(room); current_scene = room
 	await process_frame; await process_frame
+	if is_instance_valid(room.story.comic):
+		room.story._close_intro()
+	await process_frame
 	room.deer.set_physics_process(false)
 	room.player.set_physics_process(false)
 	room.deer.manual_control = true
@@ -57,10 +62,15 @@ func run() -> void:
 	var red := CombatAttackData.new(&"practice_red", room.deer, 20, 12, 180, 0, CombatAttackData.DangerType.COUNTERABLE_DANGER)
 	check(room.player.receive_combat_hit(red) == CombatHitResult.Type.PARRY_SUCCESS and room.player.defense_state == LanPlayer.DefenseState.RED_PARRY_SUCCESS, "red counter still succeeds during invincibility")
 	reset_player()
+	press(true, false, KEY_F9)
+	check(assist.player_invincible, "editor's F9 pause shortcut is no longer an invincibility binding")
 	press(false); press(true, true)
 	check(assist.player_invincible, "release and held-key repeat do not toggle invincibility")
 	press()
-	check(not assist.player_invincible and assist._invincibility_label.text == "F9 开启无敌", "F9 disables protection and updates the HUD")
+	check(not assist.player_invincible and assist._invincibility_label.text == "F12 开启无敌", "F12 disables protection and updates the HUD through viewport input")
+	var physics_before := Engine.get_physics_frames()
+	await physics_frame; await physics_frame
+	check(not paused and Engine.get_physics_frames() > physics_before, "physics keeps advancing after disabling protection")
 	check(room.player.receive_combat_hit(normal) == CombatHitResult.Type.NORMAL_HIT and room.player.combat_stats.health == room.player.combat_stats.max_health - 20, "normal damage returns after turning protection off")
 	reset_player()
 	room.player.defense_state = LanPlayer.DefenseState.PARRY_NOTHING_EARLY
@@ -68,7 +78,7 @@ func run() -> void:
 	check(room.player.combat_stats.health == room.player.combat_stats.max_health - 10, "ordinary guard retains the existing half-damage rule with protection off")
 	root.get_tree().paused = true
 	press()
-	check(assist.player_invincible and assist.process_mode == Node.PROCESS_MODE_ALWAYS, "F9 protection remains accessible while paused")
+	check(assist.player_invincible and assist.process_mode == Node.PROCESS_MODE_ALWAYS, "F12 protection remains accessible while paused")
 	root.get_tree().paused = false
 	room.deer.reset_phase()
 	check(assist.player_invincible, "encounter restart preserves the session's protection setting")

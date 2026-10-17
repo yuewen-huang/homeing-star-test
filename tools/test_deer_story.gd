@@ -79,6 +79,10 @@ func kill_human() -> void:
 		boss._physics_process(1.0 / 60)
 		if boss.state == DeerBoss.State.COMPLETE: break
 	await process_frame
+func dismiss_reward() -> void:
+	if story.reward_reveal != null:
+		story.reward_reveal._finish_reveal()
+		await process_frame
 func run() -> void:
 	save = root.get_node("SaveProgress") as SaveProgressService
 	output = OS.get_environment("HOMING_STAR_TEST_OUTPUT")
@@ -92,12 +96,16 @@ func run() -> void:
 	# M10 short reactions use only production facts and never pause combat.
 	boss.set_physics_process(false)
 	boss.phase = 2
+	# Isolate this optional reaction from the direct-route save's locked core powers.
+	boss.manual_control = true
+	boss.root_phase.item_available = true
 	boss.root_phase.start_ultimate()
 	boss.root_phase.elapsed = 1.5
 	check(boss.root_phase.use_decoy(), "Production root counter accepts a valid decoy")
 	story._process(0.8)
 	check(story._said.has(&"decoy") and not paused, "Successful decoy queues only a nonblocking bubble")
 	boss.root_phase.reset_all()
+	boss.manual_control = false
 	story._pending_bubble = ""
 	story._queue_bubble(&"capture", "过去了！")
 	boss.warning_kind = &""
@@ -112,12 +120,16 @@ func run() -> void:
 	boss.vine_phase.spawn_strike(&"curtain", room.player.position.x, room.player.position.x - 200, 1)
 	await kill_human()
 	check(save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED) and not story.victory_pending, "Final production landing saves victory before any inspection")
+	check(story.reward_reveal != null and save.get_item_count(ItemCatalog.DEER_RELIC) == 1 and not story.chapter_gate.visible, "Final landing grants exactly one relic and presents it before unlocking portal")
+	await dismiss_reward()
+	check(story.chapter_gate.visible and not paused, "Closing reward presentation reveals chapter two portal and resumes play")
+	inventory[ItemCatalog.DEER_RELIC] = 1
 	save.load_progress()
 	check(save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED), "Victory reloads from disk")
 	check(boss.state == DeerBoss.State.COMPLETE and boss.animated_sprite.animation == &"human_fall_ING" and not boss.is_physics_processing(), "Defeated human stays down on approved final pose")
 	check(boss.vine_phase.strikes.is_empty() and boss.root_phase.nodules.is_empty() and not room.mist_field.hunting, "Final cleanup leaves no attacking vines, root terrain or hunt")
 	check(save.get_stele_state(&"vine_puzzle_high_swing") == 0 and save.get_stele_state(&"vine_combat_branch_arena") == 0 \
-		and not save.has_completed(SaveProgressService.STORY_C1_XIAOSUI_MET) and save.get_inventory_items() == inventory, "Direct boss route requires no residents, steles or invented reward")
+		and not save.has_completed(SaveProgressService.STORY_C1_XIAOSUI_MET) and save.get_inventory_items() == inventory, "Direct boss route grants only the relic without residents or steles")
 	await stand(boss.position + Vector2(-70, 0))
 	key()
 	await process_frame
@@ -160,7 +172,10 @@ func run() -> void:
 	await stand(boss.position + Vector2(-70, 0))
 	key()
 	await process_frame
-	check(failed.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED) and story.dialogue != null, "Body E retries victory first, then permits M11")
+	check(failed.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED) and story.reward_reveal != null, "Body E retries victory first, then presents its reward")
+	await dismiss_reward()
+	key()
+	await process_frame
 	failed.failing = true
 	story.dialogue.advance()
 	check(story.choices != null and not failed.has_completed(SaveProgressService.STORY_C1_DEER_BODY_INSPECTED), "Failed M11 save never rolls back battle victory")

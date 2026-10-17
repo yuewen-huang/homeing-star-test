@@ -200,10 +200,11 @@ func run() -> void:
 	pierce.receive_hit(1, player.position)
 	check(pierce.is_poise_broken() and pierce.combat_stats.health == 8, "three sword hits break poise and leave a damage window")
 	player.reset_after_map_fall(pierce.tip + Vector2(-40, 60))
-	player.start_special_attack(1)
+	player.apply_attack_facing(1)
+	player.perform_special_attack(1, 0.0, player.find_throw_target())
 	var effect := player.timeline_attack_effect
 	effect.set_process(false)
-	check(player.special_attack_max_form and effect.skill_hit_context.max_form, "real player selects the existing Max skill against the broken vine")
+	check(player.special_attack_max_form and effect.skill_hit_context.max_form, "E throw selects the existing PLUS against a broken vine")
 	pierce.receive_skill_hit(effect.skill_hit_context, player.position)
 	player.cancel_uncommitted_attack_effects()
 	check(pierce.dead and room._remaining_vines == 1 and room.combat_active, "skill damage restores the second vine without completing early")

@@ -133,13 +133,36 @@ func run() -> void:
 	broken.poise_bar = true
 	broken.broken_poise = true
 	broken.add_to_group(&"damageable")
-	player.start_special_attack(-1.0)
+	player.perform_special_attack(-1.0, 0.0, player.find_throw_target())
 	check(player.special_attack_max_form and player.timeline_attack_effect.get_index() < player.animated_sprite.get_index(), "Max cat spirit draws behind Lan")
 	player.end_special_attack_early()
-	broken.free()
+	# I remains a heavy attack even with a broken enemy nearby.
+	Input.action_press(&"special_attack")
 	player.start_special_attack(-1.0)
+	check(player.special_attack_charging and not player.special_attack_max_form, "I charges instead of selecting PLUS on broken targets")
+	player.update_special_attack_charge(0.45)
+	check(player.special_attack_charging and not player.animated_sprite.is_playing(), "Held I keeps the windup pose and never hits")
+	Input.action_release(&"special_attack")
+	player.update_special_attack_charge(0.0)
+	check(not player.special_attack_max_form and player.timeline_attack_effect.skill_hit_context.damage == 30, "Half charge releases a 30 damage heavy attack")
+	player.end_special_attack_early()
+	broken.free()
+	for ratio in [0.0, 0.5, 1.0]:
+		player.perform_special_attack(-1.0, ratio)
+		check(is_equal_approx(player.special_attack_lunge_distance, lerpf(96.0, 300.0, ratio)), "Charge scales unobstructed travel: %s" % ratio)
+		check(player.timeline_attack_effect.skill_hit_context.damage == roundi(lerpf(18.0, 42.0, ratio)), "Charge scales damage: %s" % ratio)
+		check(player.timeline_attack_effect.skill_hit_context.poise_damage == 15 and not player.timeline_attack_effect.skill_hit_context.max_form, "Charge preserves the normal interrupt contract")
+		player.end_special_attack_early()
+	Input.action_press(&"special_attack")
+	player.start_special_attack(-1.0)
+	player.update_special_attack_charge(2.0)
+	check(player.special_attack_charging and is_equal_approx(player.special_attack_charge_elapsed, 0.9), "Full charge caps and waits for release")
+	player.cancel_uncommitted_attack_effects()
+	check(not player.special_attack_charging, "An interrupted charge cannot release a phantom attack")
+	Input.action_release(&"special_attack")
+	player.perform_special_attack(-1.0)
 	var effect = player.timeline_attack_effect
-	check(effect.skill_hit_context.emphasis == SkillHitContext.Emphasis.SKILL and effect.skill_hit_context.poise_damage == player.SPECIAL_ATTACK_POISE_DAMAGE, "Normal form asks for skill emphasis and poise")
+	check(effect.skill_hit_context.emphasis == SkillHitContext.Emphasis.HEAVY_SKILL and effect.skill_hit_context.poise_damage == player.SPECIAL_ATTACK_POISE_DAMAGE, "Heavy attack preserves skill poise")
 	player.special_attack_lunge_elapsed = 0.0
 	var travelled := 0.0
 	var steps := 0

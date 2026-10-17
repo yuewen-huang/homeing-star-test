@@ -44,7 +44,9 @@ func run() -> void:
 	guard.world_min_x = -1000.0; guard.world_max_x = 3000.0
 	room.add_child(guard)
 	guard.set_physics_process(false)
+	await process_frame
 	guard.global_position = player.global_position
+	check(guard.parry_cue._display != null and guard.parry_cue._display.texture is AtlasTexture, "Lan's closing guard cue plays from the baked atlas")
 	right = guard.defense_contact_point(deer.global_position)
 	var hitbox := CombatHitbox2D.new()
 	room.add_child(hitbox); hitbox.set_physics_process(false)
@@ -61,11 +63,14 @@ func run() -> void:
 
 	# Guard failure (early parry): the blocked-hit spark is also on the blade.
 	clear_effects()
+	guard.parry_chain.cancel()
 	guard.play_idle(); guard.defense_state = LanPlayer.DefenseState.NONE
 	guard.start_parry_nothing()
 	result = guard.receive_combat_hit(CombatAttackData.new(&"t", deer, 20, 12, 180.0, 0.0))
 	spawned = effects()
-	check(result == CombatHitResult.Type.PARRY_FAILURE and spawned.size() == 1 and spawned[0].global_position == right, "Blocked-hit spark lands on the blade")
+	var blocked_at: Vector2 = spawned[0].global_position if not spawned.is_empty() else Vector2.INF
+	check(result == CombatHitResult.Type.PARRY_FAILURE and spawned.size() == 1 and blocked_at == right,
+		"Blocked-hit spark lands on the blade (result=%s, count=%d, at=%s, blade=%s)" % [CombatHitResult.Type.keys()[result], spawned.size(), blocked_at, right])
 	while Engine.time_scale < 1.0: await process_frame
 
 	# Red counter: global (every Lan's clash visual), landing on the deer's chest light.

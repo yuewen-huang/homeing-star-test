@@ -73,6 +73,10 @@ func run() -> void:
 		var on_beat := true
 		var open_smears := true
 		var attached := true
+		var restrained := true
+		var palette_matches := true
+		var above_floor := true
+		var body_sized := true
 		var opened := 0
 		for strike: Dictionary in rhythm.strikes:
 			while deer.clash_phase.step_time + 0.000001 < float(strike.t): tick(1)
@@ -80,10 +84,25 @@ func run() -> void:
 			var live: Array = crescents()
 			open_smears = open_smears and not live.is_empty() and live.back().age >= live.back().duration - 0.001
 			attached = attached and not live.is_empty() and live.back().get_parent() == deer
+			if not live.is_empty():
+				var smear: PixelSlash = live.back()
+				restrained = restrained and not smear.crescent_ghost and not smear.crescent_speed_lines and not smear.crescent_core
+				palette_matches = palette_matches and smear.palette_key == (&"red" if strike.danger == &"red" else &"deer")
+				# Include the outer echo, including enlarged final strikes. The deer origin
+				# is its floor anchor; checking the whole arc catches buried lower tips.
+				var outline := smear.visual_bounds()
+				above_floor = above_floor and outline.end.y <= deer.global_position.y + 0.5
+				var sprite := deer.animated_sprite
+				var body_size := Vector2(sprite.sprite_frames.get_frame_texture(sprite.animation, sprite.frame).get_image().get_used_rect().size) * sprite.scale
+				body_sized = body_sized and outline.size.x >= body_size.x * 1.05
+				if strike.swing != "thrust": body_sized = body_sized and outline.size.y >= body_size.y * 1.05
 			opened += 1 if deer.attack_hitbox.attack != null else 0
 			if r == 0 and strike == rhythm.strikes[0]: await snapshot("rhythm_first_beat")
 		check(on_beat, "%s: every strike's clip is on screen on its beat" % id)
 		check(open_smears and attached, "%s: a crescent on the deer is fully open on every beat" % id)
+		check(restrained and palette_matches, "%s: deer smears use the body palette (red danger preserved), without ghost, white core or speed lines" % id)
+		check(above_floor, "%s: the full smear and outer echo stay above the floor, including finishers" % id)
+		check(body_sized, "%s: every smear spans beyond the visible deer body (thrust along its long axis)" % id)
 		check(opened == rhythm.strike_count(), "%s: damage opens on every beat" % id)
 		tick(240)
 		check(room.dummy.contacts.size() - before == rhythm.strike_count(), "%s: the dummy takes %d contacts (got %d: %s)" % [id, rhythm.strike_count(), room.dummy.contacts.size() - before, str(room.dummy.contacts.slice(before).map(func(c) -> String: return str(c.get("id", c)) if c is Dictionary else str(c)))])

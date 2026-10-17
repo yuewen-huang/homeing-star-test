@@ -13,6 +13,7 @@ const MAP_SCENES := [
 	"res://scenes/sideview/chapter_1_wind_room.tscn",
 	"res://scenes/sideview/chapter_1_root_room.tscn",
 	"res://scenes/sideview/chapter_1_vine_room.tscn",
+	"res://scenes/sideview/chapter_2_salt_field.tscn",
 ]
 const MIST := "res://scenes/sideview/chapter_1_mist_room.tscn"
 
@@ -49,7 +50,7 @@ func check_catalog_matches_maps() -> void:
 	check(TravelCatalog.CHAPTERS[0] == Chapter1Travel.CHAPTER, "chapter 1 comes from its own file")
 	for chapter: Dictionary in TravelCatalog.CHAPTERS:
 		for region: Dictionary in chapter.regions:
-			check(ResourceLoader.exists(region.emblem) and ResourceLoader.exists(region.music), "region %s has emblem and music" % region.id)
+			check((String(region.emblem).is_empty() or ResourceLoader.exists(region.emblem)) and ResourceLoader.exists(region.music), "region %s has valid optional emblem and music" % region.id)
 			for stele: Dictionary in region.steles:
 				check(not listed.has(stele.id), "stele %s is catalogued once" % stele.id)
 				listed[stele.id] = true
