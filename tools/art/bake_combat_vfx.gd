@@ -40,12 +40,16 @@ func bake(key: String, encoded: Dictionary, asset_path: String) -> void:
 	var total: float = source.duration + source.tail
 	if source.shape == &"path": total = float(source._path.total) + source.tail
 	elif source.shape == &"sparks": total = source.spark_life.y
-	elif source.shape in [&"crescent", &"star"]: total = source.duration + source.hold + source.fade
+	elif source.shape in [&"crescent", &"star", &"wind_ribbons"]: total = source.duration + source.hold + source.fade
 	var times: Array[float] = [0.0]
 	for frame in range(1, ceili(total * FPS) + 1): times.append(minf(frame / FPS, total))
-	if source.shape in [&"crescent", &"star"]:
+	if source.shape in [&"crescent", &"star", &"wind_ribbons"]:
 		times.append(source.duration)
 		times.append(source.duration + source.hold)
+	elif source.shape == &"quake":
+		# Preserve the exact contact/compression image held by a real parry hit-stop.
+		times.append(source.duration)
+		times.append(source.duration+0.035)
 	times.sort()
 	var unique_times: Array[float] = []
 	for t in times:

@@ -52,6 +52,10 @@ func reset_player() -> void:
 	player.velocity = Vector2.ZERO
 func reset_vine() -> void:
 	# This helper explicitly starts a fresh in-memory fight, including after victory.
+	# The victory presentation can own a frozen-player session after its deferred
+	# callbacks run. End that session before replacing the fight under test.
+	if room.story._session: room.story._end_session()
+	player.set_input_frozen(false)
 	if room.story._settled:
 		room.story._settled = false
 		room.story.victory_pending = false
@@ -62,7 +66,9 @@ func reset_vine() -> void:
 	boss.phase = 4
 	boss.reset_phase()
 	boss.set_physics_process(false)
-	check(until(func() -> bool: return vine.step == DeerVinePhase.Step.HOVER), "production transform reaches the hovering human form")
+	var reached := until(func() -> bool: return vine.step == DeerVinePhase.Step.HOVER)
+	if not reached: print("TRANSFORM DIAGNOSTIC phase=",boss.phase," state=",boss.state," step=",vine.step," frozen=",player.input_frozen," health=",player.combat_stats.health," transition=",boss.phase_transition.active)
+	check(reached, "production transform reaches the hovering human form")
 	# Manual simulation must synchronize the real phase-four view before screen-sized casts.
 	room._process(0)
 	(room.get_node("Camera2D") as Camera2D).force_update_scroll()

@@ -7,6 +7,46 @@ var viewport: SubViewport
 var stage: Node2D
 var sprites: Array[CanvasItem] = []
 
+func pack_atlas(pages: Array[Dictionary]) -> Dictionary:
+	# Sparse world quads share one texture. Avoid allocating the empty map middle.
+	var ordered := pages.duplicate()
+	ordered.sort_custom(func(a: Dictionary,b: Dictionary) -> bool: return a.crop_size[1]>b.crop_size[1])
+	# Pages are at most 1024 px wide. Balance three padded columns by height;
+	# this avoids the large empty shelves left by the narrow north-wall strips.
+	var heights := [1,1,1]
+	var used_width := 0
+	for page in ordered:
+		var size := Vector2i(page.crop_size[0],page.crop_size[1])
+		var column := 0
+		for index in range(1,3):
+			if heights[index]<heights[column]: column = index
+		var cursor := Vector2i(column*(PAGE_SIZE+2)+1,heights[column])
+		page.atlas_rect = [cursor.x,cursor.y,size.x,size.y]
+		heights[column] += size.y+2
+		used_width = maxi(used_width,cursor.x+size.x+1)
+	var dimensions := Vector2i(used_width,int(heights.max()))
+	if dimensions.x>4096 or dimensions.y>4096:
+		push_error("Boundary atlas exceeds its texture budget")
+		return {}
+	var color := Image.create(dimensions.x,dimensions.y,false,Image.FORMAT_RGBA8)
+	var depth := Image.create(dimensions.x,dimensions.y,false,Image.FORMAT_RGBA8)
+	color.fill(Color.TRANSPARENT)
+	depth.fill(Color.TRANSPARENT)
+	for page in pages:
+		var rect: Array = page.atlas_rect
+		var at := Vector2i(rect[0],rect[1])
+		var color_page := Image.load_from_file(page.color)
+		var depth_page := Image.load_from_file(page.depth)
+		color.blit_rect(color_page,Rect2i(Vector2i.ZERO,color_page.get_size()),at)
+		depth.blit_rect(depth_page,Rect2i(Vector2i.ZERO,depth_page.get_size()),at)
+		page.erase("crop_size")
+	var color_error := color.save_png(OUTPUT+"boundary_atlas.png")
+	var depth_error := depth.save_png(OUTPUT+"boundary_depth_atlas.png")
+	if color_error!=OK or depth_error!=OK:
+		push_error("Could not save boundary atlases: %d / %d" % [color_error,depth_error])
+		return {}
+	return {"color":OUTPUT+"boundary_atlas.png","depth":OUTPUT+"boundary_depth_atlas.png","size":[dimensions.x,dimensions.y]}
+
 func _initialize() -> void: run.call_deferred()
 
 func source_hashes() -> Dictionary:
@@ -84,11 +124,14 @@ func run() -> void:
 		var result := image.get_region(Rect2i(crop[0],crop[1],crop[2],crop[3])).save_png(page.depth)
 		if result!=OK: quit(result); return
 		page.erase("origin"); page.erase("crop")
+		page.crop_size = [crop[2],crop[3]]
 	if source_hashes()!=sources:
 		push_error("Source changed during bake. Saved authoring is intact; rerun after saving."); quit(1); return
+	var atlas := pack_atlas(pages)
+	if atlas.is_empty(): quit(1); return
 	var file := FileAccess.open(OUTPUT+"manifest.json",FileAccess.WRITE)
-	file.store_string(JSON.stringify({"version":1,"sources":sources,"pages":pages},"\t")); file.close()
-	print("BOUNDARY BAKE: ",items.size()," items -> ",pages.size()," colour/depth pages")
+	file.store_string(JSON.stringify({"version":2,"sources":sources,"pages":pages,"atlas":atlas},"\t")); file.close()
+	print("BOUNDARY BAKE: ",items.size()," items -> ",pages.size()," sparse quads, one colour/depth atlas ",atlas.size)
 	source.free(); viewport.free()
 	await process_frame
 	quit()

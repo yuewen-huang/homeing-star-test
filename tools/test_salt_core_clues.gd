@@ -94,6 +94,9 @@ func run() -> void:
 	excavate(1)
 	check(field.boss_found and field.dig_hint.contains("找到核心") and not field.dig_hint.contains("空空如也"),"Digging the correct heap announces the core discovery")
 	await capture("salt_core_discovered")
+	check(field.crab_encounter.active,"Core discovery starts the production encounter")
+	field.crab_encounter.crab.combat_stats.apply_health_damage(999)
+	await process_frame
 	excavate(6)
 	check(field.dig_hint.contains("已经确认") and not field.dig_hint.contains("方向"),"Further empty digs do not send the player toward an already found core")
 	field.free()

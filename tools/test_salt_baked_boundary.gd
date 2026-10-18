@@ -26,6 +26,10 @@ func picture(baked: bool,point: Vector2,label_: String) -> Image:
 	# camera would resample nearest-filtered pages a second time and add 1px aliasing.
 	field.camera.position = field.camera.position.round()
 	check((field.baked_boundary!=null)==baked,"Requested baked mode installed: %s" % baked)
+	if baked and field.baked_boundary:
+		var single: MeshInstance2D = field.baked_boundary.get_node_or_null("BoundarySingleDraw")
+		check(single!=null and single.mesh.get_surface_count()==1,"Boundary uses one mesh surface and one shared color atlas")
+		check(field.baked_boundary.find_children("*","Sprite2D",true,false).is_empty(),"No per-page boundary sprites remain in atlas mode")
 	await process_frame; await RenderingServer.frame_post_draw
 	var image := root.get_texture().get_image()
 	if not output.is_empty(): image.save_png(output.path_join(label_+".png"))

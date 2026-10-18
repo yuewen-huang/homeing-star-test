@@ -17,7 +17,8 @@ func run() -> void:
 		if clip.spec.shape == "crescent" and clip.spec.palette == "deer": deer_clips.append(clip)
 	check(PixelSlash.new().pixel_size == 3.0, "Shared effects retain their three-world-pixel default")
 	check(deer_clips.size() >= 5, "The baked library contains the five production deer swing families")
-	check(manifest.clips.size() == 47, "The production library contains only the 46 combat recipes and Lan parry cue")
+	var quakes: Array = manifest.clips.values().filter(func(clip): return clip.spec.shape == "quake")
+	check(quakes.size() == 5 and manifest.clips.size() >= 52, "The production library includes five crystal crab ground attack recipes")
 	var semantically_named: bool = manifest.clips.values().all(func(clip: Dictionary) -> bool:
 		var base := String(clip.get("asset_path", ""))
 		if not base.contains("/") or base.is_empty(): return false

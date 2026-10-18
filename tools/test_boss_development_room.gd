@@ -128,10 +128,14 @@ func run() -> void:
 	check(master.state == master.State.CHASE and master.position == at and not master.combat_timeline.is_playing(), "Master remains idle without auto chasing or selecting attacks")
 	await capture("master_idle")
 	room.light_button.pressed.emit()
+	master = room.adapter.boss
+	freeze_specimen()
 	check(master.combat_timeline.current_animation == &"attack_1", "Light button runs the master's production timeline")
 	advance(0.2)
 	await capture("master_light")
 	key(KEY_2)
+	master = room.adapter.boss
+	freeze_specimen()
 	check(master.combat_timeline.current_animation == &"attack_2" and is_zero_approx(master.combat_timeline.current_animation_position), "Key 2 interrupts and restarts as master heavy attack")
 	advance(0.3)
 	await capture("master_heavy")

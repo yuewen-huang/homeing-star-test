@@ -54,7 +54,7 @@ func run() -> void:
 	check(not movement.ground_audio.playing,"Run stop immediately clears unfinished footsteps")
 	player.reset_after_map_fall(Vector2(380,555))
 	Input.action_press("ui_right"); await frames(30)
-	check(not movement.ground_audio.playing,"Walking does not start the running-only audio")
+	check(movement.ground_audio.stream in LanMovementAudio.WALK_STEPS,"Walking uses the two dedicated walk sounds rather than running audio")
 	Input.action_release("ui_right"); await frames(3)
 	player.reset_after_map_fall(Vector2(380,555))
 	Input.action_press("ui_right"); await frames(2); Input.action_release("ui_right"); await frames(2); Input.action_press("ui_right"); await frames(22)

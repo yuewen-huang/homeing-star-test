@@ -73,6 +73,7 @@ func run() -> void:
 		check(crab.action==&"idle" and crab.playing,"Complete action recovers into full idle cycle "+String(action))
 	check(frames==144,"All 144 source cells are covered once by 18 physical segments")
 	for action_index in 5:
+		if action_index == 4: room.select_combo_library(4)
 		room.play_action(action_index)
 		check(crab.action==[&"left_slam",&"right_slam",&"double_slam",&"walk",&"burrow"][action_index],"Existing action button triggers runtime action %d" % action_index)
 		if action_index<3:
@@ -98,6 +99,41 @@ func run() -> void:
 	advance(1.0)
 	check(crab.part==&"END" and is_equal_approx(crab.position.x,room.dummy.position.x),"Emergence ends at the locked preview destination")
 	await capture("crystal_crab_burrow_end")
+	# Exercise the actual OptionButton and play button signals, not start_quake().
+	room.dummy_x.value = 900
+	for selected in CrystalCrabQuakeRhythm.ORDER.size():
+		room.library_picker.item_selected.emit(selected)
+		room.ultimate_button.pressed.emit()
+		check(crab.rhythm != null and crab.rhythm.id == CrystalCrabQuakeRhythm.ORDER[selected],"UI selection and button 5 play the selected ground skill %d" % selected)
+		var score_end := crab.rhythm.end_time
+		var first_beat: float = crab.quake_beats[0].t
+		advance(first_beat)
+		var marker: Dictionary = CrystalCrabQuakeRhythm.CONTACTS[crab.quake_beats[0].anchor]
+		var mean := Vector2.ZERO
+		for point: Vector2 in marker.points: mean += point
+		mean /= marker.points.size()
+		var painted_contact := crab.animated_sprite.to_global(mean+crab.animated_sprite.offset)
+		check(absf(painted_contact.x-crab.quake_beats[0].center.x)<0.01,"Ground centre matches rendered claw contact horizontally %d" % selected)
+		check(is_equal_approx(crab.quake_beats[0].center.y,room.FLOOR_Y),"Ground art stays on the visible floor instead of inheriting painted claw depth %d" % selected)
+		check(is_equal_approx(crab.attack_collision.global_position.x,painted_contact.x),"Damage footprint shares the painted contact X %d" % selected)
+		check(not crab.quake_vfx.last_impact.is_empty(),"The ground beat selects a dedicated crab impact sound %d" % selected)
+		await capture("crystal_crab_anchor_%d_active" % selected)
+		advance(score_end-first_beat+0.15)
+		check(not room.dummy.contacts.is_empty(),"Selected ground skill actually reaches the preview dummy %d" % selected)
+		check(crab.quake_vfx.last_impact==[&"claw_b",&"double",&"echo",&"double",&"burrow",&"aftershock"][selected],"Every combo routes its closing beat to the authored impact sound %d" % selected)
+		check(crab.quake_vfx.impact_voices.all(func(voice): return voice.bus==&"SFX" and (voice.stream==null or voice.stream.resource_path.begins_with("res://assets/sideview/audio/crystal_crab/"))),"Crab voices use the SFX bus and no landing placeholder %d" % selected)
+	room.dummy_x.value = 688
+	room.play_action(1)
+	check(crab.direction == -1 and crab.animated_sprite.scale == Vector2(-2,2),"Body faces a target on its left")
+	check(is_equal_approx(crab.quake_beats[0].center.x,crab.global_position.x-190),"Left-facing right-claw AOE is mirrored with the body")
+	advance(0.70)
+	await capture("crystal_crab_facing_left_active")
+	room.dummy_x.value = 1020
+	room.play_action(1)
+	check(crab.direction == 1 and crab.animated_sprite.scale == Vector2(2,2),"Body faces a target on its right")
+	check(is_equal_approx(crab.quake_beats[0].center.x,crab.global_position.x+190),"Right-facing right-claw AOE retains its authored offset")
+	advance(0.70)
+	await capture("crystal_crab_facing_right_active")
 	room.play_action(2)
 	advance(0.7)
 	room.play_action(0)

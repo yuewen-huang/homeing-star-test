@@ -51,6 +51,9 @@ const KIND_NAMES := {"hit": Kind.HIT, "carry": Kind.CARRY, "charge": Kind.CHARGE
 const CHARGE_FLICKER := 0.04
 
 const PALETTES := {
+	&"master_wind": [Color("eeeeee"), Color("00e0dd"), Color("009fe8"), Color("007fc3")],
+	&"master": [Color("e8e4db"), Color("c5c7c8"), Color("6b8494"), Color("2b3948")],
+	&"crab": [Color("f1f2e6"), Color("bee5d8"), Color("3cada8"), Color("174d54")],
 	&"violet": [Color("fff4ff"), Color("f3b6ff"), Color("c25fe6"), Color("4f1c72")],
 	&"normal": [Color("ffffff"), Color("d6f3ff"), Color("78c4ea"), Color("33618f")],
 	&"red": [Color("fff0dd"), Color("ff9c66"), Color("e2412f"), Color("6e1222")],
@@ -61,6 +64,7 @@ const PALETTES := {
 }
 
 var shape := &"arc"
+var wind_profile := &"down_cut"
 ## Arc: centre relative to this node; angles in radians (y down, so increasing turns
 ## clockwise on screen); radius is the outer edge.
 var center := Vector2.ZERO
@@ -281,6 +285,7 @@ func _ready() -> void:
 func _reach() -> float:
 	var outer := line_gap + line_width + 8.0
 	match shape:
+		&"wind_ribbons": return 330.0
 		&"line": return maxf(from_point.length(), to_point.length()) + width + outer
 		&"burst": return center.length() + radius * 1.6 + width + outer
 		&"crescent": return center.length() + radius * maxf(1.0, squash) + line_gap * 3.0 + line_width + 48.0
@@ -300,9 +305,9 @@ func _u0() -> float: return 0.0 if shape in [&"line", &"path"] else start_angle
 func _u1() -> float: return 1.0 if shape == &"line" else end_angle
 
 func is_done() -> bool:
-	if shape == &"burst": return age >= duration + tail
+	if shape in [&"burst", &"quake"]: return age >= duration + tail
 	if shape == &"sparks": return age >= spark_life.y
-	if shape in [&"crescent", &"star"]: return age >= duration + hold + fade
+	if shape in [&"crescent", &"star", &"wind_ribbons"]: return age >= duration + hold + fade
 	return not _swinging and _samples.is_empty()
 
 func tip_param() -> float:
@@ -373,13 +378,85 @@ func _shade(strength: float) -> Color:
 func _draw_slash() -> void:
 	if age <= 0.0: return
 	match shape:
+		&"wind_ribbons": _draw_master_wind()
 		&"burst": _draw_burst()
+		&"quake": _draw_quake()
 		&"sparks": _draw_sparks()
 		&"crescent": _draw_crescent()
 		&"star": _draw_star()
 		&"line": _draw_line_trail()
 		&"path": _draw_path_trail()
 		_: _draw_arc_trail()
+
+## Master wind is a set of individually authored, unequal curved ribbons.
+## This offline geometry never samples, transforms or recolours the legacy PNGs.
+func _draw_master_wind() -> void:
+	if age >= duration+hold+fade: return
+	var curves: Array
+	if wind_profile == &"return_lift":
+		curves = [
+			[Vector2(-115,115),Vector2(-30,175),Vector2(260,-60),Vector2(105,-165),32.0,0.0],
+			[Vector2(-150,110),Vector2(-40,70),Vector2(205,-30),Vector2(90,-140),20.0,0.012],
+			[Vector2(-55,130),Vector2(140,140),Vector2(275,-40),Vector2(185,-120),14.0,0.025],
+			[Vector2(-165,90),Vector2(-190,20),Vector2(-100,45),Vector2(-120,70),12.0,0.006],
+			[Vector2(60,-110),Vector2(95,-210),Vector2(165,-185),Vector2(170,-140),10.0,0.035],
+		]
+	else:
+		curves = [
+			[Vector2(-130,-130),Vector2(-15,-190),Vector2(235,-95),Vector2(195,115),32.0,0.0],
+			[Vector2(-85,-150),Vector2(105,-205),Vector2(270,-30),Vector2(215,100),18.0,0.012],
+			[Vector2(-35,-155),Vector2(180,-155),Vector2(220,10),Vector2(245,95),11.0,0.025],
+			[Vector2(-90,108),Vector2(-50,115),Vector2(-120,35),Vector2(-135,95),10.0,0.018],
+			[Vector2(100,115),Vector2(210,110),Vector2(170,35),Vector2(130,80),16.0,0.035],
+		]
+	for index in curves.size():
+		var curve: Array = curves[index]
+		var local_age := age - float(curve[5])
+		if local_age <= 0: continue
+		var opening := ease_swing(local_age / duration)
+		var erode := clampf((local_age-duration-hold)/fade,0,1)
+		if erode >= 1: continue
+		# Rip from the trailing edge; the tip stays sharp instead of alpha-fading
+		# a single unchanging crescent. Each ribbon has a different silhouette.
+		var first := erode * 0.83
+		var thickness := float(curve[4]) * width / 32.0 * (1.0-erode*0.8)
+		_wind_band(curve,first,opening,thickness,0.0,palette[2],erode,index)
+		if erode < 0.78 and index < 3:
+			_wind_band(curve,first+0.04,opening-0.04,thickness*0.19,thickness*0.22,palette[1],erode,index)
+		if erode < 0.32 and index == 0:
+			_wind_band(curve,maxf(first,0.63),minf(opening,0.90),thickness*0.10,thickness*0.29,palette[0],0,index)
+
+func _wind_band(curve: Array, first: float, last: float, thickness: float, offset: float,
+		colour: Color, erode: float, ribbon: int) -> void:
+	if last-first < 0.008: return
+	const SAMPLES := 84
+	for k in SAMPLES:
+		var a := float(k)/SAMPLES
+		var b := float(k+1)/SAMPLES
+		if b <= first or a >= last: continue
+		# Stable authored notches open into gaps during erosion, not random noise.
+		if erode > 0.28 and (k+7*ribbon)%23 in [6,7,8]: continue
+		if erode > 0.60 and (k+3*ribbon)%13 in [2,3,4,5,6]: continue
+		a = maxf(a,first)
+		b = minf(b,last)
+		var pa: Vector2 = (curve[0] as Vector2).bezier_interpolate(curve[1],curve[2],curve[3],a)
+		var pb: Vector2 = (curve[0] as Vector2).bezier_interpolate(curve[1],curve[2],curve[3],b)
+		var normal := (pb-pa).normalized().orthogonal()
+		var wa := thickness*_wind_width(a,last,ribbon)
+		var wb := thickness*_wind_width(b,last,ribbon)
+		var points := PackedVector2Array([
+			(pa+normal*(wa*0.5+offset))/pixel_size,
+			(pb+normal*(wb*0.5+offset))/pixel_size,
+			(pb+normal*(-wb*0.5+offset))/pixel_size,
+			(pa+normal*(-wa*0.5+offset))/pixel_size])
+		if not Geometry2D.triangulate_polygon(points).is_empty():
+			_canvas.draw_colored_polygon(points,colour)
+
+func _wind_width(along: float, tip: float, ribbon: int) -> float:
+	var lens := pow(maxf(0.0,sin(PI*along)),0.62)
+	var sharp_tip := clampf((tip-along)/0.12,0,1)
+	var variation := 1.0+0.22*sin(along*23.0+float(ribbon)*2.1)
+	return lens*sharp_tip*variation
 
 func _draw_arc_trail() -> void:
 	for i in range(1, _samples.size()):
@@ -628,3 +705,103 @@ func _draw_star() -> void:
 	# A thin ring just inside the long rays, gone early in the fade.
 	var ring := radius * 0.7 * open * (0.9 + f * 0.5) / pixel_size
 	if f < 0.4: _canvas.draw_arc(c, ring, 0.0, TAU, 24, palette[1], 1.0)
+
+## Offline ground attack body: a fractured salt crown, swept shock lip and eroding chips.
+## Geometry stays inside the same authored footprint; no contact stars or flash overlays.
+func _draw_quake() -> void:
+	var opened := ease_swing(age / duration)
+	var f := clampf((age-duration)/tail,0,1)
+	if f>=1: return
+	var r := radius*opened
+	if r<1.0: return
+	var strength := pow(1.0-f,0.8)
+	var impact_age := maxf(0.0,age-duration)
+	var struck := age >= duration
+	# First the crust compresses, then the same slabs are launched and fall heavily.
+	# The hit and footprint are unchanged; these are material motions after contact.
+	var compression := 0.45+0.55*ease_swing(impact_age/0.035) if struck else 0.22
+	var erosion := 1.0-clampf((impact_age-0.12)/0.12,0,1)
+	var main: Color = palette[2]
+	var bright: Color = palette[1]
+	var dark: Color = palette[3]
+	main.a = strength*0.82
+	bright.a = strength
+	dark.a = strength*0.65
+	# A subdued ground shadow gives the lifting plates a solid base.
+	var shadow := PackedVector2Array()
+	for i in 48:
+		var angle := TAU*i/48.0
+		shadow.append(Vector2(cos(angle)*r,sin(angle)*r*squash)/pixel_size)
+	var shadow_color: Color = palette[3]
+	shadow_color.a = strength*(0.22+0.24*exp(-impact_age/0.045))
+	if r>1: _canvas.draw_colored_polygon(shadow,shadow_color)
+	# Halite reads as cubic cleavage and chalk-white salt crust, not pointed quartz.
+	# Reuse the existing footprint and opening envelope; only the material changes.
+	var salt_top := Color("edf4ef").lerp(palette[1],0.25)
+	var salt_side := Color("b9cbc5").lerp(palette[2],0.25)
+	var salt_shade := Color("758c88").lerp(palette[3],0.28)
+	for i in 13:
+		var a := TAU*float((i+6)%13)/13.0+sin(float(i)*7.3)*0.06
+		var variation := 0.5+0.5*sin(float(i)*13.17+2.4)
+		var reach := r*(0.54+variation*0.24)
+		var base := Vector2(cos(a)*reach,sin(a)*reach*squash)
+		var size := (7.0+variation*10.0)*opened*erosion*(radius/140.0)
+		var height := (7.0+variation*16.0)*opened*erosion*compression*(radius/140.0)
+		var flight := maxf(0.0,(180.0+variation*90.0)*impact_age-1700.0*impact_age*impact_age)
+		base.y -= flight*(radius/140.0)
+		if struck and impact_age>0.15: base.y += sin((impact_age-0.15)*42.0)*exp(-(impact_age-0.15)*32.0)*1.5
+		_salt_cube(base,size,height,salt_top,salt_side,salt_shade,strength)
+		if i%3==0:
+			_salt_cube(base+Vector2(size*0.36,-height),size*0.55,height*0.38,salt_top,salt_side,salt_shade,strength)
+	# Hairline square cleavage marks and a sparse white salt film remain between blocks.
+	for i in 9:
+		var a := float(i)*2.39996
+		var base := Vector2(cos(a)*r*0.43,sin(a)*r*squash*0.43)/pixel_size
+		var length := r*(0.16+float(i%3)*0.025)/pixel_size
+		var color := salt_top
+		color.a = strength*0.65
+		_canvas.draw_polyline(PackedVector2Array([base,base+Vector2(length,0),base+Vector2(length,length*0.18)]),color,1.0)
+	# Swept front shock lip, with gaps and tapered bright ends.
+	for i in 36:
+		var a := TAU*i/36.0
+		var b := a+TAU/36.0*0.86
+		var impulse := exp(-impact_age/0.055) if struck else 0.25
+		var width := (4.0+6.0*maxf(0,sin(a)))*strength+12.0*impulse
+		_band(a,b,maxf(0,r-width-3.0),maxf(0,r-width),maxf(0,r-width-3.0),maxf(0,r-width),dark)
+		_band(a,b,maxf(0,r-width),r,maxf(0,r-width*0.65),r,bright if i%4 else main)
+	# Cubic salt fragments and fine dry grains replace sharp mineral splinters.
+	for i in 22:
+		var a := float(i)*2.39996
+		var drift := maxf(0,age-duration)
+		var fraction := 0.25+float(i%7)/10.0
+		var pos := Vector2(cos(a),sin(a)*squash)*r*fraction
+		pos.y -= maxf(0.0,(210.0+float(i%5)*25.0)*drift-1900.0*drift*drift)
+		var size := (1.5+float(i%3))*strength if struck else 0.0
+		if size<0.9: continue
+		_salt_cube(pos,size,size*1.2,salt_top,salt_side,salt_shade,strength)
+	for i in 34:
+		var a := float(i)*2.39996+0.37
+		var fraction := 0.25+float(i%9)*0.075
+		var pos := Vector2(cos(a)*r*fraction,sin(a)*r*squash*fraction)
+		var flight := maxf(0.0,(120.0+float(i%6)*18.0)*impact_age-1550.0*impact_age*impact_age)
+		pos.y -= flight
+		var color := salt_top
+		color.a = strength*0.72 if struck else 0.0
+		_canvas.draw_rect(Rect2(pos/pixel_size,Vector2.ONE),color)
+
+func _salt_cube(base: Vector2, half_width: float, height: float, top_color: Color, side_color: Color, shade_color: Color, alpha: float) -> void:
+	if half_width<0.7 or height<0.7: return
+	var top := (base-Vector2(0,height))/pixel_size
+	var left := top+Vector2(-half_width,0)/pixel_size
+	var right := top+Vector2(half_width,0)/pixel_size
+	var back := top+Vector2(0,-half_width*0.38)/pixel_size
+	var front := top+Vector2(0,half_width*0.38)/pixel_size
+	var down := Vector2(0,height)/pixel_size
+	top_color.a = alpha*0.94
+	side_color.a = alpha*0.90
+	shade_color.a = alpha*0.82
+	_canvas.draw_colored_polygon(PackedVector2Array([left,back,right,front]),top_color)
+	_canvas.draw_colored_polygon(PackedVector2Array([left,front,front+down,left+down]),side_color)
+	_canvas.draw_colored_polygon(PackedVector2Array([front,right,right+down,front+down]),shade_color)
+	var edge := Color("f8fbf3",alpha)
+	_canvas.draw_polyline(PackedVector2Array([left,back,right]),edge,1.0)
