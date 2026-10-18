@@ -44,6 +44,8 @@ SUBMOVES = {
     'attack_3_lift': {'source': 'attack_3', 'label': '旋风 · 挑斩', 'parts': {'START':[13,16], 'ING':[17,18], 'END':[19,31]}},
     'air_spin': {'source': 'air_spin_slam', 'label': '空中 · 旋斩', 'parts': {'START':[6,7], 'ING':[8,15]}},
     'air_slam': {'source': 'air_spin_slam', 'label': '空中 · 下劈落地', 'parts': {'START':[16,16], 'ING':[17,23], 'END':[24,29]}},
+    'attack_2_open': {'source': 'attack_2', 'label': '攻击二 · 首刀', 'parts': {'START':[0,6], 'ING':[7,10]}},
+    'attack_3_down': {'source': 'attack_3', 'label': '旋风 · 前斩', 'parts': {'START':[0,4], 'ING':[5,7]}},
 }
 
 def main():
@@ -113,7 +115,7 @@ def main():
         (DEST/(action+'.png.import')).unlink(missing_ok=True)
     generated = ['class_name MasterPhase1Segments','extends RefCounted','', 'const PARTS := '+json.dumps(PARTS, ensure_ascii=False), 'const SUBMOVES := '+json.dumps(SUBMOVES, ensure_ascii=False), '']
     (ROOT/'homeing-star-game/scripts/sideview/master_phase1_segments.gd').write_text('\n'.join(generated),encoding='utf8')
-    print('Verified independent action segments and six compound submoves:', DEST)
+    print(f'Verified independent action segments and {len(SUBMOVES)} compound submoves:', DEST)
 
 if __name__ == '__main__':
     main()

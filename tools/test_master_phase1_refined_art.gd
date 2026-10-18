@@ -25,7 +25,7 @@ func run() -> void:
 	current_scene = room
 	await frames(2)
 	room.select_boss(1)
-	check(room.segment_picker.item_count == 17, "Eleven source actions and six compound submoves exposed")
+	check(room.segment_picker.item_count == 19, "Eleven source actions and eight compound submoves exposed")
 	check(room.segment_buttons[&"START"].disabled and not room.segment_buttons[&"ING"].disabled and room.segment_buttons[&"END"].disabled, "Idle keeps only its real loop segment")
 	for index in MasterPhase1Art.preview_actions().size():
 		room.select_segment_action(index)
@@ -65,7 +65,7 @@ func run() -> void:
 	room.select_combo(1)
 	check(not room.segment_row.visible, "Phase-two hides phase-one art tools")
 	room.select_combo(0)
-	check(room.segment_row.visible and room.segment_picker.item_count == 17, "Phase-one restores art tools")
+	check(room.segment_row.visible and room.segment_picker.item_count == 19, "Phase-one restores art tools")
 	room.select_combo_library(2)
 	room.play_action(4)
 	await frames(40)
