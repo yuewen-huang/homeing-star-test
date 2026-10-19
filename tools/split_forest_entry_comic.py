@@ -5,7 +5,7 @@ from PIL import Image
 
 WORKSPACE = Path(__file__).resolve().parents[2]
 SOURCE = WORKSPACE / "homeing-star-temp-assert/PendingArt/town_to_mist_forest_comic/20261015-v01"
-DEST = WORKSPACE / "homeing-star-game/assets/ui/comics/forest_entry"
+DEST = WORKSPACE / "homeing-star-game/assets/shared/ui/comics/forest_entry"
 # Pillow boxes: left, top, right, bottom (right/bottom excluded).
 # Remove only page borders/gutters; never resize or stretch the artwork.
 PANELS = [

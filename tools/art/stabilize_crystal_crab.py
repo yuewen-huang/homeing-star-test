@@ -15,7 +15,7 @@ import numpy as np
 from PIL import Image
 
 WORKSPACE = Path(__file__).resolve().parents[3]
-ASSETS = WORKSPACE / 'homeing-star-game/assets/sideview/characters/crystal_crab/boss/actions'
+ASSETS = WORKSPACE / 'homeing-star-game/assets/bosses/crystal_crab/body/boss/actions'
 OUT = WORKSPACE / 'homeing-star-test/artifacts/crystal-crab-contours'
 SOURCE = WORKSPACE / 'homeing-star-temp-assert/Art/盐场各BOSS/晶蟹/稳帧前精修PNG.zip'
 ACTIONS = ['idle', 'walk', 'left_slam', 'right_slam', 'double_slam', 'burrow']

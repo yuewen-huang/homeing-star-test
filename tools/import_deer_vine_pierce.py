@@ -53,7 +53,7 @@ def main():
             assert alpha == 1, ('Unexpected opacity', index, layer)
             atlases[layer].paste(image, (index % 4 * CANVAS[0], index // 4 * CANVAS[1]))
         reach.append(solid_reach(layer_frame(doc, index, 1)[0]))
-    target = args.project/'assets/sideview/characters/xiujiao_ranger/human/vfx'
+    target = args.project/'assets/bosses/deer/body/human/vfx'
     target.mkdir(parents=True, exist_ok=True)
     for layer, name in ((0, 'vine_pierce_circle.png'), (1, 'vine_pierce.png')):
         texture = target/name

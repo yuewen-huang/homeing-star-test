@@ -5,10 +5,10 @@ func _initialize() -> void:
 	if source == null: quit(1); return
 	var height := roundi(600.0*source.get_height()/source.get_width())
 	source.resize(600,height,Image.INTERPOLATE_LANCZOS)
-	var destination := "res://assets/sideview/environment/chapter_2_salt/"
-	var result := source.save_png(destination+"salt_coast_v1.png")
+	var destination := "res://assets/levels/chapter_2_salt/environment/"
+	var result := source.save_png(destination+"salt_coast.png")
 	if result != OK: quit(result); return
 	var fill := source.get_region(Rect2i(0,height-8,600,8))
-	result = fill.save_png(destination+"salt_sea_fill_v1.png")
+	result = fill.save_png(destination+"salt_sea_fill.png")
 	print("COAST EXPORT ",source.get_size()," SEA ",fill.get_size())
 	quit(result)

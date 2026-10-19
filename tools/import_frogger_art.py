@@ -9,7 +9,7 @@ parser.add_argument('--source', type=Path, default=Path(r'E:\download\Bosses_Fro
 parser.add_argument('--audit-only', action='store_true')
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[2]
-target = root / 'homeing-star-game/assets/sideview/characters/frogger'
+target = root / 'homeing-star-game/assets/bosses/frogger/body'
 audit = root / 'homeing-star-test/artifacts/frogger-art'
 audit.mkdir(parents=True, exist_ok=True)
 if not args.audit_only:

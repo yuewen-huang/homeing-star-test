@@ -5,7 +5,7 @@ from PIL import Image
 
 WORKSPACE = Path(__file__).resolve().parents[2]
 SOURCE = WORKSPACE / "homeing-star-temp-assert/PendingArt/m09_deer_encounter/20261015-v01"
-DEST = WORKSPACE / "homeing-star-game/assets/ui/comics/deer_intro"
+DEST = WORKSPACE / "homeing-star-game/assets/shared/ui/comics/deer_intro"
 PANELS = [
     ("01_blocked_path.png", (14, 11, 1010, 386)),
     ("02_unease.png", (14, 405, 489, 749)),

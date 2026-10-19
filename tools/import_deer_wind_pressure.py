@@ -19,7 +19,7 @@ def main():
     assert doc['canvas'] == (330, 256) and len(doc['frames']) == 26
     assert [layer['name'] for layer in doc['layers']] == ['Sprite Sheet', '图层 2']
     assert all(frame['duration_ms'] == 100 for frame in doc['frames'])
-    body = Image.open(args.project/'assets/sideview/characters/xiujiao_ranger/boss/actions/bind_push_ING.png').convert('RGBA')
+    body = Image.open(args.project/'assets/bosses/deer/body/boss/actions/bind_push_ING.png').convert('RGBA')
     assert body.size == (256*26, 256)
     atlas = Image.new('RGBA', (330*8, 256*4))
     frames = []
@@ -32,7 +32,7 @@ def main():
         x, y = index%8*330, index//8*256
         atlas.paste(effect, (x, y))
         frames.append({'region': [x,y,330,256], 'opacity': opacity, 'duration_ms': 100})
-    target = args.project/'assets/sideview/effects/deer_painted'
+    target = args.project/'assets/bosses/deer/fx/painted'
     target.mkdir(parents=True, exist_ok=True)
     texture = target/'wind_pressure.png'
     atlas.save(texture)
@@ -43,7 +43,7 @@ def main():
     data = {'canvas': [330,256], 'pivot': [82,256], 'world_scale': 1.4, 'frames': frames,
             'body_clip': 'bind_push_ING', 'contact_frames': [3,10,17], 'tail_first':21,
             'source_sha256': before}
-    resource = '[gd_resource type="Resource" load_steps=2 format=3]\n\n[ext_resource type="Texture2D" path="res://assets/sideview/effects/deer_painted/wind_pressure.png" id="1"]\n\n[resource]\nmetadata/texture = ExtResource("1")\nmetadata/animation = '+json.dumps(json.dumps(data,ensure_ascii=False),ensure_ascii=False)+'\n'
+    resource = '[gd_resource type="Resource" load_steps=2 format=3]\n\n[ext_resource type="Texture2D" path="res://assets/bosses/deer/fx/painted/wind_pressure.png" id="1"]\n\n[resource]\nmetadata/texture = ExtResource("1")\nmetadata/animation = '+json.dumps(json.dumps(data,ensure_ascii=False),ensure_ascii=False)+'\n'
     (target/'wind_pressure.tres').write_text(resource,encoding='utf-8')
     args.output.mkdir(parents=True,exist_ok=True)
     (args.output/'painted-import.json').write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding='utf-8')

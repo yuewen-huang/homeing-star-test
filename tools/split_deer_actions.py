@@ -64,7 +64,7 @@ def old_frame_clip(family,frame):
 
 
 def migrate_painted(project):
-    path=project/'assets/sideview/effects/deer_painted/timelines.tres'
+    path=project/'assets/bosses/deer/fx/painted/timelines.tres'
     data=read_resource_json(path,'timelines')
     for kind,clip in data['clips'].items():
         for sample in clip.get('body_offsets',[]):
@@ -88,7 +88,7 @@ def main():
     args=parser.parse_args();project=args.project
     if args.bindings_only:
         migrate_painted(project);return
-    art=project/'assets/sideview/characters/xiujiao_ranger/boss'
+    art=project/'assets/bosses/deer/body/boss'
     snapshot=BASE.parent/'homeing-star-temp-assert/PendingArt/workspace_art/deer-action-split-20261012/source_full'
     snapshot.mkdir(parents=True,exist_ok=True)
     for name,count in OLD_COUNTS.items():
@@ -159,7 +159,7 @@ def main():
     # Explicit resource dependencies also include every physical PNG in scene-only exports.
     resource=f'[gd_resource type="Resource" load_steps={len(clips)+1} format=3]\n\n'
     for i,(name,clip) in enumerate(clips.items()):
-        resource+=f'[ext_resource type="Texture2D" path="res://assets/sideview/characters/xiujiao_ranger/boss/actions/{clip["file"]}" id="{i+1}"]\n'
+        resource+=f'[ext_resource type="Texture2D" path="res://assets/bosses/deer/body/boss/actions/{clip["file"]}" id="{i+1}"]\n'
     resource+='\n[resource]\nmetadata/library_json = '+json.dumps(json.dumps(data,ensure_ascii=False),ensure_ascii=False)+'\n'
     resource+='metadata/textures = {\n'+',\n'.join(json.dumps(name)+f': ExtResource("{i+1}")' for i,name in enumerate(clips))+'\n}\n'
     (target/'library.tres').write_text(resource,encoding='utf-8')

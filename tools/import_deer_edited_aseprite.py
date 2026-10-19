@@ -14,7 +14,7 @@ from PIL import Image, ImageDraw
 
 ROOT=Path(__file__).resolve().parents[2]
 GAME=ROOT/'homeing-star-game'
-ART=GAME/'assets/sideview/characters/xiujiao_ranger/boss/actions'
+ART=GAME/'assets/bosses/deer/body/boss/actions'
 OUT=ROOT/'homeing-star-test/artifacts/deer-edited-aseprite-20261016'
 
 

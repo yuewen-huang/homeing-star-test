@@ -12,7 +12,7 @@ SCRIPTS = ["back_alley_entry_comic", "back_alley_pill_comic", "navigation_hall_e
 def collect():
     result = []
     for name in SCRIPTS:
-        text = (GAME / f"scripts/sideview/{name}.gd").read_text(encoding="utf-8")
+        text = (GAME / f"scripts/story/comics/{name}.gd").read_text(encoding="utf-8")
         textures = dict(re.findall(r'const (\w+) := preload\(\s*"res://([^\"]+)"\)', text))
         block = text.split("const PANELS := [", 1)[1].split("\n]", 1)[0]
         panels = []

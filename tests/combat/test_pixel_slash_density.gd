@@ -10,7 +10,7 @@ func check(ok: bool, label: String) -> void:
 	print("OK " if ok else "FAIL ", label)
 
 func run() -> void:
-	var library := preload("res://assets/sideview/effects/combat_baked/library.tres")
+	var library := preload("res://assets/generated/combat_vfx/library.tres")
 	var manifest: Dictionary = JSON.parse_string(library.get_meta("manifest", "{}"))
 	var deer_clips: Array[Dictionary] = []
 	for clip: Dictionary in manifest.clips.values():
@@ -23,7 +23,7 @@ func run() -> void:
 		var base := String(clip.get("asset_path", ""))
 		if not base.contains("/") or base.is_empty(): return false
 		for page: String in clip.get("pages", []):
-			if not page.begins_with(base + "_") or not ResourceLoader.exists("res://assets/sideview/effects/combat_baked/" + page): return false
+			if not page.begins_with(base + "_") or not ResourceLoader.exists("res://assets/generated/combat_vfx/" + page): return false
 		return true)
 	check(semantically_named, "Every production atlas page has an action-scoped path and resolves in Godot")
 	check(deer_clips.all(func(clip: Dictionary) -> bool: return is_equal_approx(float(clip.pixel_size), 2.0)), "Every deer crescent is baked at the approved two-pixel density")

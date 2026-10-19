@@ -22,7 +22,7 @@ def main():
     sheet = Image.new('RGBA', (width*6, height))
     for i, frame in enumerate(frames):
         sheet.paste(frame, (i*width, 0))
-    target = args.project/'assets/sideview/effects/root_anchor'
+    target = args.project/'assets/bosses/deer/fx/root_anchor'
     target.mkdir(parents=True, exist_ok=True)
     sheet.save(target/'root_anchor.png')
     exported = Image.open(target/'root_anchor.png').convert('RGBA')

@@ -1,6 +1,6 @@
 extends SceneTree
 const DEST := "res://scenes/levels/chapter_2_salt/chapter_2_salt_ambient.tscn"
-const PATH := "res://assets/sideview/environment/chapter_2_salt/ambient/"
+const PATH := "res://assets/levels/chapter_2_salt/environment/ambient/"
 const PROJECTION := preload("res://scripts/levels/chapter_2_salt/salt_field_projection.gd")
 const CONTROLLER := preload("res://scripts/levels/chapter_2_salt/chapter_2_salt_ambient.gd")
 const CRITTER := preload("res://scripts/levels/chapter_2_salt/salt_field_critter.gd")

@@ -18,9 +18,9 @@ const WINCH_SCRIPT := preload("res://scripts/levels/chapter_1/root_water_winch.g
 const STELE_SCRIPT := preload("res://scripts/levels/common/minigame_stele.gd")
 const FUNGUS_SCENE := preload("res://scenes/levels/chapter_1/root_light_fungus.tscn")
 const GATE_SCENE := preload("res://scenes/levels/chapter_1/root_light_gate.tscn")
-const FAR_ART := preload("res://assets/sideview/environment/chapter_1_root/layers/01_far_cavern.png")
-const MID_ART := preload("res://assets/sideview/environment/chapter_1_root/layers/02_mid_root_arch.png")
-const FRONT_ART := preload("res://assets/sideview/environment/chapter_1_root/layers/04_foreground_roots.png")
+const FAR_ART := preload("res://assets/levels/chapter_1/root/layers/01_far_cavern.png")
+const MID_ART := preload("res://assets/levels/chapter_1/root/layers/02_mid_root_arch.png")
+const FRONT_ART := preload("res://assets/levels/chapter_1/root/layers/04_foreground_roots.png")
 
 ## name, x, y, width, height, flags ("checkpoint", "hanging")
 const BLOCKS := [

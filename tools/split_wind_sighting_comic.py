@@ -5,7 +5,7 @@ from PIL import Image
 
 WORKSPACE = Path(__file__).resolve().parents[2]
 SOURCE = WORKSPACE / "homeing-star-temp-assert/PendingArt/m07_distant_back/20261015-v03-acting"
-DEST = WORKSPACE / "homeing-star-game/assets/ui/comics/wind_sighting"
+DEST = WORKSPACE / "homeing-star-game/assets/shared/ui/comics/wind_sighting"
 PANELS = [
     ("01_distant_back.png", (13, 9, 1011, 389)),
     ("02_recognition.png", (13, 407, 498, 721)),

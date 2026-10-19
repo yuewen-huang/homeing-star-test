@@ -78,7 +78,7 @@ func run_test() -> void:
 		if child is Sprite2D:
 			art_paths.append((child as Sprite2D).texture.resource_path)
 	assert(art_paths.size() == 5, "归航厅应加载两张连续远景和三层厅内素材")
-	assert(art_paths.has("res://assets/sideview/environment/navigation_hall/far_day.png"),
+	assert(art_paths.has("res://assets/levels/navigation_hall/environment/far_day.png"),
 		"归航厅远景默认应为白天")
 	var far_tiles: Array = room.get("far_day_tiles")
 	assert(far_tiles.size() == 2, "远景需要两张连续图片")

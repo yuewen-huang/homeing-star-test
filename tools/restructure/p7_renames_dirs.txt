@@ -1,0 +1,10 @@
+# Restructure P7 (2026-10-19), pass 2: folders lose version suffixes.
+assets/bosses/master/body/boss/phase1_refined -> assets/bosses/master/body/boss/phase1
+assets/levels/chapter_1/mist/terrain/ground_v1 -> assets/levels/chapter_1/mist/terrain/ground
+assets/levels/chapter_1/root/terrain/ground_v1 -> assets/levels/chapter_1/root/terrain/ground
+assets/levels/chapter_1/vine/terrain/ground_v1 -> assets/levels/chapter_1/vine/terrain/ground
+assets/levels/chapter_1/vine/terrain/vine_art_v2 -> assets/levels/chapter_1/vine/terrain/vine_art
+assets/levels/chapter_1/wind/terrain/ground_v1 -> assets/levels/chapter_1/wind/terrain/ground
+assets/levels/town/environment/parallax_v1 -> assets/levels/town/environment/parallax
+assets/levels/town/environment/props_v1 -> assets/levels/town/environment/props
+assets/levels/town/environment/street_v1 -> assets/levels/town/environment/street

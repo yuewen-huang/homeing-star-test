@@ -121,7 +121,7 @@ func run() -> void:
 		advance(score_end-first_beat+0.15)
 		check(not room.dummy.contacts.is_empty(),"Selected ground skill actually reaches the preview dummy %d" % selected)
 		check(crab.quake_vfx.last_impact==[&"claw_b",&"double",&"echo",&"double",&"burrow",&"aftershock"][selected],"Every combo routes its closing beat to the authored impact sound %d" % selected)
-		check(crab.quake_vfx.impact_voices.all(func(voice): return voice.bus==&"SFX" and (voice.stream==null or voice.stream.resource_path.begins_with("res://assets/sideview/audio/crystal_crab/"))),"Crab voices use the SFX bus and no landing placeholder %d" % selected)
+		check(crab.quake_vfx.impact_voices.all(func(voice): return voice.bus==&"SFX" and (voice.stream==null or voice.stream.resource_path.begins_with("res://assets/bosses/crystal_crab/audio/"))),"Crab voices use the SFX bus and no landing placeholder %d" % selected)
 	room.dummy_x.value = 688
 	room.play_action(1)
 	check(crab.direction == -1 and crab.animated_sprite.scale == Vector2(-2,2),"Body faces a target on its left")

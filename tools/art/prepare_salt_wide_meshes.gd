@@ -1,5 +1,5 @@
 extends SceneTree
-const OUT := "res://assets/sideview/environment/chapter_2_salt/layout_wide/"
+const OUT := "res://assets/levels/chapter_2_salt/environment/layout_wide/"
 const GROUND := preload("res://scripts/levels/chapter_2_salt/salt_field_ground.gd")
 const BOUNDARY := preload("res://scripts/levels/chapter_2_salt/salt_field_boundary.gd")
 func _initialize() -> void: run.call_deferred()

@@ -8,7 +8,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / 'homeing-star-temp-assert/PendingArt/character/双子'
-DEST = ROOT / 'homeing-star-game/assets/sideview/characters/twin_fish'
+DEST = ROOT / 'homeing-star-game/assets/bosses/twin_fish/body'
 AUDIT = ROOT / 'homeing-star-test/artifacts/twin-fish-import'
 
 

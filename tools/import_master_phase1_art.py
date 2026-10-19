@@ -7,7 +7,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / 'homeing-star-temp-assert/PendingArt/character/师傅优化计划'
-DEST = ROOT / 'homeing-star-game/assets/sideview/characters/master/boss/phase1_refined'
+DEST = ROOT / 'homeing-star-game/assets/bosses/master/body/boss/phase1'
 AUDIT = ROOT / '.artifacts/master-phase1-audit/native'
 CONFIG = {
     'idle': ('phase1_optimized_idle_16f', 256, True),
@@ -93,7 +93,7 @@ def main():
                 for local,i in enumerate(range(first,last+1)):
                     x,y = local%columns*w, local//columns*h
                     assert saved.crop((x,y,x+w,y+h)).tobytes() == native_frames[i].tobytes(), (clip,i)
-                ext.append(f'[ext_resource type="Texture2D" path="res://assets/sideview/characters/master/boss/phase1_refined/actions/{clip}.png" id="{clip}"]\n')
+                ext.append(f'[ext_resource type="Texture2D" path="res://assets/bosses/master/body/boss/phase1/actions/{clip}.png" id="{clip}"]\n')
                 animations.append('{"frames": [%s], "loop": false, "name": &"%s", "speed": 1.0}' % (', '.join(entries), clip))
                 all_entries.extend(entries)
             animations.append('{"frames": [%s], "loop": %s, "name": &"%s", "speed": 1.0}' % (', '.join(all_entries), str(whole_loop).lower(), move))

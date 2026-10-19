@@ -7,7 +7,7 @@ func _initialize() -> void:
 	for i in 3:
 		var cell := source.get_region(Rect2i(i*width,0,width,source.get_height()))
 		cell.resize(300,roundi(300.0*cell.get_height()/cell.get_width()),Image.INTERPOLATE_LANCZOS)
-		var result := cell.save_png("res://assets/sideview/environment/chapter_2_salt/salt_outcrop_%d.png" % (i+1))
+		var result := cell.save_png("res://assets/levels/chapter_2_salt/environment/salt_outcrop_%d.png" % (i+1))
 		if result != OK: quit(result); return
 		print("OUTCROP ",i+1," ",cell.get_size())
 	quit()

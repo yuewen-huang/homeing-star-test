@@ -42,8 +42,8 @@ from PIL import Image, ImageDraw, ImageFont
 ROOT = Path(os.environ.get("HOMING_STAR_GAME_PROJECT", Path(__file__).resolve().parents[2] / "homeing-star-game"))
 MEOWA = Path(__file__).resolve().parents[2] / "homeing-star-temp-assert/PendingArt/character/师傅/战斗姿态1"
 OUT = Path(os.environ.get("HOMING_STAR_TEST_OUTPUT", Path(__file__).resolve().parents[1] / "artifacts"))
-LAN = ROOT / "assets/sideview/characters/lan"
-MASTER = ROOT / "assets/sideview/characters/master/boss/phase1"
+LAN = ROOT / "assets/characters/lan/body"
+MASTER = ROOT / "assets/bosses/master/body/boss/phase1"
 
 ALPHA_CUT = 128               # 硬边阈值，与项目既有脚本保持一致
 QUANT_COLORS = 32             # tools/build_instant_dash_skill_assets.py 使用的色数

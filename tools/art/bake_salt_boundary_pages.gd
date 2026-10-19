@@ -1,6 +1,6 @@
 extends SceneTree
 ## Native render bake: colour + 16-bit object-depth pages preserve the original occlusion.
-const OUTPUT := "res://assets/sideview/environment/chapter_2_salt/baked_boundary/"
+const OUTPUT := "res://assets/levels/chapter_2_salt/environment/baked_boundary/"
 const SOURCE := "res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn"
 const PAGE_SIZE := 1024
 var viewport: SubViewport
@@ -53,14 +53,14 @@ func source_hashes() -> Dictionary:
 	var result := {}
 	for path in [SOURCE,"res://scenes/levels/chapter_2_salt/chapter_2_salt_environment.tscn",
 		"res://scripts/levels/chapter_2_salt/salt_field_perimeter.gd",
-		"res://assets/sideview/environment/chapter_2_salt/salt_outcrop_1.png",
-		"res://assets/sideview/environment/chapter_2_salt/salt_outcrop_2.png",
-		"res://assets/sideview/environment/chapter_2_salt/salt_outcrop_3.png",
-		"res://assets/sideview/environment/chapter_2_salt/salt_boundary_v1.png"]:
+		"res://assets/levels/chapter_2_salt/environment/salt_outcrop_1.png",
+		"res://assets/levels/chapter_2_salt/environment/salt_outcrop_2.png",
+		"res://assets/levels/chapter_2_salt/environment/salt_outcrop_3.png",
+		"res://assets/levels/chapter_2_salt/environment/salt_boundary.png"]:
 		result[path] = FileAccess.get_md5(path)
-	for name_ in DirAccess.get_files_at("res://assets/sideview/environment/chapter_2_salt/layout_wide"):
+	for name_ in DirAccess.get_files_at("res://assets/levels/chapter_2_salt/environment/layout_wide"):
 		if name_.begins_with("north_") and name_.ends_with(".tres"):
-			var path := "res://assets/sideview/environment/chapter_2_salt/layout_wide/"+name_
+			var path := "res://assets/levels/chapter_2_salt/environment/layout_wide/"+name_
 			result[path] = FileAccess.get_md5(path)
 	return result
 

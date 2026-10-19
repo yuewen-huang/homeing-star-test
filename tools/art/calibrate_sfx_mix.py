@@ -10,7 +10,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[3]
 GAME = ROOT/'homeing-star-game'
 REPORT = ROOT/'homeing-star-test/artifacts/sfx-mix'
-OUT = GAME/'assets/sideview/audio/sfx/mix_profile.json'
+OUT = GAME/'assets/shared/audio/sfx/mix_profile.json'
 
 def samples(path):
     raw = path.read_bytes(); pos = 12; fmt = data = None

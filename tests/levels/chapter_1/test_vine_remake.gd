@@ -152,7 +152,7 @@ func run() -> void:
 	await e()
 	check(room.puzzle.state == MinigameStele.SteleState.UNLOCKED and not is_instance_valid(room._flight_game), "first E unlocks and saves without completing")
 	var transition := root.get_node("SceneTransition") as SceneTransitionService
-	transition.play_music(load("res://assets/sideview/audio/homeward_town_day.mp3"))
+	transition.play_music(load("res://assets/levels/town/audio/homeward_town_day.mp3"))
 	var music := transition.music_player.stream
 	var music_position := transition.music_player.get_playback_position()
 	await e()

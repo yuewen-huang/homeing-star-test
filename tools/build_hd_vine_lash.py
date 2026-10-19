@@ -15,7 +15,7 @@ from import_deer_ground_lash import body_capsules
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / 'homeing-star-temp-assert/PendingArt/character/朽角巡林者/藤鞭地底重拍_高清双藤_v3_20261013'
-GAME = ROOT / 'homeing-star-game/assets/sideview/characters/xiujiao_ranger/human/vfx'
+GAME = ROOT / 'homeing-star-game/assets/bosses/deer/body/human/vfx'
 SIZE = (512, 512)
 PIVOT = (110, 448)
 GROUPS = ['01_F00-F05', '02_F06-F11', '03_F12-F17', '04_F18-F23', '05_F24-F29']

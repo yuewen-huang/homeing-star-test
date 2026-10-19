@@ -7,7 +7,7 @@ from aseprite_rgba_reader import read, layer_frame
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / 'homeing-star-temp-assert/PendingArt/character/主角-岚/手动作业区/Sprite-0003.aseprite'
-TARGET = ROOT / 'homeing-star-game/assets/sideview/characters/lan/attack/sword_wave'
+TARGET = ROOT / 'homeing-star-game/assets/characters/lan/body/attack/sword_wave'
 PREVIEW = ROOT / 'homeing-star-test/artifacts/lan-sword-wave-source.png'
 
 def main():

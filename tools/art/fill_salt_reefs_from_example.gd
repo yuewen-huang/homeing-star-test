@@ -44,7 +44,7 @@ func run() -> void:
 	var bank: Node2D = field.get_node("Environment/Boundary")
 	var textures: Array[Texture2D] = []
 	for i in 3:
-		var texture: Texture2D = load("res://assets/sideview/environment/chapter_2_salt/salt_outcrop_%d.png" % (i+1))
+		var texture: Texture2D = load("res://assets/levels/chapter_2_salt/environment/salt_outcrop_%d.png" % (i+1))
 		textures.append(texture); regions.append(visible_region(texture))
 	for side in 2:
 		for rock in bank.get_node("LeftBanks" if side==0 else "RightBanks").get_children():

@@ -5,7 +5,7 @@ import json
 from PIL import Image
 
 ROOT=Path(__file__).resolve().parents[2]
-ART=ROOT/'homeing-star-game/assets/sideview/characters/xiujiao_ranger/boss/actions'
+ART=ROOT/'homeing-star-game/assets/bosses/deer/body/boss/actions'
 OUT=ROOT/'homeing-star-test/artifacts/deer-edited-aseprite-20261016'
 
 

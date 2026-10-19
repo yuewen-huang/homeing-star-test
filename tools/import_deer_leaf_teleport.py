@@ -29,7 +29,7 @@ def main():
         cel, opacity = layer_frame(doc, index, 0)
         assert opacity == 1, ('Unexpected cel opacity', index, opacity)
         strip.paste(cel, (CANVAS[0]*index, 0))
-    target = args.project/'assets/sideview/characters/xiujiao_ranger/human/vfx'
+    target = args.project/'assets/bosses/deer/body/human/vfx'
     target.mkdir(parents=True, exist_ok=True)
     texture = target/'leaf_teleport.png'
     strip.save(texture)

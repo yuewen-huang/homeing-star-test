@@ -1,0 +1,69 @@
+# Restructure P7 (2026-10-19): assets grouped by owner first, then type.
+# Applied with move_res_paths.py; kept as the record of where each folder went.
+
+# Lan
+assets/sideview/characters/lan -> assets/characters/lan/body
+assets/sideview/effects/lan_attacks -> assets/characters/lan/fx/attacks
+assets/sideview/effects/lan_ultimate -> assets/characters/lan/fx/ultimate
+assets/sideview/effects/lan_wind_magic -> assets/characters/lan/fx/wind_magic
+assets/sideview/audio/lan_voice -> assets/characters/lan/audio/voice
+
+# Other characters (NPCs)
+assets/sideview/characters/forest_npcs -> assets/characters/forest_npcs
+assets/sideview/characters/aberration -> assets/characters/aberration
+assets/sideview/characters/child -> assets/characters/child
+assets/sideview/characters/eating_guests -> assets/characters/eating_guests
+assets/sideview/characters/magic_shop_owner -> assets/characters/magic_shop_owner
+assets/sideview/characters/maidashu -> assets/characters/maidashu
+assets/sideview/characters/navigator -> assets/characters/navigator
+assets/sideview/characters/wind -> assets/characters/wind
+
+# Bosses (deer = 朽角巡林者, formerly xiujiao_ranger)
+assets/sideview/characters/xiujiao_ranger -> assets/bosses/deer/body
+assets/sideview/effects/deer_painted -> assets/bosses/deer/fx/painted
+assets/sideview/effects/deer_root_painted -> assets/bosses/deer/fx/root_painted
+assets/sideview/effects/root_anchor -> assets/bosses/deer/fx/root_anchor
+assets/sideview/effects/wind_thorn_wall -> assets/bosses/deer/fx/wind_thorn_wall
+assets/sideview/characters/master -> assets/bosses/master/body
+assets/sideview/effects/master_wind -> assets/bosses/master/fx/wind
+assets/sideview/characters/crystal_crab -> assets/bosses/crystal_crab/body
+assets/sideview/audio/crystal_crab -> assets/bosses/crystal_crab/audio
+assets/sideview/characters/twin_fish -> assets/bosses/twin_fish/body
+assets/sideview/characters/frogger -> assets/bosses/frogger/body
+assets/sideview/bosses/amethyst_tree_core -> assets/bosses/regional_core/body/amethyst_tree_core
+assets/sideview/effects/regional_core -> assets/bosses/regional_core/fx
+
+# Enemies
+assets/sideview/monsters -> assets/enemies
+
+# Levels
+assets/sideview/environment/chapter_1_boss_rooms -> assets/levels/chapter_1/boss_rooms
+assets/sideview/environment/chapter_1_mist -> assets/levels/chapter_1/mist
+assets/sideview/environment/chapter_1_root -> assets/levels/chapter_1/root
+assets/sideview/environment/chapter_1_signposts -> assets/levels/chapter_1/signposts
+assets/sideview/environment/chapter_1_vine -> assets/levels/chapter_1/vine
+assets/sideview/environment/chapter_1_wind -> assets/levels/chapter_1/wind
+assets/sideview/audio/chapter_1 -> assets/levels/chapter_1/audio
+assets/sideview/audio/mist -> assets/levels/chapter_1/audio_mist
+assets/sideview/environment/chapter_2_salt -> assets/levels/chapter_2_salt/environment
+assets/sideview/audio/chapter_2 -> assets/levels/chapter_2_salt/audio
+assets/sideview/environment/navigation_hall -> assets/levels/navigation_hall/environment
+assets/sideview/environment/tutorial_city_gate -> assets/levels/tutorial/environment
+assets/sideview/audio/tutorial_battle -> assets/levels/tutorial/audio
+assets/sideview/back_alley -> assets/levels/back_alley/environment
+assets/sideview/town -> assets/levels/town/environment
+assets/sideview/audio/homeward_town_day.mp3 -> assets/levels/town/audio/homeward_town_day.mp3
+assets/sideview/audio/town_disorder_night.mp3 -> assets/levels/town/audio/town_disorder_night.mp3
+
+# Shared
+assets/sideview/environment/common_portal -> assets/shared/environment/common_portal
+assets/sideview/effects/combat_warning -> assets/shared/combat_fx/warning
+assets/sideview/effects/ground_impact -> assets/shared/combat_fx/ground_impact
+assets/sideview/audio/actions -> assets/shared/audio/actions
+assets/sideview/audio/combat -> assets/shared/audio/combat
+assets/sideview/audio/sfx -> assets/shared/audio/sfx
+assets/sideview/shaders -> assets/shared/shaders
+assets/ui -> assets/shared/ui
+
+# Tool output
+assets/sideview/effects/combat_baked -> assets/generated/combat_vfx

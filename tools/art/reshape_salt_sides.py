@@ -10,7 +10,7 @@ import struct
 ROOT = Path(__file__).resolve().parents[3]
 GAME = ROOT / "homeing-star-game"
 PROFILE = GAME / "scripts/levels/chapter_2_salt/salt_field_perimeter.gd"
-SCENES = GAME / "scenes/sideview"
+SCENES = GAME / "scenes/levels/chapter_2_salt"
 MARKER = "metadata/irregular_sides_authored = true"
 profile_text = PROFILE.read_text(encoding="utf-8")
 profiles = []

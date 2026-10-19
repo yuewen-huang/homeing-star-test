@@ -6,7 +6,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[3]
-ASSETS = ROOT / "homeing-star-game/assets/sideview/effects/combat_baked"
+ASSETS = ROOT / "homeing-star-game/assets/generated/combat_vfx"
 SCALE = 4
 CELL = 120
 COLS = 8

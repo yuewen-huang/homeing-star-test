@@ -36,7 +36,7 @@ def feet_center(im):
 
 def frames_resource(id):
     out = ['[gd_resource type="SpriteFrames" load_steps=6 format=3]', '',
-           f'[ext_resource type="Texture2D" path="res://assets/sideview/characters/forest_npcs/{id}/idle_128x160_4f.png" id="1"]', '']
+           f'[ext_resource type="Texture2D" path="res://assets/characters/forest_npcs/{id}/idle_128x160_4f.png" id="1"]', '']
     for i in range(4):
         out += [f'[sub_resource type="AtlasTexture" id="Atlas_{i}"]', 'atlas = ExtResource("1")',
                 f'region = Rect2({i * 128}, 0, 128, 160)', '']
@@ -63,9 +63,9 @@ def main():
     all_idle, all_portraits = {}, {}
     for id, name, species in CHARS:
         work = ART / id
-        body_dest = GAME / 'assets/sideview/characters/forest_npcs' / id
-        face_dest = GAME / 'assets/ui/portraits/dialogue_fit' / id
-        original_dest = GAME / 'assets/ui/portraits/forest_npcs' / id
+        body_dest = GAME / 'assets/characters/forest_npcs' / id
+        face_dest = GAME / 'assets/shared/ui/portraits/dialogue_fit' / id
+        original_dest = GAME / 'assets/shared/ui/portraits/forest_npcs' / id
         for folder in [body_dest, face_dest, original_dest, work / 'idle_normalized']:
             folder.mkdir(parents=True, exist_ok=True)
         raw = Image.open(work / 'idle_raw.png').convert('RGBA')

@@ -6,8 +6,8 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 GAME = ROOT / 'homeing-star-game'
 ART = ROOT / 'homeing-star-temp-assert/PendingArt/forest_npcs/20261015-production'
-folders = [GAME / 'assets/sideview/characters/forest_npcs', GAME / 'assets/ui/portraits/forest_npcs']
-folders += [GAME / 'assets/ui/portraits/dialogue_fit' / x for x in ['yupo', 'ali', 'lingwei', 'xiaosui']]
+folders = [GAME / 'assets/characters/forest_npcs', GAME / 'assets/shared/ui/portraits/forest_npcs']
+folders += [GAME / 'assets/shared/ui/portraits/dialogue_fit' / x for x in ['yupo', 'ali', 'lingwei', 'xiaosui']]
 files = [p for f in folders for p in f.rglob('*') if p.is_file()]
 files += [GAME / 'scenes/dev/forest_npc_art_gallery.tscn', GAME / 'scripts/dev/forest_npc_art_gallery.gd',
           GAME / 'scripts/dev/forest_npc_art_gallery.gd.uid']

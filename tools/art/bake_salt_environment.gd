@@ -37,7 +37,7 @@ func bake() -> void:
 	root.add_child(environment)
 	var backdrop := Node2D.new(); backdrop.name = "Backdrop"; backdrop.z_index = -20
 	environment.add_child(backdrop)
-	var sky: Texture2D = load("res://assets/sideview/environment/chapter_2_salt/salt_clear_sky_v1.png")
+	var sky: Texture2D = load("res://assets/levels/chapter_2_salt/environment/salt_clear_sky.png")
 	fill(backdrop,"OutsideBase",Rect2(-6000,-4000,15600,10000),Color("e7ede9"))
 	fill(backdrop,"UpperSky",Rect2(-6000,-4000,15600,3660),sky.get_image().get_pixel(600,0))
 	for i in range(-4,8):

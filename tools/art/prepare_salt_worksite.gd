@@ -1,6 +1,6 @@
 extends SceneTree
 const SOURCE := "D:/HomingStar/homeing-star-temp-assert/Art/salt/worksite/20261017-v01/"
-const DEST := "res://assets/sideview/environment/chapter_2_salt/worksite/"
+const DEST := "res://assets/levels/chapter_2_salt/environment/worksite/"
 func _initialize() -> void:
 	DirAccess.make_dir_recursive_absolute(DEST)
 	var names := ["loading_ground","raked_bed","shallow_brine","wooden_trough","salt_rake"]

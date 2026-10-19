@@ -6,12 +6,12 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-assets = ROOT / 'homeing-star-game/assets/sideview/effects/combat_baked'
+assets = ROOT / 'homeing-star-game/assets/generated/combat_vfx'
 manifest = json.loads((assets / 'manifest.json').read_text(encoding='utf-8'))
 pages = sorted({page for clip in manifest['clips'].values() for page in clip['pages']})
 lines = [f'[gd_resource type="Resource" load_steps={len(pages) + 1} format=3]', '']
 for i, page in enumerate(pages, 1):
-    lines.append(f'[ext_resource type="Texture2D" path="res://assets/sideview/effects/combat_baked/{page}" id="{i}"]')
+    lines.append(f'[ext_resource type="Texture2D" path="res://assets/generated/combat_vfx/{page}" id="{i}"]')
 lines += ['', '[resource]', 'metadata/manifest = ' + json.dumps(json.dumps(manifest, ensure_ascii=False, separators=(',', ':')), ensure_ascii=False), 'metadata/textures = {']
 lines += [json.dumps(page) + f': ExtResource("{i}")' + (',' if i < len(pages) else '') for i, page in enumerate(pages, 1)]
 lines += ['}', '']

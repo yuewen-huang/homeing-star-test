@@ -15,6 +15,6 @@ func _initialize() -> void:
 			last = maxi(last,y)
 	var cropped := source.get_region(Rect2i(0,first,source.get_width(),last-first+1))
 	cropped.resize(384,roundi(384.0*cropped.get_height()/cropped.get_width()),Image.INTERPOLATE_LANCZOS)
-	var error := cropped.save_png("res://assets/sideview/environment/chapter_2_salt/salt_boundary_v1.png")
+	var error := cropped.save_png("res://assets/levels/chapter_2_salt/environment/salt_boundary.png")
 	print("BOUNDARY EXPORT ",cropped.get_size()," ",error)
 	quit(error)

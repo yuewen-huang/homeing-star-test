@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[2]
 GAME = ROOT / 'homeing-star-game'
 OUT = ROOT / 'homeing-star-temp-assert/PendingArt/Effects/Fw effects'
 FX = 'assets/sideview/effects/'
-BODY = 'assets/sideview/characters/master/boss/'
+BODY = 'assets/bosses/master/body/boss/'
 # Names and windows use Aseprite's one-based frame numbering.
 CONFIGS = [
     ('01_一阶段_攻击1', 'attack_1', 'master_wind/phase1_optimized_atak1_fx_675x384_16f.png', 'phase1_optimized_atak1_body_675x384_16f.png', (675,384),16,(0,-192),1),

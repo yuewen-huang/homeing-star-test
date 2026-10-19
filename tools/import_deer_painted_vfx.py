@@ -81,7 +81,7 @@ def main():
     manifest = json.loads((args.source/"capture_manifest.json").read_text(encoding="utf-8"))
     refs = {clip["id"]: clip for clip in manifest["clips"]}
     anchor = manifest["anchor"]
-    destination = args.project/"assets/sideview/effects/deer_painted"
+    destination = args.project/"assets/bosses/deer/fx/painted"
     timeline_path = destination/"timelines.tres"
     preserved = {}
     if timeline_path.exists():
@@ -169,7 +169,7 @@ def main():
         output["clips"]["mist_dash"] = clip
         print(f"Painted mist dash: {len(timing)} frames, {sum(timing)} ms, back={len(layers['back'])}, front={len(layers['front'])}")
     # Validate all inputs before replacing any runtime file. Sources stay untouched.
-    destination = args.project/"assets/sideview/effects/deer_painted"
+    destination = args.project/"assets/bosses/deer/fx/painted"
     destination.mkdir(parents=True, exist_ok=True)
     for kind in SPECS:
         for depth in ("back", "front"):

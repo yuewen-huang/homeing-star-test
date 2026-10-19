@@ -9,7 +9,7 @@ import wave
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[3]
-OUT = ROOT / 'homeing-star-game/assets/sideview/audio/crystal_crab'
+OUT = ROOT / 'homeing-star-game/assets/bosses/crystal_crab/audio'
 REPORT = ROOT / 'homeing-star-test/artifacts/crab-contact-audit'
 RATE = 48000
 

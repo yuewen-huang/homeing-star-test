@@ -10,7 +10,7 @@ from aseprite_rgba_reader import read, layer_frame
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT/'homeing-star-temp-assert/PendingArt/character/朽角巡林者/红藤/Aseprite_20261013'
-DEST = ROOT/'homeing-star-game/assets/sideview/characters/xiujiao_ranger/human/vfx'
+DEST = ROOT/'homeing-star-game/assets/bosses/deer/body/human/vfx'
 
 
 def pivot_from_slice(raw):

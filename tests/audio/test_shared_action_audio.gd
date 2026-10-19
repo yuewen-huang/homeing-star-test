@@ -4,7 +4,7 @@ class MemoryProgress extends SaveProgressService:
 		_config = ConfigFile.new(); _loaded = true
 	func save_progress() -> bool: return true
 	func is_ability_unlocked(_ability: StringName) -> bool: return true
-const PROFILE := preload("res://assets/sideview/audio/sfx/mix_profile.gd")
+const PROFILE := preload("res://assets/shared/audio/sfx/mix_profile.gd")
 func level(voice: Node) -> float:
 	return float(PROFILE.DATA.sounds[voice.stream.resource_path].active_weighted_db)+voice.volume_db
 var failures := 0

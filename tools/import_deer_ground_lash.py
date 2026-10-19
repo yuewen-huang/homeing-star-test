@@ -9,7 +9,7 @@ from aseprite_rgba_reader import read, layer_frame
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / 'homeing-star-temp-assert/PendingArt/character/朽角巡林者/藤鞭地底重拍_三变体_v2_20261013/03_双藤重拍.aseprite'
-DEST = ROOT / 'homeing-star-game/assets/sideview/characters/xiujiao_ranger/human/vfx'
+DEST = ROOT / 'homeing-star-game/assets/bosses/deer/body/human/vfx'
 PIVOT = (48, 196)
 
 

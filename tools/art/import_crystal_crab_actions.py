@@ -8,7 +8,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from aseprite_rgba_reader import read, layer_frame
 
 WORKSPACE = Path(__file__).resolve().parents[3]
-DEST = WORKSPACE/'homeing-star-game/assets/sideview/characters/crystal_crab/boss/actions'
+DEST = WORKSPACE/'homeing-star-game/assets/bosses/crystal_crab/body/boss/actions'
 SPECS = {'idle':'待机','walk':'走路','left_slam':'左砸','right_slam':'右砸','double_slam':'双砸','burrow':'钻地-移动-出现'}
 
 def main():
@@ -63,7 +63,7 @@ def main():
     script += ['}','const CLIPS := {']
     for spec in clips:
         clip = spec['clip']
-        fields = [f'"texture": preload("res://assets/sideview/characters/crystal_crab/boss/actions/{clip}.png")']
+        fields = [f'"texture": preload("res://assets/bosses/crystal_crab/body/boss/actions/{clip}.png")']
         for key in ['count','source_start','fps','ground_y','durations_ms','frame_ends','duration']:
             fields.append(f'"{key}": {json.dumps(spec[key])}')
         script.append(f'\t&"{clip}": {{'+', '.join(fields)+'},')

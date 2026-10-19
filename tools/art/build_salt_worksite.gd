@@ -1,6 +1,6 @@
 extends SceneTree
 const DEST := "res://scenes/levels/chapter_2_salt/chapter_2_salt_worksite.tscn"
-const ART := "res://assets/sideview/environment/chapter_2_salt/worksite/"
+const ART := "res://assets/levels/chapter_2_salt/environment/worksite/"
 const PATCH := preload("res://scripts/levels/chapter_2_salt/chapter_2_salt_worksite.gd")
 const DEPTH := preload("res://scripts/levels/chapter_2_salt/salt_field_prop_depth.gd")
 func _initialize() -> void: run.call_deferred()

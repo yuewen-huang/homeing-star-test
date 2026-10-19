@@ -37,7 +37,7 @@ def import_roots(source, project, work, executable):
                 frames.append({'duration_ms':durations[i],'region':[r[k] for k in ('x','y','w','h')], 'offset':[-anchor_x,-anchor_y], 'hit_rect':[box[0]-anchor_x,box[1]-anchor_y,box[2]-box[0],box[3]-box[1]], 'source_position':[row['spriteSourceSize']['x'],row['spriteSourceSize']['y']]})
             clips[key]={'kind':kind,'variant':variant,'canvas':[w,h],'duration_ms':sum(durations),'frames':frames,'source_file':path.name,'source_sha256':hashlib.sha256(blob).hexdigest(),'idle_frame':n-1,'destroy_frames':[1,0] if kind=='nodule' else []}
             print(key,n,'frames',sum(durations),'ms',flush=True)
-    dest=project/'assets/sideview/effects/deer_root_painted';dest.mkdir(parents=True,exist_ok=True)
+    dest=project/'assets/bosses/deer/fx/root_painted';dest.mkdir(parents=True,exist_ok=True)
     for key in clips: shutil.copy2(work/(key+'.png'),dest/(key+'.png'))
     payload=json.dumps({'world_scale':1.4,'clips':clips,'source_folder':str(source)},ensure_ascii=False,separators=(',',':'))
     (dest/'timelines.tres').write_text('[gd_resource type="Resource" format=3]\n\n[resource]\nmetadata/timelines = '+json.dumps(payload,ensure_ascii=False)+'\n',encoding='utf-8')

@@ -6,11 +6,11 @@ extends SceneTree
 ## 种子可以是 PCM WAV，也可以是游戏里已导入的 QOA 压缩 AudioStreamWAV（.res），工具自行解码。
 
 const SR := 44100
-const OUT_DIR := "res://assets/sideview/audio/sfx/derived/"
-const ACTIONS := "res://assets/sideview/audio/actions/"
+const OUT_DIR := "res://assets/shared/audio/sfx/derived/"
+const ACTIONS := "res://assets/shared/audio/actions/"
 const SEEDS := {
-	"swing": "res://assets/sideview/audio/combat/parry_prepare.wav",
-	"ring": "res://assets/sideview/audio/combat/parry_success.wav",
+	"swing": "res://assets/shared/audio/combat/parry_prepare.wav",
+	"ring": "res://assets/shared/audio/combat/parry_success.wav",
 	"call_far": ACTIONS + "deer_call_far.res",
 	"call_near": ACTIONS + "deer_call_near.res",
 	"gallop": ACTIONS + "deer_run.res",

@@ -37,7 +37,7 @@ func run() -> void:
 	assert(midground.get_child_count() == 2)
 	for landscape in midground.get_children():
 		assert(landscape.texture is AtlasTexture)
-		assert(landscape.texture.atlas.resource_path.ends_with("04_midground_gardens_v1.png"))
+		assert(landscape.texture.atlas.resource_path.ends_with("04_midground_gardens.png"))
 		assert(is_equal_approx(landscape.scale.x, landscape.scale.y))
 	print("Master room layout: two-screen bounds, camera edges and ultimate lock passed")
 	quit()

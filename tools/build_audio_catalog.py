@@ -63,7 +63,7 @@ def references(path, lines):
 def build():
     OUT.mkdir(parents=True, exist_ok=True)
     refs = code_references()
-    profile = json.loads((GAME/"assets/sideview/audio/sfx/mix_profile.json").read_text(encoding="utf-8"))["sounds"]
+    profile = json.loads((GAME/"assets/shared/audio/sfx/mix_profile.json").read_text(encoding="utf-8"))["sounds"]
     files = set()
     for root in [WORKSPACE/'homeing-star-game', WORKSPACE/'homeing-star-temp-assert',
                  WORKSPACE/'homeing-star-test']:
@@ -71,7 +71,7 @@ def build():
         for p in root.rglob('*'):
             if any(part in SKIP for part in p.parts): continue
             if p.is_file() and p.suffix.lower() in {'.wav', '.mp3'}:
-                if p.suffix.lower() == '.mp3' and not p.is_relative_to(GAME/'assets/sideview/audio'): continue
+                if p.suffix.lower() == '.mp3' and not any(part.startswith('audio') for part in p.relative_to(GAME).parts): continue
                 files.add(p.resolve())
     items = []
     for path in sorted(files, key=lambda p: str(p).casefold()):
@@ -79,13 +79,13 @@ def build():
         external = path.is_relative_to(LIBRARY)
         scope = '正式资源' if runtime else ('外部素材库' if external else '项目素材/测试产物')
         rel = path.relative_to(LIBRARY) if external else path.relative_to(WORKSPACE)
-        group = rel.parts[0] if external else ('ui' if path.is_relative_to(GAME/'assets/ui') else path.parent.name if runtime else rel.parts[0])
+        group = rel.parts[0] if external else ('ui' if path.is_relative_to(GAME/'assets/shared/ui') else path.parent.name if runtime else rel.parts[0])
         category = '/'.join(path.relative_to(GAME/'assets').parts[:-1]) if runtime else str(rel.parent)
         locations = references(path, refs) if runtime else []
         imported = []
         if external and path.parent.name == '手动':
             for key in MANUAL.get(path.stem, []):
-                resource = GAME/'assets/sideview/audio/actions'/f'{key}.res'
+                resource = GAME/'assets/shared/audio/actions'/f'{key}.res'
                 if resource.exists():
                     imported.append(resource.relative_to(GAME).as_posix())
                     locations += references(resource, refs)

@@ -7,7 +7,7 @@ extends SceneTree
 ##   <Godot> --headless --path ../homeing-star-game --script <本文件的绝对路径> -- --manifest
 ## Segment boundaries: ../homeing-star-doc/docs/design/chapter_1_deer_vine_phase_design.md, section 7.
 
-const OUT := "res://assets/sideview/characters/xiujiao_ranger/human/"
+const OUT := "res://assets/bosses/deer/body/human/"
 const CELL := 256
 ## All sheets share one layout, so one foot pivot keeps the figure still across clips.
 ## x matches the deer's body centre in 变身 F00, so the transform starts where the deer stood.

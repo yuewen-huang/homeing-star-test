@@ -102,7 +102,7 @@ def run(source, project, work, aseprite):
         assert row['duration'] == duration and not row['trimmed']
         frames.append({'duration_ms': duration, 'region': [r[k] for k in ('x','y','w','h')],
             'hit_rect': [box[0]-pivot[0], box[1]-pivot[1], box[2]-box[0], box[3]-box[1]]})
-    target = project/'assets/sideview/effects/wind_thorn_wall'
+    target = project/'assets/bosses/deer/fx/wind_thorn_wall'
     target.mkdir(parents=True, exist_ok=True)
     shutil.copy2(png, target/'growth.png')
     animation = {'canvas': list(images[0].size), 'pivot': pivot, 'pivot_source': 'shared root baseline; no source slice',

@@ -6,8 +6,8 @@ import shutil
 
 ROOT=Path(__file__).resolve().parents[3]
 GAME=ROOT/'homeing-star-game'
-SCENES=GAME/'scenes/sideview'
-RESOURCE='res://assets/sideview/environment/chapter_2_salt/layout_wide/'
+SCENES=GAME/'scenes/levels/chapter_2_salt'
+RESOURCE='res://assets/levels/chapter_2_salt/environment/layout_wide/'
 backup=ROOT/'homeing-star-test/artifacts'/('salt-wide-'+datetime.now().strftime('%Y%m%d-%H%M%S'))
 backup.mkdir(parents=True)
 

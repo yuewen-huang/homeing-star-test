@@ -72,7 +72,7 @@ func run() -> void:
 	caption = Label.new()
 	caption.position = Vector2(20,606)
 	layer.add_child(caption)
-	check(FileAccess.get_file_as_bytes("res://assets/sideview/characters/master/boss/master_combat_timelines.tres") == FileAccess.get_file_as_bytes("D:/HomingStar/homeing-star-test/fixtures/master/phase1_legacy_timelines.tres"),"Original authored timing and hitbox data restored byte-for-byte")
+	check(FileAccess.get_file_as_bytes("res://assets/bosses/master/body/boss/master_combat_timelines.tres") == FileAccess.get_file_as_bytes("D:/HomingStar/homeing-star-test/fixtures/master/phase1_legacy_timelines.tres"),"Original authored timing and hitbox data restored byte-for-byte")
 	for action: StringName in master.PHASE_1_WIND:
 		var spec: Array = master.PHASE_1_WIND[action]
 		var source: Texture2D = spec[0]

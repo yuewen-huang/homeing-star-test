@@ -1,6 +1,6 @@
 extends SceneTree
 const STAGING := "D:/HomingStar/Art/manual-action-audio-20261011/"
-const DEST := "res://assets/sideview/audio/actions/"
+const DEST := "res://assets/shared/audio/actions/"
 func _initialize() -> void:
 	var manifest: Array = JSON.parse_string(FileAccess.get_file_as_string(STAGING+"manifest.json"))
 	for row in manifest:

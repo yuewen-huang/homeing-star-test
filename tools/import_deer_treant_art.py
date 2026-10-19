@@ -22,7 +22,7 @@ def main():
     parser.add_argument('--source', type=Path, default=BASE.parent/'homeing-star-temp-assert/PendingArt/character/朽角巡林者/小树人')
     parser.add_argument('--project', type=Path, default=BASE.parent/'homeing-star-game')
     args = parser.parse_args()
-    target = args.project/'assets/sideview/characters/xiujiao_ranger/treant'
+    target = args.project/'assets/bosses/deer/body/treant'
     target.mkdir(parents=True, exist_ok=True)
     for source_name, target_name in (('walk.png', 'treant_walk.png'), ('idle.png', 'treant_cast.png')):
         source = args.source/source_name

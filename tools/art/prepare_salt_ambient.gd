@@ -1,5 +1,5 @@
 extends SceneTree
-const DEST := "res://assets/sideview/environment/chapter_2_salt/ambient/"
+const DEST := "res://assets/levels/chapter_2_salt/environment/ambient/"
 const STATIC := ["starfish","plank","stone_1","stone_2","stone_3","crystal"]
 const ANIMALS := ["fish","jijuxie","pangxie","woniu"]
 func _initialize() -> void:

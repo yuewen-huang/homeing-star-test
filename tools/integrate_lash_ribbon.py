@@ -4,7 +4,7 @@ from pathlib import Path
 from PIL import Image
 
 BASE = Path(__file__).resolve().parents[2]
-VFX = BASE / 'homeing-star-game/assets/sideview/characters/xiujiao_ranger/human/vfx'
+VFX = BASE / 'homeing-star-game/assets/bosses/deer/body/human/vfx'
 SOURCE = BASE / 'homeing-star-temp-assert/PendingArt/character/朽角巡林者/地涌藤鞭_局部贴图试验_20261013'
 data = json.loads((SOURCE / 'motion.json').read_text(encoding='utf-8'))
 data.update(active_frames=[11, 20], slam_frames=[11, 18], impact_frames=[16, 18])
