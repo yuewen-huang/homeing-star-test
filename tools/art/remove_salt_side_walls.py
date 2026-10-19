@@ -5,7 +5,7 @@ import re
 import shutil
 
 ROOT = Path(__file__).resolve().parents[3]
-scene = ROOT / "homeing-star-game/scenes/sideview/chapter_2_salt_environment.tscn"
+scene = ROOT / "homeing-star-game/scenes/levels/chapter_2_salt/chapter_2_salt_environment.tscn"
 text = scene.read_text(encoding="utf-8")
 blocks = re.split(r"(?=^\[)", text, flags=re.M)
 remove = set()

@@ -62,7 +62,7 @@ func run() -> void:
 	room.add_child(camera)
 	camera.make_current()
 	feedback = root.get_node("CombatFeedback") as CombatFeedbackService
-	var player := load("res://scenes/sideview/lan_player.tscn").instantiate() as LanPlayer
+	var player := load("res://scenes/player/lan/lan_player.tscn").instantiate() as LanPlayer
 	player.name = "Lan"
 	player.world_min_x = -1000.0
 	player.world_max_x = 2000.0
@@ -95,14 +95,14 @@ func run() -> void:
 	player.emit_received_hit_feedback(Vector2(-100, 0), 1.0)
 	expect_effect(CombatImpactEffect.Kind.PLAYER_HURT)
 	clear_feedback()
-	var bat := load("res://scenes/sideview/back_alley_bat.tscn").instantiate() as BackAlleyBat
+	var bat := load("res://scenes/enemies/back_alley/back_alley_bat.tscn").instantiate() as BackAlleyBat
 	bat.health = 20
 	room.add_child(bat)
 	bat.set_process(false)
 	bat.receive_hit(1, Vector2(-100, 0))
 	expect_effect(CombatImpactEffect.Kind.NORMAL_HIT, bat)
 	clear_feedback()
-	var slime := load("res://scenes/sideview/back_alley_slime.tscn").instantiate() as BackAlleySlime
+	var slime := load("res://scenes/enemies/back_alley/back_alley_slime.tscn").instantiate() as BackAlleySlime
 	slime.health = 20
 	room.add_child(slime)
 	slime.set_process(false)
@@ -118,7 +118,7 @@ func run() -> void:
 	mist.receive_hit(1, Vector2(100, 555))
 	expect_effect(CombatImpactEffect.Kind.NORMAL_HIT, mist)
 	clear_feedback()
-	var dummy := load("res://scenes/sideview/training_dummy.tscn").instantiate() as TrainingDummy
+	var dummy := load("res://scenes/combat/training_dummy.tscn").instantiate() as TrainingDummy
 	room.add_child(dummy)
 	dummy.receive_hit(1, Vector2(-100, 0))
 	expect_effect(CombatImpactEffect.Kind.NORMAL_HIT, dummy)
@@ -152,7 +152,7 @@ func run() -> void:
 	deer.receive_hit(1, Vector2(-100, 0))
 	expect_effect(CombatImpactEffect.Kind.BROKEN_HIT, deer)
 	clear_feedback()
-	var master := load("res://scenes/sideview/tutorial_master_boss.tscn").instantiate() as DamageReceiver2D
+	var master := load("res://scenes/bosses/master/master_boss.tscn").instantiate() as DamageReceiver2D
 	master.set("world_min_x", -1000.0)
 	master.set("world_max_x", 2000.0)
 	master.set("aggro_target_path", NodePath("../Lan"))
@@ -171,7 +171,7 @@ func run() -> void:
 	master.receive_hit(1, Vector2(-100, 0))
 	expect_effect(CombatImpactEffect.Kind.BROKEN_HIT, master)
 	clear_feedback()
-	var guard := load("res://scenes/sideview/lan_player.tscn").instantiate() as LanPlayer
+	var guard := load("res://scenes/player/lan/lan_player.tscn").instantiate() as LanPlayer
 	guard.world_min_x = -1000.0
 	guard.world_max_x = 2000.0
 	room.add_child(guard)

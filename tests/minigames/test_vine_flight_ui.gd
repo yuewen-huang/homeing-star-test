@@ -61,7 +61,7 @@ func run() -> void:
 	save.name = "SaveProgress"
 	root.add_child(save)
 	save.set_stele_state(&"vine_puzzle_high_swing",1)
-	room = load("res://scenes/sideview/chapter_1_vine_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_vine_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	room.player.set_physics_process(false)

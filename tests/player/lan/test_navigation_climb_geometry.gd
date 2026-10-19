@@ -21,7 +21,7 @@ func check(condition: bool, message: String) -> void:
 
 
 func run() -> void:
-	var town := (load("res://scenes/sideview/homeward_town.tscn") as PackedScene).instantiate()
+	var town := (load("res://scenes/levels/town/homeward_town.tscn") as PackedScene).instantiate()
 	root.add_child(town)
 	await process_frame
 	await process_frame

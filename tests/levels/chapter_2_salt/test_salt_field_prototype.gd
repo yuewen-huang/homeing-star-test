@@ -13,7 +13,7 @@ class MemorySave extends SaveProgressService:
 		writes += 1
 		return not fail_write
 
-var field: SaltFieldPrototype
+var field: Chapter2SaltField
 var save: MemorySave
 var checks := 0
 var failures := 0
@@ -25,7 +25,7 @@ func check(ok: bool, message: String) -> void:
 	if not ok: failures += 1
 	print("OK " if ok else "FAIL ",message)
 func enter() -> void:
-	field = load("res://scenes/sideview/chapter_2_salt_field.tscn").instantiate() as SaltFieldPrototype
+	field = load("res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn").instantiate() as Chapter2SaltField
 	root.add_child(field)
 	current_scene = field
 	field.set_physics_process(false)
@@ -46,7 +46,7 @@ func run() -> void:
 	var real_save := root.get_node("SaveProgress")
 	root.remove_child(real_save); real_save.free()
 	save = MemorySave.new(); save.name = "SaveProgress"; root.add_child(save)
-	var authored: Node2D = load("res://scenes/sideview/chapter_2_salt_environment.tscn").instantiate()
+	var authored: Node2D = load("res://scenes/levels/chapter_2_salt/chapter_2_salt_environment.tscn").instantiate()
 	var placed_rock: Sprite2D = authored.get_node("Boundary/LeftBanks").get_child(0)
 	check(placed_rock.texture!=null and authored.get_node("Ground").mesh!=null,
 		"Authored rocks and ground exist before entering the tree, for editor visibility")
@@ -227,7 +227,7 @@ func run() -> void:
 	clear_scene()
 	# A fresh playthrough has no stored map section and therefore generates a new record.
 	save._config = ConfigFile.new()
-	check(not save.ensure_salt_field_state(SaltFieldPrototype.CANDIDATES).is_empty(),"Fresh playthrough generates and saves a new hiding record")
+	check(not save.ensure_salt_field_state(Chapter2SaltField.CANDIDATES).is_empty(),"Fresh playthrough generates and saves a new hiding record")
 	await process_frame; await process_frame
 	print("SALT FIELD PROTOTYPE: %d checks, %d failures" % [checks,failures])
 	quit(1 if failures else 0)

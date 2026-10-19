@@ -182,7 +182,7 @@ func run() -> void:
 	# Verify protection against real Lan, whose health and launch are not overridden
 	# by the development observer's immunity.
 	var observer := deer.combat_target
-	var player := load("res://scenes/sideview/lan_player.tscn").instantiate() as LanPlayer
+	var player := load("res://scenes/player/lan/lan_player.tscn").instantiate() as LanPlayer
 	player.world_min_x = 0
 	player.world_max_x = 1280
 	player.fallback_ground_y = 555
@@ -215,7 +215,7 @@ func run() -> void:
 	current_scene = null
 	# Formal-room wiring: no test overrides, actual contextual Q dispatch and retry.
 	save.load_progress()
-	var arena = load("res://scenes/sideview/chapter_1_final_boss_room.tscn").instantiate()
+	var arena = load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate()
 	root.add_child(arena)
 	current_scene = arena
 	await process_frame

@@ -28,14 +28,14 @@ func capture(label_: String) -> void:
 	feedback.clear_body_reaction(boss.animated_sprite)
 	for effect in get_nodes_in_group(CombatImpactEffect.GROUP): effect.free()
 	for effect in room.find_children("*","Node2D",true,false):
-		if effect.get_script()==load("res://scripts/sideview/lan_attack_effect.gd"): effect.queue_free()
+		if effect.get_script()==load("res://scripts/player/lan/lan_attack_effect.gd"): effect.queue_free()
 	await process_frame
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(output.path_join(label_+".png"))
 func run() -> void:
 	var old := root.get_node("SaveProgress"); root.remove_child(old); old.free()
 	var memory := MemoryProgress.new(); memory.name = "SaveProgress"; root.add_child(memory)
-	room = load("res://scenes/sideview/chapter_1_final_boss_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate()
 	root.add_child(room); current_scene = room
 	if room.story.comic!=null: room.story._close_intro()
 	player = room.player; boss = room.deer

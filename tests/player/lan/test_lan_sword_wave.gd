@@ -55,7 +55,7 @@ func run() -> void:
 	var camera := Camera2D.new()
 	world.add_child(camera)
 	camera.make_current()
-	player = load("res://scenes/sideview/lan_player.tscn").instantiate() as LanPlayer
+	player = load("res://scenes/player/lan/lan_player.tscn").instantiate() as LanPlayer
 	player.position = Vector2(0, 555)
 	player.world_min_x = -1800.0
 	player.world_max_x = 1800.0

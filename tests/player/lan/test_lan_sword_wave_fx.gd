@@ -63,12 +63,12 @@ func run() -> void:
 	camera.position = Vector2(0, 450)
 	room.add_child(camera)
 	camera.make_current()
-	player = load("res://scenes/sideview/lan_player.tscn").instantiate() as LanPlayer
+	player = load("res://scenes/player/lan/lan_player.tscn").instantiate() as LanPlayer
 	player.world_min_x = -2000.0
 	player.world_max_x = 2000.0
 	room.add_child(player)
 	player.set_physics_process(false)
-	dummy = load("res://scenes/sideview/training_dummy.tscn").instantiate()
+	dummy = load("res://scenes/combat/training_dummy.tscn").instantiate()
 	room.add_child(dummy)
 	dummy.hit_received.connect(func(damage: int, _total: int) -> void: hits.append(damage))
 	await process_frame

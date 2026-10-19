@@ -52,7 +52,7 @@ func run() -> void:
 	var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
 	assist.set_player_invincible(false)
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
-	room = load("res://scenes/sideview/tutorial_battle_room.tscn").instantiate()
+	room = load("res://scenes/levels/tutorial/tutorial_battle_room.tscn").instantiate()
 	room.get_node("MasterBoss").manual_control = true
 	root.add_child(room)
 	current_scene = room

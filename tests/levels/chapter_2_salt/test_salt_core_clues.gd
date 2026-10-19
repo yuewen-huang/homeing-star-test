@@ -1,6 +1,6 @@
 extends SceneTree
-const CLUE := preload("res://scripts/sideview/salt_core_clue.gd")
-const PROJECTION := preload("res://scripts/sideview/salt_field_projection.gd")
+const CLUE := preload("res://scripts/levels/chapter_2_salt/salt_core_clue.gd")
+const PROJECTION := preload("res://scripts/levels/chapter_2_salt/salt_field_projection.gd")
 class MemorySave extends SaveProgressService:
 	var fail_write := false
 	func load_progress() -> void:
@@ -10,7 +10,7 @@ class MemorySave extends SaveProgressService:
 	func is_ability_unlocked(_ability: StringName) -> bool: return true
 var checks := 0
 var failures := 0
-var field: SaltFieldPrototype
+var field: Chapter2SaltField
 var save: MemorySave
 
 func _initialize() -> void: run.call_deferred()
@@ -19,7 +19,7 @@ func check(ok: bool, message: String) -> void:
 	if not ok: failures += 1
 	print("OK " if ok else "FAIL ",message)
 func enter() -> void:
-	field = load("res://scenes/sideview/chapter_2_salt_field.tscn").instantiate() as SaltFieldPrototype
+	field = load("res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn").instantiate() as Chapter2SaltField
 	root.add_child(field)
 	current_scene = field
 	field.set_physics_process(false)

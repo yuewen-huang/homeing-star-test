@@ -15,7 +15,7 @@ func require(condition: bool, message: String) -> bool:
 
 func run_test() -> void:
 	seed(22)
-	var player = (load("res://scenes/sideview/lan_player.tscn") as PackedScene).instantiate()
+	var player = (load("res://scenes/player/lan/lan_player.tscn") as PackedScene).instantiate()
 	player.world_min_x = -900.0
 	player.world_max_x = 900.0
 	root.add_child(player)
@@ -121,7 +121,7 @@ func run_test() -> void:
 			return
 		effect.queue_free()
 
-	var battle_room = (load("res://scenes/sideview/tutorial_battle_room.tscn") as PackedScene).instantiate()
+	var battle_room = (load("res://scenes/levels/tutorial/tutorial_battle_room.tscn") as PackedScene).instantiate()
 	root.add_child(battle_room)
 	await process_frame
 	battle_room.process_mode = Node.PROCESS_MODE_DISABLED

@@ -8,16 +8,16 @@ extends SceneTree
 ##
 ## Coordinates: y grows downwards. Water levels LOW 1910 / MID 1240 / HIGH 700.
 
-const OUT := "res://scenes/sideview/chapter_1_root_room.tscn"
-const ROOM_SCRIPT := preload("res://scripts/sideview/chapter_1_root_room.gd")
-const WATER_SCRIPT := preload("res://scripts/sideview/root_water.gd")
-const SHELL_SCRIPT := preload("res://scripts/sideview/root_cave_shell.gd")
-const BLOCK_SCRIPT := preload("res://scripts/sideview/root_rock_block.gd")
-const LOG_SCRIPT := preload("res://scripts/sideview/root_float_log.gd")
-const WINCH_SCRIPT := preload("res://scripts/sideview/root_water_winch.gd")
-const STELE_SCRIPT := preload("res://scripts/sideview/minigame_stele.gd")
-const FUNGUS_SCENE := preload("res://scenes/sideview/terrain_parts/root_light_fungus.tscn")
-const GATE_SCENE := preload("res://scenes/sideview/terrain_parts/root_light_gate.tscn")
+const OUT := "res://scenes/levels/chapter_1/chapter_1_root_room.tscn"
+const ROOM_SCRIPT := preload("res://scripts/levels/chapter_1/chapter_1_root_room.gd")
+const WATER_SCRIPT := preload("res://scripts/levels/chapter_1/root_water.gd")
+const SHELL_SCRIPT := preload("res://scripts/levels/chapter_1/root_cave_shell.gd")
+const BLOCK_SCRIPT := preload("res://scripts/levels/chapter_1/root_rock_block.gd")
+const LOG_SCRIPT := preload("res://scripts/levels/chapter_1/root_float_log.gd")
+const WINCH_SCRIPT := preload("res://scripts/levels/chapter_1/root_water_winch.gd")
+const STELE_SCRIPT := preload("res://scripts/levels/common/minigame_stele.gd")
+const FUNGUS_SCENE := preload("res://scenes/levels/chapter_1/root_light_fungus.tscn")
+const GATE_SCENE := preload("res://scenes/levels/chapter_1/root_light_gate.tscn")
 const FAR_ART := preload("res://assets/sideview/environment/chapter_1_root/layers/01_far_cavern.png")
 const MID_ART := preload("res://assets/sideview/environment/chapter_1_root/layers/02_mid_root_arch.png")
 const FRONT_ART := preload("res://assets/sideview/environment/chapter_1_root/layers/04_foreground_roots.png")

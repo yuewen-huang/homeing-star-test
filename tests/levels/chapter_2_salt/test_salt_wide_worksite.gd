@@ -19,7 +19,7 @@ func run() -> void:
 	var old:=root.get_node("SaveProgress"); root.remove_child(old); old.free()
 	var save:=MemorySave.new(); save.name="SaveProgress"; root.add_child(save)
 	save._config.set_value("map_states","chapter_2_salt_field",{"boss_pile":2,"dug":[4,27]})
-	var field:=load("res://scenes/sideview/chapter_2_salt_field.tscn").instantiate() as SaltFieldPrototype
+	var field:=load("res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn").instantiate() as Chapter2SaltField
 	root.add_child(field); current_scene=field; field.set_physics_process(false)
 	check(field.piles.size()==56 and field.state.boss_pile==2 and field.piles[4].excavated and field.piles[27].excavated and not field.piles[28].excavated,"Legacy 28-heap saves retain the hidden core and dug IDs while adding new heaps")
 	check(field.baked_boundary!=null,"Wider authored reefs use the updated baked boundary")

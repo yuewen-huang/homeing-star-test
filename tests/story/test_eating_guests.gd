@@ -13,7 +13,7 @@ extends SceneTree
 ##
 ## 跑法：homeing-star-test/run-tests.ps1 -Test test_eating_guests
 
-const TOWN_SCENE := "res://scenes/sideview/homeward_town.tscn"
+const TOWN_SCENE := "res://scenes/levels/town/homeward_town.tscn"
 
 var _checks := 0
 var _failures := 0

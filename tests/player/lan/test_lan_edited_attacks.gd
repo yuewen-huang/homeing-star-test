@@ -40,7 +40,7 @@ func run_checks() -> void:
 			root.add_child(room)
 			var owner := Node2D.new()
 			room.add_child(owner)
-			var effect = load("res://scenes/sideview/lan_attack_effect.tscn").instantiate()
+			var effect = load("res://scenes/player/lan/lan_attack_effect.tscn").instantiate()
 			effect.setup(owner, direction, config, true)
 			owner.add_child(effect)
 			var targets: Array[Receiver] = []
@@ -82,7 +82,7 @@ func capture() -> void:
 	var index := 0
 	for variant in [1,2]:
 		for direction in [-1.0,1.0]:
-			var player = load("res://scenes/sideview/lan_player.tscn").instantiate()
+			var player = load("res://scenes/player/lan/lan_player.tscn").instantiate()
 			player.world_min_x = -2000.0
 			player.world_max_x = 2000.0
 			player.position = Vector2(400 if direction < 0 else 900, 240 if variant == 1 else 520)
@@ -96,7 +96,7 @@ func capture() -> void:
 			player.animated_sprite.flip_h = direction > 0
 			player.animated_sprite.offset = Vector2(direction * -14.0, -3.5)
 			var config = LanAttackEffectCatalog.attack_2x_1() if variant == 1 else LanAttackEffectCatalog.attack_2x_2()
-			var effect = load("res://scenes/sideview/lan_attack_effect.tscn").instantiate()
+			var effect = load("res://scenes/player/lan/lan_attack_effect.tscn").instantiate()
 			effect.setup(player, direction, config, true)
 			player.add_child(effect)
 			effect.set_physics_process(false)

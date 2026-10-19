@@ -42,7 +42,7 @@ func run() -> void:
 	if not OS.get_cmdline_user_args().is_empty():
 		capture_dir = OS.get_cmdline_user_args()[0]
 		DirAccess.make_dir_recursive_absolute(capture_dir)
-	var scene_path := "res://scenes/sideview/chapter_1_mist_room.tscn"
+	var scene_path := "res://scenes/levels/chapter_1/chapter_1_mist_room.tscn"
 	var fixture := MemorySave.new()
 	fixture._loaded = true
 	check(fixture.get_unlocked_stele_destinations().is_empty(), "Locked destinations excluded")
@@ -70,7 +70,7 @@ func run() -> void:
 	var original_file := FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH)
 	var original_config := save._config.encode_to_text()
 	save._config.set_value("progress", String(SaveProgressService.STORY_MASTER_PHASE_2_DEFEATED), false)
-	var town = load("res://scenes/sideview/homeward_town.tscn").instantiate()
+	var town = load("res://scenes/levels/town/homeward_town.tscn").instantiate()
 	root.add_child(town)
 	current_scene = town
 	await process_frame

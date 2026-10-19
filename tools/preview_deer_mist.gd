@@ -58,7 +58,7 @@ func run() -> void:
 	progress.name = "SaveProgress"
 	root.add_child(progress)
 	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
-	room = load("res://scenes/sideview/chapter_1_final_boss_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	boss = room.deer

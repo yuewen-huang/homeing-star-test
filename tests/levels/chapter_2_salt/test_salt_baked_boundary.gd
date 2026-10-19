@@ -13,7 +13,7 @@ func check(ok: bool,message: String) -> void:
 	if not ok: failures += 1
 
 func picture(baked: bool,point: Vector2,label_: String) -> Image:
-	var field: Node2D = load("res://scenes/sideview/chapter_2_salt_field.tscn").instantiate()
+	var field: Node2D = load("res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn").instantiate()
 	field.use_baked_boundary = baked
 	root.add_child(field); current_scene = field
 	field.process_mode = Node.PROCESS_MODE_DISABLED

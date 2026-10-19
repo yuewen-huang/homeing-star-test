@@ -15,7 +15,7 @@ func require(condition: bool, message: String) -> bool:
 
 func run_test() -> void:
 	seed(1)
-	var player = (load("res://scenes/sideview/lan_player.tscn") as PackedScene).instantiate()
+	var player = (load("res://scenes/player/lan/lan_player.tscn") as PackedScene).instantiate()
 	player.set("world_min_x", -10000.0)
 	player.set("world_max_x", 10000.0)
 	root.add_child(player)

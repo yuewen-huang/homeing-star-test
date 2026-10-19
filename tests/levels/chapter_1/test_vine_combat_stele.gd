@@ -76,7 +76,7 @@ func run() -> void:
 	var previous_mode := assist.difficulty
 	assist.set_player_invincible(false)
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
-	room = load("res://scenes/sideview/chapter_1_vine_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_vine_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	await process_frame
@@ -267,7 +267,7 @@ func run() -> void:
 	await process_frame
 	check(not is_instance_valid(player), "scene exit removes the encounter")
 	save.set_stele_state(Chapter1VineRoom.COMBAT_ID, 2)
-	room = load("res://scenes/sideview/chapter_1_vine_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_vine_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	room.start_combat()

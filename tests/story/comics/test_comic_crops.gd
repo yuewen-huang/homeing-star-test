@@ -2,10 +2,10 @@ extends SceneTree
 ## Render every existing comic panel, inspect source edges, and exercise advancement.
 
 const SCENES := [
-	"res://scenes/sideview/back_alley_entry_comic.tscn",
-	"res://scenes/sideview/back_alley_pill_comic.tscn",
-	"res://scenes/sideview/navigation_hall_entry_comic.tscn",
-	"res://scenes/sideview/navigation_hall_exit_comic.tscn",
+	"res://scenes/story/comics/back_alley_entry_comic.tscn",
+	"res://scenes/story/comics/back_alley_pill_comic.tscn",
+	"res://scenes/story/comics/navigation_hall_entry_comic.tscn",
+	"res://scenes/story/comics/navigation_hall_exit_comic.tscn",
 ]
 var checks := 0
 var failures := 0

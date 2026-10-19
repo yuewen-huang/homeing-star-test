@@ -31,7 +31,7 @@ func run() -> void:
 	var memory := MemoryProgress.new()
 	memory.name = "SaveProgress"
 	root.add_child(memory)
-	room = load("res://scenes/sideview/chapter_1_final_boss_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	await process_frame

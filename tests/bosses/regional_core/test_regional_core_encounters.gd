@@ -28,7 +28,7 @@ func select(region: int) -> void:
 		current_scene = null
 		room.free()
 	progress._config = ConfigFile.new()
-	room = load("res://scenes/sideview/chapter_1_%s_room.tscn" % ROOMS[region]).instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_%s_room.tscn" % ROOMS[region]).instantiate()
 	root.add_child(room)
 	current_scene = room
 	core = room.regional_core

@@ -25,7 +25,7 @@ func run() -> void:
 	var save := MemorySave.new()
 	save.name = "SaveProgress"
 	root.add_child(save)
-	var field := load("res://scenes/sideview/chapter_2_salt_field.tscn").instantiate() as SaltFieldPrototype
+	var field := load("res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn").instantiate() as Chapter2SaltField
 	root.add_child(field)
 	current_scene = field
 	field.set_physics_process(false)

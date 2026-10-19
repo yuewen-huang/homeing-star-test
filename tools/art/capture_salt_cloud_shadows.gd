@@ -12,7 +12,7 @@ func run() -> void:
 	var real_save := root.get_node("SaveProgress")
 	root.remove_child(real_save); real_save.free()
 	var save := MemorySave.new(); save.name = "SaveProgress"; root.add_child(save)
-	var field := load("res://scenes/sideview/chapter_2_salt_field.tscn").instantiate() as SaltFieldPrototype
+	var field := load("res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn").instantiate() as Chapter2SaltField
 	root.add_child(field); current_scene = field
 	field.set_physics_process(false)
 	field.feet = Vector2(1800,120 if sky_mode else 900)

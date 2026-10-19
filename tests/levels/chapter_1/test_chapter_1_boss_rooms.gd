@@ -15,7 +15,7 @@ const CASES := [
 	["vine","DeerGate","chapter_1_special_boss_upper_right_room",&"vine_puzzle_high_swing",&"vine_combat_branch_arena"],
 	["mist","PortalToSpecialBoss","chapter_1_special_boss_lower_left_room",&"mist_puzzle_entry",&"mist_combat_01"],
 	["root","HeartGate","chapter_1_root_heart_room",&"root_puzzle_water_veins",&"root_combat_sunken_roots"],
-	["vine","HeartGate","chapter_1_final_boss_room",&"",&""],
+	["vine","HeartGate","chapter_1_deer_boss_room",&"",&""],
 ]
 var save: TestProgress
 var transition: SceneTransitionService
@@ -94,7 +94,7 @@ func run() -> void:
 			old_room.free()
 		save.load_progress()
 		transition.set_scene_entry_position(Vector2(-1,-1))
-		var region_path := "res://scenes/sideview/chapter_1_%s_room.tscn" % data[0]
+		var region_path := "res://scenes/levels/chapter_1/chapter_1_%s_room.tscn" % data[0]
 		var origin := load(region_path).instantiate() as Node2D
 		root.add_child(origin)
 		current_scene = origin

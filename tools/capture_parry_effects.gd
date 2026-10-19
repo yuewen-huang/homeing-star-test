@@ -63,7 +63,7 @@ func run() -> void:
 	room.queue_free()
 	await process_frame
 
-	var tutorial = load("res://scenes/sideview/tutorial_battle_room.tscn").instantiate()
+	var tutorial = load("res://scenes/levels/tutorial/tutorial_battle_room.tscn").instantiate()
 	root.add_child(tutorial); current_scene = tutorial
 	for i in 3: await process_frame
 	var lan := tutorial.get_node("Lan") as LanPlayer

@@ -1,0 +1,15 @@
+# Restructure P3 (2026-10-19): scene and root script share a name; real names for shipping levels.
+scenes/levels/chapter_1/chapter_1_boss_room_base.tscn -> scenes/levels/chapter_1/chapter_1_boss_room.tscn
+scenes/levels/chapter_1/chapter_1_final_boss_room.tscn -> scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn
+scenes/levels/back_alley/back_alley_placeholder.tscn -> scenes/levels/back_alley/back_alley.tscn
+scripts/levels/back_alley/back_alley_placeholder.gd -> scripts/levels/back_alley/back_alley.gd
+scenes/levels/navigation_hall/navigation_hall_placeholder.tscn -> scenes/levels/navigation_hall/navigation_hall.tscn
+scripts/levels/navigation_hall/navigation_hall_placeholder.gd -> scripts/levels/navigation_hall/navigation_hall.gd
+scripts/levels/chapter_2_salt/salt_field_ambient.gd -> scripts/levels/chapter_2_salt/chapter_2_salt_ambient.gd
+scripts/levels/chapter_2_salt/salt_field_clouds.gd -> scripts/levels/chapter_2_salt/chapter_2_salt_environment.gd
+scripts/levels/chapter_2_salt/salt_field_prototype.gd -> scripts/levels/chapter_2_salt/chapter_2_salt_field.gd
+scripts/levels/chapter_2_salt/salt_worksite_patch.gd -> scripts/levels/chapter_2_salt/chapter_2_salt_worksite.gd
+scripts/levels/tutorial/tutorial_battle_music.gd -> scripts/levels/tutorial/tutorial_battle_room.gd
+scripts/bosses/master/tutorial_master_boss.gd -> scripts/bosses/master/master_boss.gd
+scenes/bosses/master/tutorial_master_boss.tscn -> scenes/bosses/master/master_boss.tscn
+scripts/levels/chapter_1/chapter_1_empty_room.gd -> scripts/levels/chapter_1/chapter_1_layout.gd

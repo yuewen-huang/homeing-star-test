@@ -1,5 +1,5 @@
 extends SceneTree
-const MIX := preload("res://scripts/core/sfx_mix.gd")
+const MIX := preload("res://scripts/audio/sfx_mix.gd")
 var failures := 0
 var checks := 0
 func check(ok: bool, label_: String) -> void:

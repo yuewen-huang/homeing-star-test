@@ -67,7 +67,7 @@ func run() -> void:
 	check(not movement.jump_audio.stream_paused,"Jump audio unpauses with the player")
 	# The same player in a non-forest room keeps takeoff sounds but excludes forest ground.
 	var stone := Node2D.new(); stone.set_meta(&"footstep_surface","stone"); room.add_child(stone)
-	var other := load("res://scenes/sideview/lan_player.tscn").instantiate() as LanPlayer
+	var other := load("res://scenes/player/lan/lan_player.tscn").instantiate() as LanPlayer
 	other.world_min_x = 32; other.world_max_x = 1248; other.position = Vector2(200,555)
 	other.save_progress = player.save_progress; other.save_progress_resolved = true
 	stone.add_child(other); other.set_physics_process(false); other.movement_audio.set_physics_process(false)

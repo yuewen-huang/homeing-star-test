@@ -58,7 +58,7 @@ basepath.write_text(base,encoding='utf-8',newline='\n')
 
 path=SCENES/'chapter_2_salt_field.tscn'; main=rock_shift(path.read_text(encoding='utf-8'))
 index=main.index('[node name="SaltField"')
-main=main[:index]+'[ext_resource type="PackedScene" path="res://scenes/sideview/chapter_2_salt_worksite.tscn" id="8_worksite"]\n\n'+main[index:]
+main=main[:index]+'[ext_resource type="PackedScene" path="res://scenes/levels/chapter_2_salt/chapter_2_salt_worksite.tscn" id="8_worksite"]\n\n'+main[index:]
 index=main.index('[editable path="Environment"]')
 main=main[:index]+'[node name="WorksiteDetails" parent="Environment" instance=ExtResource("8_worksite")]\n\n'+main[index:]
 path.write_text(main,encoding='utf-8',newline='\n')

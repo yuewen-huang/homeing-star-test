@@ -1,7 +1,7 @@
 extends SceneTree
 ## Extend the saved main-scene example; append nodes while preserving every existing block.
-const SCENE := "res://scenes/sideview/chapter_2_salt_field.tscn"
-const PROJECTION := preload("res://scripts/sideview/salt_field_projection.gd")
+const SCENE := "res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn"
+const PROJECTION := preload("res://scripts/levels/chapter_2_salt/salt_field_projection.gd")
 var field: Node2D
 var additions := ""
 var added := 0

@@ -77,14 +77,14 @@ func run() -> void:
 	var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
 	assist.set_player_invincible(false)
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
-	var room = load("res://scenes/sideview/chapter_1_final_boss_room.tscn").instantiate()
+	var room = load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate()
 	room.enable_deer_boss = false
 	root.add_child(room)
 	current_scene = room
 	await process_frame
 	lan = room.player
 	lan.set_physics_process(false)
-	crab = load("res://scenes/sideview/crystal_crab_boss.tscn").instantiate()
+	crab = load("res://scenes/bosses/crystal_crab/crystal_crab_boss.tscn").instantiate()
 	crab.combat_target = lan
 	crab.manual_control = true
 	crab.position = Vector2(820,555)

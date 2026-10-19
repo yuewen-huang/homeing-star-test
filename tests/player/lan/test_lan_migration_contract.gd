@@ -17,7 +17,7 @@ func run_test() -> void:
 	var room := Node2D.new()
 	root.add_child(room)
 	current_scene = room
-	var player := (load("res://scenes/sideview/lan_player.tscn") as PackedScene).instantiate() as LanPlayer
+	var player := (load("res://scenes/player/lan/lan_player.tscn") as PackedScene).instantiate() as LanPlayer
 	player.world_min_x = -1000.0
 	player.world_max_x = 1000.0
 	room.add_child(player)

@@ -14,7 +14,7 @@ func check(ok: bool, message: String) -> void:
 func run() -> void:
 	var old := root.get_node("SaveProgress"); root.remove_child(old); old.free()
 	var save := MemorySave.new(); save.name = "SaveProgress"; root.add_child(save)
-	var field := load("res://scenes/sideview/chapter_2_salt_field.tscn").instantiate() as SaltFieldPrototype
+	var field := load("res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn").instantiate() as Chapter2SaltField
 	root.add_child(field); current_scene = field; field.set_physics_process(false)
 	for y in [60,120,180,1670,1760,1800]:
 		check(SaltFieldPerimeter.inset(0,y)==0 and SaltFieldPerimeter.inset(1,y)==0,"North/south joins retain original side coordinates at depth %d" % y)
@@ -35,7 +35,7 @@ func run() -> void:
 		var inspect := pile.ground_position+Vector2(0,42)
 		reachable = reachable and SaltFieldPerimeter.clamp_walker(inspect).is_equal_approx(inspect)
 	check(reachable,"Every salt heap retains its front excavation approach")
-	var boundary: Node = load("res://scenes/sideview/chapter_2_salt_environment.tscn").instantiate().get_node("Boundary")
+	var boundary: Node = load("res://scenes/levels/chapter_2_salt/chapter_2_salt_environment.tscn").instantiate().get_node("Boundary")
 	# Only the north wall remains; the saved side reefs retain the terrain silhouette.
 	var north_only := true
 	var count := 0

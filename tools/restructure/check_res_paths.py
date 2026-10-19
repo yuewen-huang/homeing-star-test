@@ -19,6 +19,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import res_paths as rp  # noqa: E402
 
 
+# Game files whose dictionary keys are old paths on purpose (`"res://old": "res://new"`);
+# their values are still checked.
+LEGACY_KEY_FILES = {"scripts/autoload/save_path_migration.gd"}
+# Test files that use old paths on purpose (to prove they are migrated).
+LEGACY_TEST_FILES = {"tests/autoload/test_save_path_migration.gd"}
+
 # Paths that are missing on purpose: path → why.
 KNOWN_MISSING = {
     "missing_scene.tscn": "test_town_travel checks that a checkpoint to a missing scene is refused",
@@ -49,7 +55,13 @@ def check(ws: rp.Workspace):
                 if rp.is_dynamic(rel):
                     prefix = rp.static_prefix(rel)
                     if prefix and not exists(game, prefix):
-                        warnings[where].append(f"runtime path folder missing: res://{rel}")
+                        target = warnings if repo_name == rp.DOC else errors
+                        target[where].append(f"runtime path folder missing: res://{rel}")
+                    continue
+                legacy_key = text[match.end():match.end() + 2] == '":'
+                if legacy_key and repo_name == rp.GAME and path.relative_to(repo).as_posix() in LEGACY_KEY_FILES:
+                    continue
+                if repo_name == rp.TEST and path.relative_to(repo).as_posix() in LEGACY_TEST_FILES:
                     continue
                 if not exists(game, rel):
                     target = warnings if repo_name == rp.DOC else errors

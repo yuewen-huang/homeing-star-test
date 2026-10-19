@@ -15,21 +15,21 @@ class TestProgress extends SaveProgressService:
 const E := ForestSignBoard.Emblem
 ## Signpost path → {board name: [direction_degrees, emblem]}.
 const ROOMS := {
-	"res://scenes/sideview/chapter_1_mist_room.tscn": {
+	"res://scenes/levels/chapter_1/chapter_1_mist_room.tscn": {
 		"Signs/StairFork": {"ToWind": [-40.0, E.WIND], "ToRoot": [0.0, E.ROOT]},
 	},
-	"res://scenes/sideview/chapter_1_root_room.tscn": {
+	"res://scenes/levels/chapter_1/chapter_1_root_room.tscn": {
 		"Signs/WestShoreFork": {"ToVine": [0.0, E.VINE], "ToBasin": [35.0, E.NONE]},
 		"Signs/EastShoreFork": {"ToVine": [-60.0, E.VINE], "ToHeart": [-120.0, E.ROOT]},
 		"Signs/SunkenShaft": {"ToEastShore": [-55.0, E.VINE]},
 		"Signs/GalleryFork": {"ToVine": [0.0, E.VINE], "ToHeart": [180.0, E.ROOT]},
 	},
-	"res://scenes/sideview/chapter_1_wind_room.tscn": {
+	"res://scenes/levels/chapter_1/chapter_1_wind_room.tscn": {
 		"Signs/WestRestFork": {"ToPuzzle": [-130.0, E.NONE], "ToVine": [-50.0, E.VINE]},
 		"Signs/CoreFork": {"ToVine": [-45.0, E.VINE], "ToCore": [45.0, E.WIND]},
 		"Signs/CoreReturn": {"ToVine": [-30.0, E.VINE]},
 	},
-	"res://scenes/sideview/chapter_1_vine_room.tscn": {
+	"res://scenes/levels/chapter_1/chapter_1_vine_room.tscn": {
 		"Signs/EntryFork": {"ToFinal": [0.0, E.BOSS], "ToRoot": [35.0, E.ROOT]},
 		"Signs/MiddleWestFork": {"ToCore": [150.0, E.VINE], "ToRoot": [30.0, E.ROOT]},
 		"Signs/LowerWestFork": {"ToCore": [180.0, E.VINE], "ToRoot": [0.0, E.ROOT]},

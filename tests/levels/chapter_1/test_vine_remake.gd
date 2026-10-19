@@ -107,7 +107,7 @@ func run() -> void:
 	save = TestProgress.new()
 	save.name = "SaveProgress"
 	root.add_child(save)
-	room = load("res://scenes/sideview/chapter_1_vine_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_vine_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	player = room.player
@@ -263,7 +263,7 @@ func run() -> void:
 	check(save._config.encode_to_text() == progress_snapshot, "abandoning an unfinished round writes no result")
 	check(save_bytes == FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH), "player save bytes unchanged")
 	# Old entry coordinates and invalid legacy checkpoints must never spawn in air.
-	for pair in [[Chapter1EmptyRoom.VINE_ENTRANCE, "WindGate"], [Chapter1EmptyRoom.VINE_ROOT_EXIT, "RootGate"], [Chapter1EmptyRoom.VINE_SPECIAL_BOSS_EXIT, "DeerGate"], [Chapter1EmptyRoom.VINE_FINAL_BOSS_EXIT, "HeartGate"]]:
+	for pair in [[Chapter1Layout.VINE_ENTRANCE, "WindGate"], [Chapter1Layout.VINE_ROOT_EXIT, "RootGate"], [Chapter1Layout.VINE_SPECIAL_BOSS_EXIT, "DeerGate"], [Chapter1Layout.VINE_FINAL_BOSS_EXIT, "HeartGate"]]:
 		transition.set_scene_entry_position(pair[0])
 		check(room._resolve_spawn() == room.get_node("Portals/" + pair[1]).position, "legacy portal maps to " + pair[1])
 	save.save_stele_checkpoint(&"vine_legacy_test", room.scene_file_path, Vector2(6500, 1100))

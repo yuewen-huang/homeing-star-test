@@ -97,6 +97,12 @@ class CheckResPathsTest(unittest.TestCase):
         self.assertIn("missing: res://assets/none.png", out)
         self.assertIn("unknown uid://nothing", out)
 
+    def test_runtime_built_path_into_missing_folder_is_an_error(self):
+        write(self.ws.root / rp.TEST / "tests/test_rooms.gd", 'var p := "res://scenes/gone/room_%s.tscn" % id\n')
+        code, out = quietly(check_res_paths.main, ["--root", str(self.ws.root)])
+        self.assertEqual(code, 1, out)
+        self.assertIn("runtime path folder missing: res://scenes/gone/room_%s.tscn", out.split("WARNINGS")[0])
+
     def test_doc_and_tool_paths_only_warn(self):
         write(self.ws.root / rp.DOC / "docs/old.md", "See `res://assets/gone.png` and `assets/gone_too.png`.\n")
         code, out = quietly(check_res_paths.main, ["--root", str(self.ws.root)])

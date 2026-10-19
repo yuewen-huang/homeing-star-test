@@ -40,7 +40,7 @@ func run() -> void:
 	var world := Node2D.new()
 	root.add_child(world)
 	current_scene = world
-	var room = load("res://scenes/sideview/tutorial_battle_room.tscn").instantiate()
+	var room = load("res://scenes/levels/tutorial/tutorial_battle_room.tscn").instantiate()
 	var background: Node = room.get_node("Environment")
 	room.remove_child(background)
 	room.free()
@@ -49,7 +49,7 @@ func run() -> void:
 	camera.position = Vector2(0, 360)
 	world.add_child(camera)
 	camera.make_current()
-	var player = load("res://scenes/sideview/lan_player.tscn").instantiate()
+	var player = load("res://scenes/player/lan/lan_player.tscn").instantiate()
 	player.position = Vector2(-40, 555)
 	player.world_min_x = -1800.0
 	player.world_max_x = 1800.0
@@ -93,7 +93,7 @@ func run() -> void:
 	player.position = Vector2(-40, 555)
 	player.facing_direction = 1.0
 	player.apply_facing_direction()
-	var dummy = load("res://scenes/sideview/training_dummy.tscn").instantiate()
+	var dummy = load("res://scenes/combat/training_dummy.tscn").instantiate()
 	dummy.position = Vector2(120, 555)
 	world.add_child(dummy)
 	dummy.set_process(false)

@@ -113,7 +113,7 @@ func run() -> void:
 	root.remove_child(previous); previous.free()
 	var progress := TestProgress.new(); progress.name = "SaveProgress"; root.add_child(progress)
 	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
-	room = load("res://scenes/sideview/chapter_1_final_boss_room.tscn").instantiate() as Chapter1DeerBossRoom
+	room = load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate() as Chapter1DeerBossRoom
 	root.add_child(room); current_scene = room
 	boss = room.deer; player = room.player
 	boss.set_physics_process(false); player.set_physics_process(false); room.mist_field.set_process(false)

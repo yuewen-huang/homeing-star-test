@@ -1,6 +1,6 @@
 extends SceneTree
 
-const MIST := "res://scenes/sideview/chapter_1_mist_room.tscn"
+const MIST := "res://scenes/levels/chapter_1/chapter_1_mist_room.tscn"
 var save: SaveProgressService
 var room: Node
 var npc: Node

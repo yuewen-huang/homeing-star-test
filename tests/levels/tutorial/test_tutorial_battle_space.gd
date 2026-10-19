@@ -48,7 +48,7 @@ func require_nonempty_animation_frames(
 
 
 func run_test() -> void:
-	var room := (load("res://scenes/sideview/tutorial_battle_room.tscn") as PackedScene).instantiate()
+	var room := (load("res://scenes/levels/tutorial/tutorial_battle_room.tscn") as PackedScene).instantiate()
 	root.add_child(room)
 	current_scene = room
 	await process_frame

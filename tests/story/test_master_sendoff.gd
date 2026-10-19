@@ -4,8 +4,8 @@ var checks := 0
 var failures := 0
 var save: SaveProgressService
 var output := ""
-const ROOM := "res://scenes/sideview/tutorial_battle_room.tscn"
-const TOWN := "res://scenes/sideview/homeward_town.tscn"
+const ROOM := "res://scenes/levels/tutorial/tutorial_battle_room.tscn"
+const TOWN := "res://scenes/levels/town/homeward_town.tscn"
 
 func _initialize() -> void:
 	call_deferred("run")

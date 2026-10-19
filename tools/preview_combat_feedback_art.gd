@@ -98,7 +98,7 @@ func run() -> void:
 	await render_event(master,CombatImpactEffect.Kind.RED_PARRY,"master_red")
 	clean()
 	room.adapter.boss.hide()
-	var slime := load("res://scenes/sideview/back_alley_slime.tscn").instantiate() as BackAlleySlime
+	var slime := load("res://scenes/enemies/back_alley/back_alley_slime.tscn").instantiate() as BackAlleySlime
 	slime.health=20;slime.position=Vector2(800,555)
 	room.add_child(slime);slime.set_process(false);slime.animated_sprite.pause()
 	slime.receive_hit(1,Vector2(640,555))
@@ -109,7 +109,7 @@ func run() -> void:
 	slime.animated_sprite.pause()
 	await capture("slime_normal_body")
 	clean();slime.free()
-	var bat := load("res://scenes/sideview/back_alley_bat.tscn").instantiate() as BackAlleyBat
+	var bat := load("res://scenes/enemies/back_alley/back_alley_bat.tscn").instantiate() as BackAlleyBat
 	bat.health=20;room.add_child(bat);bat.position=Vector2(800,450)
 	bat.set_process(false);bat.animated_sprite.pause()
 	bat.receive_hit(1,Vector2(640,450))

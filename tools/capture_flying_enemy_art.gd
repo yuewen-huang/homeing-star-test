@@ -32,14 +32,14 @@ func run() -> void:
 	label.text = "Back-alley bat                         Wind trial: approved Fly / Idle"
 	label.position = Vector2(60, 160)
 	world.add_child(label)
-	actor = load("res://scenes/sideview/lan_player.tscn").instantiate()
+	actor = load("res://scenes/player/lan/lan_player.tscn").instantiate()
 	actor.world_min_x = 0
 	actor.world_max_x = 1280
 	world.add_child(actor)
 	actor.position = Vector2(750, 610)
 	actor.set_input_frozen(true)
 	actor.set_physics_process(false)
-	bat = load("res://scenes/sideview/back_alley_bat.tscn").instantiate()
+	bat = load("res://scenes/enemies/back_alley/back_alley_bat.tscn").instantiate()
 	bat.position.x = 200
 	bat.setup(2, 510, 100)
 	world.add_child(bat)

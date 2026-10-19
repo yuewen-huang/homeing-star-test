@@ -41,7 +41,7 @@ func run() -> void:
 	deer = room.adapter.deer; roots = deer.root_phase
 	deer.set_physics_process(false); deer.vfx.set_process(false); room.player.set_physics_process(false); room.set_physics_process(false)
 	var health: int = room.player.combat_stats.health
-	var real_player := load("res://scenes/sideview/lan_player.tscn").instantiate() as LanPlayer
+	var real_player := load("res://scenes/player/lan/lan_player.tscn").instantiate() as LanPlayer
 	real_player.save_progress = room.player.save_progress; real_player.save_progress_resolved = true
 	real_player.world_min_x = 32; real_player.world_max_x = 1248
 	real_player.position = Vector2(380,555); room.add_child(real_player); real_player.set_physics_process(false)

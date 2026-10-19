@@ -18,7 +18,7 @@ extends SceneTree
 ##
 ## 跑法：homeing-star-test/run-tests.ps1 -Test test_town_npc_chatter
 
-const TOWN_SCENE := "res://scenes/sideview/homeward_town.tscn"
+const TOWN_SCENE := "res://scenes/levels/town/homeward_town.tscn"
 
 ## 判断"没说过话"用的哨兵值：档案里的 `last` 初始就是它。
 const NEVER_SPOKEN := -1

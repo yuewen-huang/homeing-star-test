@@ -7,7 +7,7 @@ func run() -> void:
 	var args := OS.get_cmdline_user_args()
 	var output := args[0]
 	DirAccess.make_dir_recursive_absolute(output)
-	var room = load("res://scenes/sideview/tutorial_battle_room.tscn").instantiate()
+	var room = load("res://scenes/levels/tutorial/tutorial_battle_room.tscn").instantiate()
 	# Inspect the authored environment without starting story or combat.
 	room.set_script(null)
 	room.get_node("Lan").process_mode = Node.PROCESS_MODE_DISABLED

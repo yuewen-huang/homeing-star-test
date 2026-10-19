@@ -171,7 +171,7 @@ func run() -> void:
 	var ordinary_deer := DeerBoss.new()
 	check(not ordinary_deer.manual_control, "Production deer AI mode is unchanged by default")
 	ordinary_deer.free()
-	var ordinary_master = load("res://scripts/sideview/tutorial_master_boss.gd").new()
+	var ordinary_master = load("res://scripts/bosses/master/master_boss.gd").new()
 	check(not ordinary_master.manual_control, "Production master AI mode is unchanged by default")
 	ordinary_master.free()
 	print("BOSS DEVELOPMENT ROOM: ", checks, " checks, ", failures, " failures")

@@ -51,7 +51,7 @@ func run() -> void:
 	var save := root.get_node("SaveProgress") as SaveProgressService
 	save._config.set_value("steles", "mist_puzzle_entry", 0)
 	save._config.set_value("stele_scores", "mist_puzzle_entry", 0)
-	room = load("res://scenes/sideview/chapter_1_mist_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_mist_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	await process_frame

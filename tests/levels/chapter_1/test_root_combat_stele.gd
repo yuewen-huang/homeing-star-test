@@ -59,7 +59,7 @@ func run() -> void:
 	save = MemoryProgress.new()
 	save.name = "SaveProgress"
 	root.add_child(save)
-	room = load("res://scenes/sideview/chapter_1_root_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_root_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	await process_frame
@@ -202,7 +202,7 @@ func run() -> void:
 	current_scene = null
 	room.free()
 	await process_frame
-	room = load("res://scenes/sideview/chapter_1_root_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_root_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	room.set_process(false)

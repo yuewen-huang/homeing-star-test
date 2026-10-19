@@ -15,7 +15,7 @@ func check(condition: bool, message: String) -> void:
 func run_test() -> void:
 	var save := root.get_node("SaveProgress") as SaveProgressService
 	var ui := root.get_node("InventoryScreen") as InventoryUI
-	var town: Node2D = load("res://scenes/sideview/homeward_town.tscn").instantiate()
+	var town: Node2D = load("res://scenes/levels/town/homeward_town.tscn").instantiate()
 	root.add_child(town)
 	await process_frame
 	var player := town.get("player") as LanPlayer

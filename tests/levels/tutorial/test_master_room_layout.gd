@@ -4,7 +4,7 @@ func _initialize() -> void:
 	call_deferred("run")
 
 func run() -> void:
-	var room = load("res://scenes/sideview/tutorial_battle_room.tscn").instantiate()
+	var room = load("res://scenes/levels/tutorial/tutorial_battle_room.tscn").instantiate()
 	# Keep the room's camera code, but don't enter story or start combat.
 	var room_script = room.get_script()
 	room.set_script(null)

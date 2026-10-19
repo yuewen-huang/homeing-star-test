@@ -63,7 +63,7 @@ func run() -> void:
 	host = Node2D.new()
 	root.add_child(host)
 	current_scene = host
-	player = load("res://scenes/sideview/lan_player.tscn").instantiate()
+	player = load("res://scenes/player/lan/lan_player.tscn").instantiate()
 	player.position = Vector2(640, 555)
 	player.world_min_x = 0
 	player.world_max_x = 1280
@@ -140,7 +140,7 @@ func run() -> void:
 	current_scene = null
 	# Actual production room: victory signal, failed save retry, and defeated-room restore.
 	save.load_progress()
-	var room: Chapter1BossRoom = load("res://scenes/sideview/chapter_1_wind_boss_room.tscn").instantiate()
+	var room: Chapter1BossRoom = load("res://scenes/levels/chapter_1/chapter_1_wind_boss_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	await frames()
@@ -153,7 +153,7 @@ func run() -> void:
 	check(save.has_completed(ForestCoreRelic.victory_id(0)) and not save.has_completed(ForestCoreRelic.power_id(0)), "Core victory without pendant stores the victory alone")
 	room.free()
 	current_scene = null
-	room = load("res://scenes/sideview/chapter_1_wind_boss_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_wind_boss_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	await frames()

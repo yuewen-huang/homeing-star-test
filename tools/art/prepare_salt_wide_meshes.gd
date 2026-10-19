@@ -1,7 +1,7 @@
 extends SceneTree
 const OUT := "res://assets/sideview/environment/chapter_2_salt/layout_wide/"
-const GROUND := preload("res://scripts/sideview/salt_field_ground.gd")
-const BOUNDARY := preload("res://scripts/sideview/salt_field_boundary.gd")
+const GROUND := preload("res://scripts/levels/chapter_2_salt/salt_field_ground.gd")
+const BOUNDARY := preload("res://scripts/levels/chapter_2_salt/salt_field_boundary.gd")
 func _initialize() -> void: run.call_deferred()
 func save_(resource: Resource,name_: String) -> void:
 	var error := ResourceSaver.save(resource,OUT+name_+".tres")
@@ -25,7 +25,7 @@ func run() -> void:
 	var arrays := []; arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX]=vertices; arrays[Mesh.ARRAY_TEX_UV]=uvs; arrays[Mesh.ARRAY_INDEX]=indices
 	var mesh := ArrayMesh.new(); mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays); save_(mesh,"outer_ground")
-	var ambient := load("res://scenes/sideview/chapter_2_salt_ambient.tscn").instantiate() as Node2D
+	var ambient := load("res://scenes/levels/chapter_2_salt/chapter_2_salt_ambient.tscn").instantiate() as Node2D
 	var details: MeshInstance2D = ambient.get_node("StaticScatter")
 	arrays=details.mesh.surface_get_arrays(0); vertices=arrays[Mesh.ARRAY_VERTEX]
 	var placements: Array = details.get_meta("placements")

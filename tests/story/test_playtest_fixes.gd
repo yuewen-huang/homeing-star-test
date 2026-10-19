@@ -45,7 +45,7 @@ func run() -> void:
 	drop.free()
 	check(not save.equip_special_item(&"unknown"), "Unowned items remain rejected")
 
-	var mist = load("res://scenes/sideview/chapter_1_mist_room.tscn").instantiate()
+	var mist = load("res://scenes/levels/chapter_1/chapter_1_mist_room.tscn").instantiate()
 	root.add_child(mist)
 	current_scene = mist
 	mist.player.set_physics_process(false)
@@ -72,7 +72,7 @@ func run() -> void:
 
 	save.set_stele_state(Chapter1WindRoom.PUZZLE_ID, MinigameStele.SteleState.COMPLETED)
 	save.set_stele_state(Chapter1WindRoom.COMBAT_ID, MinigameStele.SteleState.UNLOCKED)
-	var room := load("res://scenes/sideview/chapter_1_wind_room.tscn").instantiate() as Chapter1WindRoom
+	var room := load("res://scenes/levels/chapter_1/chapter_1_wind_room.tscn").instantiate() as Chapter1WindRoom
 	root.add_child(room)
 	current_scene = room
 	room.set_physics_process(false)

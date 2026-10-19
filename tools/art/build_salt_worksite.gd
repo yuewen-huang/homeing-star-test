@@ -1,8 +1,8 @@
 extends SceneTree
-const DEST := "res://scenes/sideview/chapter_2_salt_worksite.tscn"
+const DEST := "res://scenes/levels/chapter_2_salt/chapter_2_salt_worksite.tscn"
 const ART := "res://assets/sideview/environment/chapter_2_salt/worksite/"
-const PATCH := preload("res://scripts/sideview/salt_worksite_patch.gd")
-const DEPTH := preload("res://scripts/sideview/salt_field_prop_depth.gd")
+const PATCH := preload("res://scripts/levels/chapter_2_salt/chapter_2_salt_worksite.gd")
+const DEPTH := preload("res://scripts/levels/chapter_2_salt/salt_field_prop_depth.gd")
 func _initialize() -> void: run.call_deferred()
 func own(node: Node,owner_: Node) -> void:
 	for child in node.get_children(): child.owner=owner_; own(child,owner_)

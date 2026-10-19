@@ -56,11 +56,11 @@ func run() -> void:
 	var memory := MemoryProgress.new(); memory.name = "SaveProgress"; root.add_child(memory)
 	feedback = root.get_node("CombatFeedback") as CombatFeedbackService
 	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
-	var vine_reference = load("res://scenes/sideview/chapter_1_vine_room.tscn").instantiate()
+	var vine_reference = load("res://scenes/levels/chapter_1/chapter_1_vine_room.tscn").instantiate()
 	var reference_zoom: Vector2 = vine_reference.get_node("Camera2D").zoom
 	vine_reference.free()
 	check(reference_zoom == Chapter1VineRoom.CAMERA_ZOOM, "target framing matches the authored vine-region camera")
-	room = load("res://scenes/sideview/chapter_1_final_boss_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate()
 	root.add_child(room); current_scene = room
 	await process_frame; await process_frame
 	if room.story.comic != null: room.story._close_intro()

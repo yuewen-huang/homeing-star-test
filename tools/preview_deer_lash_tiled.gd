@@ -1,6 +1,6 @@
 extends SceneTree
 ## Isolated visual inspection of the same ribbon now used by the real skill.
-const Ribbon = preload("res://scripts/sideview/deer_vine_lash_ribbon.gd")
+const Ribbon = preload("res://scripts/bosses/deer/deer_vine_lash_ribbon.gd")
 class MemoryProgress extends SaveProgressService:
 	func load_progress() -> void:
 		_config = ConfigFile.new()
@@ -34,7 +34,7 @@ func run() -> void:
 	var memory := MemoryProgress.new()
 	memory.name = "SaveProgress"
 	root.add_child(memory)
-	var scene := "res://scenes/sideview/chapter_1_final_boss_room.tscn" if production else "res://scenes/dev/boss_development_room.tscn"
+	var scene := "res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn" if production else "res://scenes/dev/boss_development_room.tscn"
 	room = load(scene).instantiate()
 	root.add_child(room)
 	current_scene = room

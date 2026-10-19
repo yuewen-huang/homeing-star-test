@@ -89,7 +89,7 @@ func test_lan_chain_parry() -> void:
 	var original := root.get_node("SaveProgress")
 	root.remove_child(original); original.free()
 	var memory := MemoryProgress.new(); memory.name = "SaveProgress"; root.add_child(memory)
-	var room: Chapter1DeerBossRoom = load("res://scenes/sideview/chapter_1_final_boss_room.tscn").instantiate()
+	var room: Chapter1DeerBossRoom = load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate()
 	root.add_child(room); current_scene = room
 	await process_frame; await process_frame
 	room.deer.set_physics_process(false)

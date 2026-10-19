@@ -22,7 +22,7 @@ DOC = "homeing-star-doc"
 GAME_SUFFIXES = {".gd", ".tscn", ".tres", ".gdshader", ".cfg", ".godot", ".json", ".import", ".md", ".uid"}
 TEST_SUFFIXES = {".gd", ".py", ".ps1", ".json", ".jsonl", ".md", ".tscn", ".tres"}
 DOC_SUFFIXES = {".md", ".json"}
-SKIP_DIRS = {".git", ".godot", "artifacts", "game_legacy", "__pycache__", "node_modules"}
+SKIP_DIRS = {".git", ".godot", "artifacts", "game_legacy", "__pycache__", "node_modules", "save"}  # save: the player's progress, never rewritten
 
 # Game paths are ASCII (snake_case); format marks are kept so runtime-built paths are seen.
 PATH_CHARS = r"[A-Za-z0-9_./\-%{}$<>]"

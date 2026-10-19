@@ -7,7 +7,7 @@ class MemorySave extends SaveProgressService:
 	func save_progress() -> bool: return true
 	func is_ability_unlocked(_ability: StringName) -> bool: return not locked
 
-var field: SaltFieldPrototype
+var field: Chapter2SaltField
 var lan: LanPlayer
 var checks := 0
 var failures := 0
@@ -34,7 +34,7 @@ func capture(label: String) -> void:
 func run() -> void:
 	var old := root.get_node("SaveProgress"); root.remove_child(old); old.free()
 	var save := MemorySave.new(); save.name = "SaveProgress"; root.add_child(save)
-	field = load("res://scenes/sideview/chapter_2_salt_field.tscn").instantiate()
+	field = load("res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn").instantiate()
 	root.add_child(field); current_scene = field; field.set_physics_process(false)
 	await process_frame; await process_frame
 	lan = field.pawn.player
@@ -44,7 +44,7 @@ func run() -> void:
 	check(not bar.slot_nodes[&"jump"].visible, "Planar exploration hides the inactive jump slot")
 	save.abilities_changed.emit()
 	check(not bar.slot_nodes[&"jump"].visible, "Unlock refresh preserves planar jump restriction")
-	field.feet = SaltFieldPrototype.RETURN_POINT; field._sync_view(0)
+	field.feet = Chapter2SaltField.RETURN_POINT; field._sync_view(0)
 	check(field.return_gate.get_child(0) is CommonPortalVisual and field.return_prompt.can_interact(), "Shared portal art and nearby E prompt replace prototype rectangle")
 	await capture("salt_shared_portal_ui")
 	field.feet = Vector2(1200,1500); field._sync_view(0)

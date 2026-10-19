@@ -2,7 +2,7 @@ extends SceneTree
 class FailedSave extends SaveProgressService:
 	var failing := true
 	func save_progress() -> bool: return not failing
-const ROOM := "res://scenes/sideview/chapter_1_final_boss_room.tscn"
+const ROOM := "res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn"
 var save: SaveProgressService
 var room: Chapter1DeerBossRoom
 var story: DeerStory
@@ -26,7 +26,7 @@ func clear_scene() -> void:
 	if current_scene != null: current_scene.free()
 	current_scene = null
 func fixture_intro(empty := false) -> PackedScene:
-	var comic := load("res://scripts/sideview/deer_intro_comic.gd").new() as WindSightingComic
+	var comic := load("res://scripts/story/comics/deer_intro_comic.gd").new() as WindSightingComic
 	var texture := GradientTexture2D.new()
 	texture.gradient = Gradient.new()
 	if not empty: comic.panels.append(texture)

@@ -100,7 +100,7 @@ func run() -> void:
 		check(-forward_tip > rear_tip, "Most of the damage reach is in front of Lan (max=%s)" % max_form)
 
 	# --- Player: timing curve, lunge, buffer and cancels.
-	var player = (load("res://scenes/sideview/lan_player.tscn") as PackedScene).instantiate()
+	var player = (load("res://scenes/player/lan/lan_player.tscn") as PackedScene).instantiate()
 	player.world_min_x = -3000.0
 	player.world_max_x = 3000.0
 	world.add_child(player)

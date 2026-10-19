@@ -15,7 +15,7 @@ extends SceneTree
 ##
 ## 跑法：homeing-star-test/run-tests.ps1 -Test test_child_npc
 
-const TOWN_SCENE := "res://scenes/sideview/homeward_town.tscn"
+const TOWN_SCENE := "res://scenes/levels/town/homeward_town.tscn"
 
 ## 岚 idle 一帧 46×55、场景缩放 1.5 → 画出来 82.5 px 高。小孩按用户要求是它的 2/3。
 const LAN_RENDERED_HEIGHT := 55.0 * 1.5

@@ -6,7 +6,7 @@ class MemorySave extends SaveProgressService:
 	func save_progress() -> bool: return true
 	func is_ability_unlocked(_ability: StringName) -> bool: return true
 
-var field: SaltFieldPrototype
+var field: Chapter2SaltField
 var lan: LanPlayer
 var checks := 0
 var failures := 0
@@ -35,12 +35,12 @@ func run() -> void:
 	var real_save := root.get_node("SaveProgress")
 	root.remove_child(real_save); real_save.free()
 	var save := MemorySave.new(); save.name = "SaveProgress"; root.add_child(save)
-	field = load("res://scenes/sideview/chapter_2_salt_field.tscn").instantiate() as SaltFieldPrototype
+	field = load("res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn").instantiate() as Chapter2SaltField
 	root.add_child(field); current_scene = field
 	field.set_physics_process(false)
 	await process_frame; await process_frame
 	lan = field.pawn.player
-	check(lan is LanPlayer and lan.scene_file_path == "res://scenes/sideview/lan_player.tscn","Actual Lan scene replaces geometric pawn")
+	check(lan is LanPlayer and lan.scene_file_path == "res://scenes/player/lan/lan_player.tscn","Actual Lan scene replaces geometric pawn")
 	check(not lan.is_physics_processing() and lan.collision_mask == 0,"Side-view gravity and vertical body collision cannot override planar feet")
 	check(lan.animated_sprite.animation == &"idle" and lan.air_state == LanPlayer.AirState.GROUNDED,"Lan begins in her real grounded idle")
 	await capture("salt_lan_idle")

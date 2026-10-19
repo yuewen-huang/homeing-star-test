@@ -108,7 +108,7 @@ func run() -> void:
 	check(statue.age <= statue.dust_start() + DeerGodCome.DISSOLVE_TIME + DeerGodCome.DUST_TIME and statue.finished, "finale closes as the last dust fades without an idle tail")
 	check(vine.god_statue == null and not vine.ultimate_active and vine._darkness.target == 0 and vine.wind == null and vine.ultimate_used, "finale cleanup restores normal loop, retaining once-per-fight mark")
 	# The actual Lan receiver must neither parry nor reduce the statue's damage.
-	var player := load("res://scenes/sideview/lan_player.tscn").instantiate() as LanPlayer
+	var player := load("res://scenes/player/lan/lan_player.tscn").instantiate() as LanPlayer
 	player.world_min_x = deer.world_min_x
 	player.world_max_x = deer.world_max_x
 	room.add_child(player)

@@ -1,5 +1,5 @@
 extends SceneTree
-const LIBRARY := preload("res://scripts/sideview/crystal_crab_action_library.gd")
+const LIBRARY := preload("res://scripts/bosses/crystal_crab/crystal_crab_action_library.gd")
 var room: BossDevelopmentRoom
 var crab: CrystalCrabBoss
 var checks := 0

@@ -6,7 +6,7 @@ func _initialize() -> void:
 func run_test() -> void:
 	var save := root.get_node("SaveProgress") as SaveProgressService
 	save.mark_completed(SaveProgressService.TUTORIAL_CLIMB)
-	var town: Node2D = load("res://scenes/sideview/homeward_town.tscn").instantiate()
+	var town: Node2D = load("res://scenes/levels/town/homeward_town.tscn").instantiate()
 	root.add_child(town)
 	current_scene = town
 	await process_frame
@@ -126,7 +126,7 @@ func run_test() -> void:
 	assert(absf(returned_player.position.x - (door_x + 90.0)) < 2.0,
 		"回镇后应出现在归航厅门口附近")
 	var revisit: Node2D = (load(
-		"res://scenes/sideview/navigation_hall_placeholder.tscn") as PackedScene).instantiate()
+		"res://scenes/levels/navigation_hall/navigation_hall.tscn") as PackedScene).instantiate()
 	root.add_child(revisit)
 	await process_frame
 	assert(revisit.get("navigator_dialogue") == null, "重进归航厅不应重播对话")

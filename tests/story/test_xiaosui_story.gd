@@ -2,8 +2,8 @@ extends SceneTree
 class FailedSave extends SaveProgressService:
 	var failing := true
 	func save_progress() -> bool: return not failing
-const VINE := "res://scenes/sideview/chapter_1_vine_room.tscn"
-const MIST := "res://scenes/sideview/chapter_1_mist_room.tscn"
+const VINE := "res://scenes/levels/chapter_1/chapter_1_vine_room.tscn"
+const MIST := "res://scenes/levels/chapter_1/chapter_1_mist_room.tscn"
 var save: SaveProgressService
 var room: Node2D
 var npc: Node2D
@@ -213,7 +213,7 @@ func run() -> void:
 
 	# Real production rush, not entry or windup, records chase knowledge.
 	seed_progress()
-	var boss_room := load("res://scenes/sideview/chapter_1_final_boss_room.tscn").instantiate() as Chapter1DeerBossRoom
+	var boss_room := load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate() as Chapter1DeerBossRoom
 	root.add_child(boss_room)
 	current_scene = boss_room
 	# The M09 intro comic (tested in test_deer_intro_comic) pauses the fight; skip it to reach real combat.

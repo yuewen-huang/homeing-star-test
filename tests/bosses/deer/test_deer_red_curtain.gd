@@ -47,7 +47,7 @@ func frames(strike: DeerVineStrike) -> Array:
 
 func verify_room(production: bool) -> void:
 	var label := "production" if production else "development"
-	room = load("res://scenes/sideview/chapter_1_final_boss_room.tscn" if production else "res://scenes/dev/boss_development_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn" if production else "res://scenes/dev/boss_development_room.tscn").instantiate()
 	root.add_child(room); current_scene = room
 	await process_frame; await process_frame
 	room.set_physics_process(false); room.set_process(false); room.player.set_physics_process(false)

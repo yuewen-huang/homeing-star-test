@@ -1,9 +1,9 @@
 extends SceneTree
-const DEST := "res://scenes/sideview/chapter_2_salt_ambient.tscn"
+const DEST := "res://scenes/levels/chapter_2_salt/chapter_2_salt_ambient.tscn"
 const PATH := "res://assets/sideview/environment/chapter_2_salt/ambient/"
-const PROJECTION := preload("res://scripts/sideview/salt_field_projection.gd")
-const CONTROLLER := preload("res://scripts/sideview/salt_field_ambient.gd")
-const CRITTER := preload("res://scripts/sideview/salt_field_critter.gd")
+const PROJECTION := preload("res://scripts/levels/chapter_2_salt/salt_field_projection.gd")
+const CONTROLLER := preload("res://scripts/levels/chapter_2_salt/chapter_2_salt_ambient.gd")
+const CRITTER := preload("res://scripts/levels/chapter_2_salt/salt_field_critter.gd")
 var rng := RandomNumberGenerator.new()
 var field: Node2D
 var occupied: Array[Vector2] = []
@@ -24,7 +24,7 @@ func point(shore := false) -> Vector2:
 func run() -> void:
 	if FileAccess.file_exists(DEST): push_error("Refusing to replace authored ambient scene"); quit(1); return
 	rng.seed = 20261017
-	field = load("res://scenes/sideview/chapter_2_salt_field.tscn").instantiate()
+	field = load("res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn").instantiate()
 	field._build_piles()
 	var atlas: Texture2D = load(PATH+"ambient_atlas.png")
 	if atlas==null: quit(1); return

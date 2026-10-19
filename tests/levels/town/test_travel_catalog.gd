@@ -9,13 +9,13 @@ class MemorySave extends SaveProgressService:
 		return true
 
 const MAP_SCENES := [
-	"res://scenes/sideview/chapter_1_mist_room.tscn",
-	"res://scenes/sideview/chapter_1_wind_room.tscn",
-	"res://scenes/sideview/chapter_1_root_room.tscn",
-	"res://scenes/sideview/chapter_1_vine_room.tscn",
-	"res://scenes/sideview/chapter_2_salt_field.tscn",
+	"res://scenes/levels/chapter_1/chapter_1_mist_room.tscn",
+	"res://scenes/levels/chapter_1/chapter_1_wind_room.tscn",
+	"res://scenes/levels/chapter_1/chapter_1_root_room.tscn",
+	"res://scenes/levels/chapter_1/chapter_1_vine_room.tscn",
+	"res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn",
 ]
-const MIST := "res://scenes/sideview/chapter_1_mist_room.tscn"
+const MIST := "res://scenes/levels/chapter_1/chapter_1_mist_room.tscn"
 
 var failures := 0
 var output := ""
@@ -73,7 +73,7 @@ func check_menu_model() -> void:
 		for stele: Dictionary in region.steles:
 			any_open = any_open or stele.unlocked
 	check(not any_open, "fresh save: every stele is locked")
-	save.save_stele_checkpoint(&"wind_combat_high_branches", "res://scenes/sideview/chapter_1_wind_room.tscn", Vector2(2700, 737), "旧名字")
+	save.save_stele_checkpoint(&"wind_combat_high_branches", "res://scenes/levels/chapter_1/chapter_1_wind_room.tscn", Vector2(2700, 737), "旧名字")
 	save.set_stele_state(&"wind_combat_high_branches", MinigameStele.SteleState.COMPLETED)
 	save.save_stele_checkpoint(&"future_stele", MIST, Vector2(900, 555), "未登记碑")
 	chapters = TravelCatalog.menu_chapters(save)
@@ -97,10 +97,10 @@ func check_menu_window() -> void:
 	save._config.set_value("steles", "mist_puzzle_entry", MinigameStele.SteleState.COMPLETED)
 	save._config.set_value("stele_destinations", "mist_combat_01", {"scene_path": MIST, "position": Vector2(2180, 551), "title": ""})
 	save._config.set_value("stele_destinations", "wind_puzzle_directed_bells",
-		{"scene_path": "res://scenes/sideview/chapter_1_wind_room.tscn", "position": Vector2(340, 367), "title": ""})
+		{"scene_path": "res://scenes/levels/chapter_1/chapter_1_wind_room.tscn", "position": Vector2(340, 367), "title": ""})
 	var backdrop: Node = null
 	if not output.is_empty():
-		backdrop = load("res://scenes/sideview/homeward_town.tscn").instantiate()
+		backdrop = load("res://scenes/levels/town/homeward_town.tscn").instantiate()
 		root.add_child(backdrop)
 		for i in 3: await process_frame
 	var menu := SteleTravelMenu.new()

@@ -6,7 +6,7 @@ class MemorySave extends SaveProgressService:
 		_loaded = true
 	func save_progress() -> bool: return not fail_write
 	func is_ability_unlocked(_ability: StringName) -> bool: return true
-var field: SaltFieldPrototype
+var field: Chapter2SaltField
 var save: MemorySave
 var failures := 0
 var checks := 0
@@ -16,7 +16,7 @@ func check(ok: bool, label_: String) -> void:
 	if not ok: failures += 1
 	print("OK " if ok else "FAIL ",label_)
 func enter() -> void:
-	field = load("res://scenes/sideview/chapter_2_salt_field.tscn").instantiate()
+	field = load("res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn").instantiate()
 	root.add_child(field)
 	current_scene = field
 	field.set_physics_process(false)

@@ -51,7 +51,7 @@ func run() -> void:
 	save = TestProgress.new()
 	save.name = "SaveProgress"
 	root.add_child(save)
-	room = load("res://scenes/sideview/chapter_1_wind_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_wind_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	await frames(3)

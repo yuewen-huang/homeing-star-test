@@ -1,7 +1,7 @@
 extends SceneTree
 ## Native render bake: colour + 16-bit object-depth pages preserve the original occlusion.
 const OUTPUT := "res://assets/sideview/environment/chapter_2_salt/baked_boundary/"
-const SOURCE := "res://scenes/sideview/chapter_2_salt_field.tscn"
+const SOURCE := "res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn"
 const PAGE_SIZE := 1024
 var viewport: SubViewport
 var stage: Node2D
@@ -51,8 +51,8 @@ func _initialize() -> void: run.call_deferred()
 
 func source_hashes() -> Dictionary:
 	var result := {}
-	for path in [SOURCE,"res://scenes/sideview/chapter_2_salt_environment.tscn",
-		"res://scripts/sideview/salt_field_perimeter.gd",
+	for path in [SOURCE,"res://scenes/levels/chapter_2_salt/chapter_2_salt_environment.tscn",
+		"res://scripts/levels/chapter_2_salt/salt_field_perimeter.gd",
 		"res://assets/sideview/environment/chapter_2_salt/salt_outcrop_1.png",
 		"res://assets/sideview/environment/chapter_2_salt/salt_outcrop_2.png",
 		"res://assets/sideview/environment/chapter_2_salt/salt_outcrop_3.png",

@@ -1,10 +1,10 @@
 extends SceneTree
 ## One-time authoring export. Runtime never invokes this or overwrites hand-placed props.
-const DEST := "res://scenes/sideview/chapter_2_salt_environment.tscn"
-const GROUND := preload("res://scripts/sideview/salt_field_ground.gd")
-const BOUNDARY := preload("res://scripts/sideview/salt_field_boundary.gd")
-const CLOUDS := preload("res://scripts/sideview/salt_field_clouds.gd")
-const PROP_DEPTH := preload("res://scripts/sideview/salt_field_prop_depth.gd")
+const DEST := "res://scenes/levels/chapter_2_salt/chapter_2_salt_environment.tscn"
+const GROUND := preload("res://scripts/levels/chapter_2_salt/salt_field_ground.gd")
+const BOUNDARY := preload("res://scripts/levels/chapter_2_salt/salt_field_boundary.gd")
+const CLOUDS := preload("res://scripts/levels/chapter_2_salt/chapter_2_salt_environment.gd")
+const PROP_DEPTH := preload("res://scripts/levels/chapter_2_salt/salt_field_prop_depth.gd")
 var environment: Node2D
 
 func _initialize() -> void: bake.call_deferred()

@@ -147,7 +147,7 @@ func run() -> void:
 	root.add_child(routing)
 	for name in ["back_alley_entry", "back_alley_pill", "navigation_hall_entry", "navigation_hall_exit"]:
 		save._config = ConfigFile.new()
-		var comic = load("res://scenes/sideview/%s_comic.tscn" % name).instantiate()
+		var comic = load("res://scenes/story/comics/%s_comic.tscn" % name).instantiate()
 		root.add_child(comic)
 		comic._show_panel(comic.PANELS.size() - 1, false)
 		var before := routing.destinations.size()
@@ -172,7 +172,7 @@ func run() -> void:
 	]:
 		save._config = ConfigFile.new()
 		save._config.set_value("progress", String(data[1]), true)
-		var revisit = load("res://scenes/sideview/%s_comic.tscn" % data[0]).instantiate()
+		var revisit = load("res://scenes/story/comics/%s_comic.tscn" % data[0]).instantiate()
 		root.add_child(revisit)
 		revisit.set_process(false)
 		check(revisit.panel_index == data[2] and revisit.auto_hold_duration == 1.0, String(data[0]) + " retains selected short-play frame")
@@ -189,7 +189,7 @@ func run() -> void:
 
 	save._config = ConfigFile.new()
 	save.fail_write = true
-	var forest = load("res://scenes/sideview/forest_entry_comic.tscn").instantiate()
+	var forest = load("res://scenes/story/comics/forest_entry_comic.tscn").instantiate()
 	root.add_child(forest)
 	forest._show_panel(5, false)
 	var routes := routing.destinations.size()

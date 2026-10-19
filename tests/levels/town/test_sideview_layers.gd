@@ -61,7 +61,7 @@ func run() -> void:
 ## 主角的层号写在主角自己身上：新场景忘了设也不会被 NPC 盖住。
 func _check_player_owns_his_layer() -> void:
 	print("[1] 主角自己认领层号（不依赖场景设置）")
-	var player := (load("res://scenes/sideview/lan_player.tscn") as PackedScene).instantiate()
+	var player := (load("res://scenes/player/lan/lan_player.tscn") as PackedScene).instantiate()
 	player.set("world_min_x", -400.0)
 	player.set("world_max_x", 400.0)
 	root.add_child(player)
@@ -74,7 +74,7 @@ func _check_player_owns_his_layer() -> void:
 
 func _check_town_layer_order() -> void:
 	print("[2] 归航镇：主角压在 NPC / 场景道具之上，仍在屏幕边缘前景框之下")
-	var town := (load("res://scenes/sideview/homeward_town.tscn") as PackedScene).instantiate()
+	var town := (load("res://scenes/levels/town/homeward_town.tscn") as PackedScene).instantiate()
 	root.add_child(town)
 	await process_frame
 	await process_frame
@@ -128,7 +128,7 @@ func _check_town_layer_order() -> void:
 
 func _check_battle_room_layer_order() -> void:
 	print("[3] 教学战房间：主角压在木桩 / 师傅 BOSS 之上（同一套层号）")
-	var battle := (load("res://scenes/sideview/tutorial_battle_room.tscn") as PackedScene).instantiate()
+	var battle := (load("res://scenes/levels/tutorial/tutorial_battle_room.tscn") as PackedScene).instantiate()
 	root.add_child(battle)
 	await process_frame
 	await process_frame
@@ -157,7 +157,7 @@ func _check_battle_room_layer_order() -> void:
 
 func _check_town_npc_tempo() -> void:
 	print("[4] 城镇 NPC 的序列帧节奏（全局规则）")
-	var town := (load("res://scenes/sideview/homeward_town.tscn") as PackedScene).instantiate()
+	var town := (load("res://scenes/levels/town/homeward_town.tscn") as PackedScene).instantiate()
 	root.add_child(town)
 	await process_frame
 	await process_frame

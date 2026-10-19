@@ -51,7 +51,7 @@ func use_portal(room: Node) -> void:
 func run_tests() -> void:
 	var transition := root.get_node("SceneTransition") as SceneTransitionService
 	transition.take_scene_entry_position()
-	var room = load("res://scenes/sideview/chapter_1_mist_room.tscn").instantiate()
+	var room = load("res://scenes/levels/chapter_1/chapter_1_mist_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	var player := prepare_room(room)
@@ -142,7 +142,7 @@ func run_tests() -> void:
 	room.queue_free()
 	await process_frame
 	# Emulate editor movement and saving/reopening the scene, without touching the user's scene file.
-	var edited = load("res://scenes/sideview/chapter_1_mist_room.tscn").instantiate()
+	var edited = load("res://scenes/levels/chapter_1/chapter_1_mist_room.tscn").instantiate()
 	edited.get_node("WindSteps").position = Vector2(10,0)
 	edited.get_node("WindSteps/WindStep2").position += Vector2(32,-14)
 	edited.get_node("WindSteps/WindStep4").position = Vector2(220,300)

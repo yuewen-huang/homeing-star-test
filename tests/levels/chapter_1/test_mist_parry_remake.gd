@@ -62,7 +62,7 @@ func run() -> void:
 	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	var transition := root.get_node("SceneTransition") as SceneTransitionService
 	transition.set_scene_entry_position(Vector2(1800, 555))
-	room = load("res://scenes/sideview/chapter_1_mist_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_mist_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	room.player.set_physics_process(false)
@@ -184,7 +184,7 @@ func run() -> void:
 	room.queue_free()
 	await process_frame
 	transition.set_scene_entry_position(Vector2(15080,555))
-	room = load("res://scenes/sideview/chapter_1_mist_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_mist_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	check(room.player.position.is_equal_approx(room.ROOT_ENTRY), "Legacy eastern arrival maps to safe new entrance")

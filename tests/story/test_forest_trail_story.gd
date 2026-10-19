@@ -2,8 +2,8 @@ extends SceneTree
 class FailedSave extends SaveProgressService:
 	var failing := true
 	func save_progress() -> bool: return not failing
-const MIST := "res://scenes/sideview/chapter_1_mist_room.tscn"
-const VINE := "res://scenes/sideview/chapter_1_vine_room.tscn"
+const MIST := "res://scenes/levels/chapter_1/chapter_1_mist_room.tscn"
+const VINE := "res://scenes/levels/chapter_1/chapter_1_vine_room.tscn"
 var save: SaveProgressService
 var room: Node2D
 var point: Node2D

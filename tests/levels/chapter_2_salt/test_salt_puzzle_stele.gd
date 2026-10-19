@@ -25,8 +25,8 @@ func run() -> void:
 	var save:=MemorySave.new(); save.name="SaveProgress"; root.add_child(save)
 	# Mirror the user's screenshot landmarks without touching the actual save.
 	save._config.set_value("map_states","chapter_2_salt_field",{"boss_pile":1,"dug":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,24,25,26,27]})
-	var packed: PackedScene=load("res://scenes/sideview/chapter_2_salt_field.tscn")
-	var field:=packed.instantiate() as SaltFieldPrototype
+	var packed: PackedScene=load("res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn")
+	var field:=packed.instantiate() as Chapter2SaltField
 	root.add_child(field); current_scene=field; field.set_physics_process(false)
 	var stele: MinigameStele=field.puzzle_stele
 	var foot:=SaltFieldProjection.unproject(stele.position)
@@ -59,7 +59,7 @@ func run() -> void:
 	field.free(); current_scene=null
 	var transition:=root.get_node("SceneTransition") as SceneTransitionService
 	transition.set_scene_entry_position(checkpoint.position)
-	field=packed.instantiate() as SaltFieldPrototype; root.add_child(field); current_scene=field; field.set_physics_process(false)
+	field=packed.instantiate() as Chapter2SaltField; root.add_child(field); current_scene=field; field.set_physics_process(false)
 	check(field.feet.distance_to(expected)<0.01 and field.puzzle_stele.state==MinigameStele.SteleState.UNLOCKED,"Explicit travel arrival restores the safe feet position and unlocked stele")
 	field.free(); current_scene=null; await process_frame
 	print("SALT PUZZLE STELE: %d checks, %d failures"%[checks,failures])

@@ -8,10 +8,10 @@ class LocalProgress extends SaveProgressService:
 	func show_toast(_message: String) -> void: pass
 	func is_ability_unlocked(_ability: StringName) -> bool: return true
 
-class LocalEncounter extends "res://scripts/sideview/back_alley_encounter.gd":
+class LocalEncounter extends "res://scripts/levels/back_alley/back_alley_encounter.gd":
 	func _ready() -> void: pass
 
-class NativeAlley extends "res://scripts/sideview/back_alley_placeholder.gd":
+class NativeAlley extends "res://scripts/levels/back_alley/back_alley.gd":
 	func _add_slime_encounter() -> void: pass
 
 var room
@@ -219,7 +219,7 @@ func test_encounter() -> void:
 	check(frog.action == &"heal", "production AI uses one healing action below half health")
 	encounter._remove_frog_boss()
 	await process_frame
-	var player := load("res://scenes/sideview/lan_player.tscn").instantiate() as LanPlayer
+	var player := load("res://scenes/player/lan/lan_player.tscn").instantiate() as LanPlayer
 	player.save_progress = progress
 	player.save_progress_resolved = true
 	player.position = Vector2(500,555)

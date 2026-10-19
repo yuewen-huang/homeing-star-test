@@ -41,7 +41,7 @@ func setup() -> void:
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	assist.set_player_invincible(false)
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index(&"Music"),-18.0)
-	var room = load("res://scenes/sideview/chapter_1_final_boss_room.tscn").instantiate()
+	var room = load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate()
 	room.enable_deer_boss = false
 	room.room_title = "晶蟹 · 砸地交锋"
 	root.add_child(room)
@@ -49,7 +49,7 @@ func setup() -> void:
 	await process_frame
 	await process_frame
 	lan = room.player
-	crab = load("res://scenes/sideview/crystal_crab_boss.tscn").instantiate()
+	crab = load("res://scenes/bosses/crystal_crab/crystal_crab_boss.tscn").instantiate()
 	crab.combat_target = lan
 	crab.manual_control = true
 	crab.position = Vector2(920,555)

@@ -77,7 +77,7 @@ func run() -> void:
 	var assist := root.get_node("/root/BattleAssist") as BattleAssistSettingsService
 	assist.set_player_invincible(false)
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)  # every parry manual
-	room = load("res://scenes/sideview/chapter_1_final_boss_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate()
 	root.add_child(room); current_scene = room
 	await process_frame; await process_frame
 	# Close the deer's opening comic so the fight is on screen (its own abandon path).

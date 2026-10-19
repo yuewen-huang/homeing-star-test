@@ -160,7 +160,7 @@ func run() -> void:
 	room.queue_free()
 	await process_frame
 	# Also render the same controller on the production room's master.
-	room = load("res://scenes/sideview/tutorial_battle_room.tscn").instantiate()
+	room = load("res://scenes/levels/tutorial/tutorial_battle_room.tscn").instantiate()
 	room.get_node("MasterBoss").manual_control = true
 	root.add_child(room)
 	current_scene = room

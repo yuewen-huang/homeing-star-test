@@ -160,7 +160,7 @@ func run() -> void:
 	var progress := MemoryProgress.new()
 	progress.name = "SaveProgress"
 	root.add_child(progress)
-	room = load("res://scenes/sideview/vine_swing_sandbox.tscn").instantiate()
+	room = load("res://scenes/dev/vine_swing_sandbox.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	player = room.player

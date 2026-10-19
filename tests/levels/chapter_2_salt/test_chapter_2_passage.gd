@@ -28,7 +28,7 @@ func clear_scene() -> void:
 	if current_scene != null: current_scene.free()
 	current_scene = null
 func enter() -> void:
-	room = load("res://scenes/sideview/chapter_1_final_boss_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	await process_frame; await process_frame
@@ -110,14 +110,14 @@ func run() -> void:
 	await capture("chapter2_gate_unlocked")
 	key()
 	await wait_transition()
-	check(current_scene is SaltFieldPrototype, "Actual E interaction transitions into the salt field prototype")
-	if current_scene is SaltFieldPrototype:
-		var chapter := current_scene as SaltFieldPrototype
+	check(current_scene is Chapter2SaltField, "Actual E interaction transitions into the salt field prototype")
+	if current_scene is Chapter2SaltField:
+		var chapter := current_scene as Chapter2SaltField
 		await physics_frame; await physics_frame
-		check(chapter.feet.distance_to(SaltFieldPrototype.SPAWN) < 2, "Salt field spawns the planar pawn at its entrance")
+		check(chapter.feet.distance_to(Chapter2SaltField.SPAWN) < 2, "Salt field spawns the planar pawn at its entrance")
 		await capture("chapter2_salt_field")
 		chapter.set_physics_process(false)
-		chapter.feet = SaltFieldPrototype.RETURN_POINT
+		chapter.feet = Chapter2SaltField.RETURN_POINT
 		chapter._sync_view(0)
 		key()
 		await wait_transition()

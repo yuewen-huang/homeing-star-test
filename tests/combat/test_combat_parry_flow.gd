@@ -21,7 +21,7 @@ func make_attack(source: Node2D, id: StringName = &"test") -> CombatAttackData:
 
 
 func spawn_player(room: Node2D, name_suffix: String) -> LanPlayer:
-	var player := (load("res://scenes/sideview/lan_player.tscn") as PackedScene).instantiate() as LanPlayer
+	var player := (load("res://scenes/player/lan/lan_player.tscn") as PackedScene).instantiate() as LanPlayer
 	player.name = "Lan%s" % name_suffix
 	player.world_min_x = -1000.0
 	player.world_max_x = 1000.0

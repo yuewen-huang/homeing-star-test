@@ -8,7 +8,7 @@ func _initialize() -> void: call_deferred("run")
 func run() -> void:
 	var out := OS.get_cmdline_user_args()[0]
 	DirAccess.make_dir_recursive_absolute(out)
-	var player := load("res://scenes/sideview/lan_player.tscn").instantiate() as LanPlayer
+	var player := load("res://scenes/player/lan/lan_player.tscn").instantiate() as LanPlayer
 	player.world_min_x = -1000.0; player.world_max_x = 2000.0
 	root.add_child(player)
 	player.set_physics_process(false); player.set_process(false)

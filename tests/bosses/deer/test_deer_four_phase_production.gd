@@ -91,7 +91,7 @@ func run() -> void:
 	var original := root.get_node("SaveProgress")
 	root.remove_child(original); original.free()
 	var memory := MemoryProgress.new(); memory.name = "SaveProgress"; root.add_child(memory)
-	room = load("res://scenes/sideview/chapter_1_final_boss_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate()
 	root.add_child(room); current_scene = room
 	# This suite validates production combat after the independently tested intro.
 	if room.story.comic != null: room.story.comic._request_finish(true)

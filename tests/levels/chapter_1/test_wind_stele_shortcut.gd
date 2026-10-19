@@ -40,7 +40,7 @@ func capture(filename: String) -> void:
 	root.get_texture().get_image().save_png(OS.get_environment("HOMING_STAR_TEST_OUTPUT").path_join(filename + ".png"))
 
 func load_room() -> void:
-	room = load("res://scenes/sideview/chapter_1_wind_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_wind_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	await frames()

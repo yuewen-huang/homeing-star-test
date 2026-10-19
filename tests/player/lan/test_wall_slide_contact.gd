@@ -32,7 +32,7 @@ func run() -> void:
 	wall.add_child(collision)
 	world.add_child(wall)
 	for direction in [1.0, -1.0]:
-		var player := preload("res://scenes/sideview/lan_player.tscn").instantiate() as LanPlayer
+		var player := preload("res://scenes/player/lan/lan_player.tscn").instantiate() as LanPlayer
 		player.world_min_x = 0
 		player.world_max_x = 1280
 		player.fallback_ground_y = 4000
@@ -80,7 +80,7 @@ func run() -> void:
 	quit(1 if failures else 0)
 
 func check_entrance_wall_animation() -> void:
-	var room := preload("res://scenes/sideview/chapter_1_wind_room.tscn").instantiate() as Chapter1EmptyRoom
+	var room := preload("res://scenes/levels/chapter_1/chapter_1_wind_room.tscn").instantiate() as Chapter1Layout
 	root.add_child(room)
 	await process_frame
 	var wall := room.get_node("Terrain/S9_Wall_23") as TerrainPiece
@@ -123,7 +123,7 @@ func check_entrance_wall_animation() -> void:
 	await process_frame
 
 func check_wind_wall() -> void:
-	var room := preload("res://scenes/sideview/chapter_1_wind_room.tscn").instantiate() as Chapter1EmptyRoom
+	var room := preload("res://scenes/levels/chapter_1/chapter_1_wind_room.tscn").instantiate() as Chapter1Layout
 	root.add_child(room)
 	await process_frame
 	var piece := room.get_node("Terrain/S6_SlopeDown_78") as TerrainPiece

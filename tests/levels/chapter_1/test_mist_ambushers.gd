@@ -41,7 +41,7 @@ func new_arena() -> void:
 	camera.position = Vector2(1000,360)
 	arena.add_child(camera)
 	camera.make_current()
-	player = load("res://scenes/sideview/lan_player.tscn").instantiate() as LanPlayer
+	player = load("res://scenes/player/lan/lan_player.tscn").instantiate() as LanPlayer
 	player.world_min_x = -10000.0
 	player.world_max_x = 20000.0
 	player.fallback_ground_y = 555.0
@@ -173,7 +173,7 @@ func run_tests() -> void:
 
 func capture_gameplay() -> void:
 	var output := OS.get_cmdline_user_args()[-1]
-	var room = load("res://scenes/sideview/chapter_1_mist_room.tscn").instantiate()
+	var room = load("res://scenes/levels/chapter_1/chapter_1_mist_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	check(room.mist_enemies.size() == 3, "Mist room must contain three persistent opponents")
@@ -221,7 +221,7 @@ func capture_gameplay() -> void:
 	quit(1 if failures else 0)
 
 func test_full_room_ambush() -> void:
-	var room = load("res://scenes/sideview/chapter_1_mist_room.tscn").instantiate()
+	var room = load("res://scenes/levels/chapter_1/chapter_1_mist_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
 	room._save.set_stele_state(room.COMBAT_ID, MinigameStele.SteleState.UNLOCKED)

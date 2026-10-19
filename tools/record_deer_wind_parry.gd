@@ -58,7 +58,7 @@ func setup() -> void:
 	var original := root.get_node("SaveProgress")
 	root.remove_child(original); original.free()
 	var memory := MemoryProgress.new(); memory.name = "SaveProgress"; root.add_child(memory)
-	room = load("res://scenes/sideview/chapter_1_final_boss_room.tscn").instantiate()
+	room = load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate()
 	root.add_child(room); current_scene = room
 	await process_frame; await process_frame
 	boss = room.deer; player = room.player; clash = boss.clash_phase

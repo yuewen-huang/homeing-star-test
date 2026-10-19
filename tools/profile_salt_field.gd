@@ -11,14 +11,14 @@ func run() -> void:
 	var environment_cache: PackedScene
 	if "--split-load" in OS.get_cmdline_user_args():
 		var environment_start := Time.get_ticks_usec()
-		environment_cache = load("res://scenes/sideview/chapter_2_salt_environment.tscn")
+		environment_cache = load("res://scenes/levels/chapter_2_salt/chapter_2_salt_environment.tscn")
 		print("ENVIRONMENT RESOURCE LOAD MS ",(Time.get_ticks_usec()-environment_start)/1000.0)
 	var real_save := root.get_node("SaveProgress")
 	root.remove_child(real_save); real_save.free()
 	var save := MemorySave.new(); save.name = "SaveProgress"; root.add_child(save)
 	var memory_before := Performance.get_monitor(Performance.MEMORY_STATIC)
 	var start := Time.get_ticks_usec()
-	var packed: PackedScene = load("res://scenes/sideview/chapter_2_salt_field.tscn")
+	var packed: PackedScene = load("res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn")
 	var loaded := Time.get_ticks_usec()
 	var field: Node2D = packed.instantiate()
 	var instantiated := Time.get_ticks_usec()

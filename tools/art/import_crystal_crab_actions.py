@@ -68,7 +68,7 @@ def main():
             fields.append(f'"{key}": {json.dumps(spec[key])}')
         script.append(f'\t&"{clip}": {{'+', '.join(fields)+'},')
     script += ['}','','static func parts(action: StringName) -> Array[StringName]:','\treturn [StringName(String(action)+"_START"), StringName(String(action)+"_ING"), StringName(String(action)+"_END")]','','static func duration(clip: StringName) -> float:','\treturn float(CLIPS[clip].duration)','','static func frame_at(clip: StringName, seconds: float) -> int:','\tvar ends: Array = CLIPS[clip].frame_ends','\tfor index in ends.size():','\t\tif seconds+0.00000001<float(ends[index]): return index','\treturn ends.size()-1','','static func build_frames() -> SpriteFrames:','\tvar frames := SpriteFrames.new()','\tframes.remove_animation(&"default")','\tfor clip: StringName in CLIPS:','\t\tvar spec: Dictionary = CLIPS[clip]','\t\tframes.add_animation(clip)','\t\tframes.set_animation_loop(clip,false)','\t\tframes.set_animation_speed(clip,spec.fps)','\t\tfor index in int(spec.count):','\t\t\tvar texture := AtlasTexture.new()','\t\t\ttexture.atlas = spec.texture','\t\t\ttexture.region = Rect2(Vector2(index*256,0),FRAME_SIZE)','\t\t\tframes.add_frame(clip,texture,float(spec.durations_ms[index])/1000*float(spec.fps))','\treturn frames','']
-    (WORKSPACE/'homeing-star-game/scripts/sideview/crystal_crab_action_library.gd').write_text('\n'.join(script),encoding='utf-8')
+    (WORKSPACE/'homeing-star-game/scripts/bosses/crystal_crab/crystal_crab_action_library.gd').write_text('\n'.join(script),encoding='utf-8')
     print(f'Verified {total} native body frames in {len(clips)} segments; guides excluded, authored timing/ground preserved.')
 
 if __name__=='__main__': main()

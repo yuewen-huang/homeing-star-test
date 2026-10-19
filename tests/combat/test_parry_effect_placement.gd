@@ -40,7 +40,7 @@ func run() -> void:
 
 	# Real settlement on a plain LanPlayer (the dev-room player ignores hits): a normal parry
 	# reports the blade point, whatever contact the hitbox had.
-	var guard := load("res://scenes/sideview/lan_player.tscn").instantiate() as LanPlayer
+	var guard := load("res://scenes/player/lan/lan_player.tscn").instantiate() as LanPlayer
 	guard.world_min_x = -1000.0; guard.world_max_x = 3000.0
 	room.add_child(guard)
 	guard.set_physics_process(false)
@@ -86,7 +86,7 @@ func run() -> void:
 	plain.free()
 
 	# The master keeps its old slash position but no longer owns a copy.
-	var master := load("res://scenes/sideview/tutorial_master_boss.tscn").instantiate() as Node2D
+	var master := load("res://scenes/bosses/master/master_boss.tscn").instantiate() as Node2D
 	check(master.get_node_or_null("RedParryEffect") == null, "Master scene no longer carries its own red parry effect")
 	master.position = Vector2(300, 555)
 	check(master.call(&"get_counter_slash_point") == Vector2(300, 555 - 128), "Master counter point keeps the original spot above its origin")

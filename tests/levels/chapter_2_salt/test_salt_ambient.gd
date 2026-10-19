@@ -13,7 +13,7 @@ func check(ok: bool,message: String) -> void:
 	if not ok: failures += 1
 	print("OK " if ok else "FAIL ",message)
 func run() -> void:
-	var ambient: Node2D = load("res://scenes/sideview/chapter_2_salt_ambient.tscn").instantiate()
+	var ambient: Node2D = load("res://scenes/levels/chapter_2_salt/chapter_2_salt_ambient.tscn").instantiate()
 	ambient.process_mode = Node.PROCESS_MODE_DISABLED; root.add_child(ambient)
 	var field := Field.new(); root.add_child(field); ambient.bind_field(field)
 	check(ambient.get_node("StaticScatter").get_meta("placements").size()==124,"One static mesh contains all six decor kinds and 124 placements")

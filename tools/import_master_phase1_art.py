@@ -114,7 +114,7 @@ def main():
         (DEST/(action+'.png')).unlink(missing_ok=True)
         (DEST/(action+'.png.import')).unlink(missing_ok=True)
     generated = ['class_name MasterPhase1Segments','extends RefCounted','', 'const PARTS := '+json.dumps(PARTS, ensure_ascii=False), 'const SUBMOVES := '+json.dumps(SUBMOVES, ensure_ascii=False), '']
-    (ROOT/'homeing-star-game/scripts/sideview/master_phase1_segments.gd').write_text('\n'.join(generated),encoding='utf8')
+    (ROOT/'homeing-star-game/scripts/bosses/master/master_phase1_segments.gd').write_text('\n'.join(generated),encoding='utf8')
     print(f'Verified independent action segments and {len(SUBMOVES)} compound submoves:', DEST)
 
 if __name__ == '__main__':

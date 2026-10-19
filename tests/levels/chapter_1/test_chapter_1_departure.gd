@@ -1,8 +1,8 @@
 extends SceneTree
 
-const TOWN := "res://scenes/sideview/homeward_town.tscn"
-const HALL := "res://scenes/sideview/navigation_hall_placeholder.tscn"
-const MIST := "res://scenes/sideview/chapter_1_mist_room.tscn"
+const TOWN := "res://scenes/levels/town/homeward_town.tscn"
+const HALL := "res://scenes/levels/navigation_hall/navigation_hall.tscn"
+const MIST := "res://scenes/levels/chapter_1/chapter_1_mist_room.tscn"
 var save: SaveProgressService
 var checks := 0
 var failures := 0
@@ -181,7 +181,7 @@ func run() -> void:
 	press_e()
 	check(not save.has_completed(SaveProgressService.STORY_C1_FOREST_ENTERED), "Pressing gate key alone cannot complete arrival")
 	await create_timer(3.0).timeout
-	check(current_scene.scene_file_path == "res://scenes/sideview/forest_entry_comic.tscn", "Departure plays new forest entry comic")
+	check(current_scene.scene_file_path == "res://scenes/story/comics/forest_entry_comic.tscn", "Departure plays new forest entry comic")
 	check(not save.has_completed(SaveProgressService.STORY_C1_FOREST_ENTERED), "Comic does not prematurely record forest arrival")
 	for i in 6:
 		press_e()

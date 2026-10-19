@@ -1,8 +1,8 @@
 extends SceneTree
 
-const TOWN := "res://scenes/sideview/homeward_town.tscn"
-const COMIC := "res://scenes/sideview/forest_entry_comic.tscn"
-const MIST := "res://scenes/sideview/chapter_1_mist_room.tscn"
+const TOWN := "res://scenes/levels/town/homeward_town.tscn"
+const COMIC := "res://scenes/story/comics/forest_entry_comic.tscn"
+const MIST := "res://scenes/levels/chapter_1/chapter_1_mist_room.tscn"
 var save: SaveProgressService
 var transition: SceneTransitionService
 var checks := 0

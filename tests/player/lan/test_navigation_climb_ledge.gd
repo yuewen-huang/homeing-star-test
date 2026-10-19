@@ -21,7 +21,7 @@ extends SceneTree
 ##
 ## 跑法：homeing-star-test/run-tests.ps1 -Test test_navigation_climb_ledge
 
-const TOWN_SCENE := "res://scenes/sideview/homeward_town.tscn"
+const TOWN_SCENE := "res://scenes/levels/town/homeward_town.tscn"
 
 ## 位移连续性阈值。攀爬全程 (39, -80) px 分 8 个动画帧走完，物理 60 fps / 动画 12 fps
 ## → 每物理帧的正常步长约 1.0 px（x）/ 2.0 px（y）。

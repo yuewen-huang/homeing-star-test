@@ -4,7 +4,7 @@ class FailedSave extends SaveProgressService:
 	var failing := true
 	func save_progress() -> bool: return not failing
 
-const WIND_ROOM := "res://scenes/sideview/chapter_1_wind_room.tscn"
+const WIND_ROOM := "res://scenes/levels/chapter_1/chapter_1_wind_room.tscn"
 var save: SaveProgressService
 var room: Chapter1WindRoom
 var npc: Node2D

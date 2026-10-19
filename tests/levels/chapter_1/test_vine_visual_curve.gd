@@ -1,5 +1,5 @@
 extends SceneTree
-const CurveModel := preload("res://scripts/sideview/vine_visual_curve.gd")
+const CurveModel := preload("res://scripts/levels/chapter_1/vine_visual_curve.gd")
 var failures := 0
 func check(ok: bool, message: String) -> void:
 	print("OK " if ok else "FAIL ", message)
