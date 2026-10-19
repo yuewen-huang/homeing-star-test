@@ -394,7 +394,7 @@ func vine_checks() -> void:
 	check(not room.player.is_combat_anchored(), "Real roll invulnerability evades binding grab")
 	room.player.reset_after_map_fall(Vector2(640, 555))
 	room.player.dodge_bullet_time_remaining = 0
-	captor._dodge_remaining = 0
+	captor.action_clock.clear()
 	captor.begin_attack()
 	for i in 75: captor.step(1.0 / 60.0)
 	check(room.player.combat_anchor_owner == captor, "Undodged binding strike actually captures player")
