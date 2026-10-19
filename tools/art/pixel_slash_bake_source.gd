@@ -52,6 +52,8 @@ const CHARGE_FLICKER := 0.04
 
 const PALETTES := {
 	&"master_wind": [Color("eeeeee"), Color("00e0dd"), Color("009fe8"), Color("007fc3")],
+	&"master_red": [Color("fff0dd"), Color("ff9c66"), Color("e2412f"), Color("6e1222")],
+	&"master_gold": [Color("fffbe2"), Color("ffe189"), Color("e4ab35"), Color("80530f")],
 	&"master": [Color("e8e4db"), Color("c5c7c8"), Color("6b8494"), Color("2b3948")],
 	&"crab": [Color("f1f2e6"), Color("bee5d8"), Color("3cada8"), Color("174d54")],
 	&"violet": [Color("fff4ff"), Color("f3b6ff"), Color("c25fe6"), Color("4f1c72")],
@@ -388,75 +390,286 @@ func _draw_slash() -> void:
 		&"path": _draw_path_trail()
 		_: _draw_arc_trail()
 
-## Master wind is a set of individually authored, unequal curved ribbons.
-## This offline geometry never samples, transforms or recolours the legacy PNGs.
+## Master wind (2026-10-19 restyle): drawn after the six kept painted frames (attack 1 /
+## attack 2 F08–F10 and attack 2 F15–F17). This offline geometry never samples the PNGs;
+## it copies their language: a blade is a bundle of parallel brush strokes in alternating
+## inks with gaps between them and staggered ends; landings throw up a crown of spikes;
+## comma-shaped wave curls and translucent cloud puffs trail the sweep; fading strokes
+## break into dashes. Inks are the painted frames' own colours.
+const MASTER_INK := {&"white": Color("ffffff"), &"pale": Color("e4e4e4"), &"cyan": Color("00f2fd"),
+	&"mint": Color("69f0c7"), &"blue": Color("0197ec"), &"deep": Color("017cc6"), &"deeper": Color("0171b6")}
+## Danger variants keep the same strokes in the shared red / gold.
+const MASTER_RED_INK := {&"white": Color("fff0dd"), &"pale": Color("ffd9c0"), &"cyan": Color("ff9c66"),
+	&"mint": Color("ffb38a"), &"blue": Color("e2412f"), &"deep": Color("a8262a"), &"deeper": Color("6e1222")}
+const MASTER_GOLD_INK := {&"white": Color("fffbe2"), &"pale": Color("fff0c0"), &"cyan": Color("ffe189"),
+	&"mint": Color("fff0a8"), &"blue": Color("e4ab35"), &"deep": Color("b07a1c"), &"deeper": Color("80530f")}
+var _inks: Dictionary = MASTER_INK
+
+## Elements per profile, in effect space (x forward, y down; the feet are at y = 160).
+## strands: bezier [p0..p3], width, inks (one stroke each), delay. curl: centre, radius,
+## turn (1 clockwise), delay. crown: base, height, spikes, delay. puffs: centres, radius.
+func _master_elements() -> Array:
+	match wind_profile:
+		&"flip_chop":
+			# 回身三连's last beat: over the top from high behind, chopping down in front;
+			# the landing throws a spike crown, curls roll off behind.
+			return [
+				{"kind": "strands", "curve": [Vector2(-215,-30),Vector2(-160,-250),Vector2(225,-240),Vector2(232,118)], "width": 96.0,
+					"inks": [&"mint", &"white", &"mint", &"blue", &"mint", &"deep"], "delay": 0.0},
+				{"kind": "strands", "curve": [Vector2(-150,-150),Vector2(-40,-262),Vector2(200,-232),Vector2(275,-40)], "width": 14.0,
+					"inks": [&"cyan", &"blue"], "delay": 0.02},
+				{"kind": "crown", "at": Vector2(232,160), "height": 150.0, "spikes": 9, "delay": 0.085},
+				{"kind": "curl", "at": Vector2(-150,128), "radius": 40.0, "turn": -1.0, "delay": 0.05},
+				{"kind": "curl", "at": Vector2(-88,140), "radius": 30.0, "turn": -1.0, "delay": 0.07},
+			]
+		&"return_lift":
+			# 压步回锋's rising cut: puffs kicked up at the low start, a stroke bundle rising
+			# to high in front, a curl where it leaves the ground.
+			return [
+				{"kind": "puffs", "at": [Vector2(-120,118),Vector2(-78,132),Vector2(-30,124)], "radius": 34.0, "delay": 0.0},
+				{"kind": "strands", "curve": [Vector2(-125,112),Vector2(-20,170),Vector2(250,-50),Vector2(110,-175)], "width": 84.0,
+					"inks": [&"mint", &"white", &"blue", &"mint", &"deep"], "delay": 0.0},
+				{"kind": "strands", "curve": [Vector2(-60,140),Vector2(150,150),Vector2(285,-30),Vector2(205,-130)], "width": 12.0,
+					"inks": [&"cyan", &"blue"], "delay": 0.02},
+				{"kind": "curl", "at": Vector2(-150,100), "radius": 38.0, "turn": 1.0, "delay": 0.01},
+			]
+		&"front_cut":
+			# 旋身顿斩's opening cut: forward and down across the chest.
+			return [
+				{"kind": "strands", "curve": [Vector2(-70,-150),Vector2(110,-215),Vector2(305,-85),Vector2(255,70)], "width": 80.0,
+					"inks": [&"mint", &"white", &"blue", &"mint", &"deep"], "delay": 0.0},
+				{"kind": "curl", "at": Vector2(-95,118), "radius": 32.0, "turn": -1.0, "delay": 0.04},
+			]
+		&"flat_spin":
+			# 旋身顿斩's horizontal spin (wind only): a flat ring with puffs churned up inside.
+			return [
+				{"kind": "strands", "curve": {"ellipse": [Vector2(30,40), 215.0, 62.0, -200.0, 150.0]}, "width": 46.0,
+					"inks": [&"mint", &"white", &"blue", &"deep"], "delay": 0.0},
+				{"kind": "puffs", "at": [Vector2(-60,78),Vector2(-10,92),Vector2(45,84)], "radius": 30.0, "delay": 0.03},
+			]
+		&"blink_spin":
+			# 瞬移回斩's reappearing spin: a low flat ring and a spike crown where he lands.
+			return [
+				{"kind": "strands", "curve": {"ellipse": [Vector2(20,92), 240.0, 52.0, -190.0, 160.0]}, "width": 44.0,
+					"inks": [&"mint", &"white", &"blue", &"mint", &"deep"], "delay": 0.0},
+				{"kind": "crown", "at": Vector2(150,160), "height": 90.0, "spikes": 7, "delay": 0.06},
+				{"kind": "curl", "at": Vector2(-200,120), "radius": 30.0, "turn": -1.0, "delay": 0.05},
+			]
+		&"heavy_chop":
+			# 瞬移回斩's delayed heavy: a tall, thick chop from high above into a big crown.
+			return [
+				{"kind": "strands", "curve": [Vector2(-50,-305),Vector2(120,-330),Vector2(265,-150),Vector2(175,150)], "width": 112.0,
+					"inks": [&"mint", &"white", &"mint", &"blue", &"mint", &"deep"], "delay": 0.0},
+				{"kind": "crown", "at": Vector2(175,160), "height": 170.0, "spikes": 11, "delay": 0.085},
+				{"kind": "curl", "at": Vector2(-60,130), "radius": 38.0, "turn": -1.0, "delay": 0.06},
+				{"kind": "curl", "at": Vector2(10,142), "radius": 28.0, "turn": -1.0, "delay": 0.08},
+			]
+		&"air_spin":
+			# 旋空突坠's spin in the air (wind only): one fat C wrapping the body, from low
+			# behind up over the head to its thickest at the low front, where the qi fly off.
+			return [
+				{"kind": "strands", "curve": {"ellipse": [Vector2(0,10), 165.0, 130.0, 140.0, 400.0]}, "width": 120.0,
+					"inks": [&"mint", &"white", &"blue", &"mint", &"blue", &"deep"], "delay": 0.0},
+				{"kind": "strands", "curve": {"ellipse": [Vector2(0,10), 192.0, 152.0, 170.0, 330.0]}, "width": 10.0,
+					"inks": [&"cyan"], "delay": 0.02},
+				{"kind": "strands", "curve": {"ellipse": [Vector2(0,10), 118.0, 94.0, 200.0, 380.0]}, "width": 12.0,
+					"inks": [&"mint"], "delay": 0.03},
+				{"kind": "curl", "at": Vector2(-150,112), "radius": 26.0, "turn": 1.0, "delay": 0.04},
+			]
+		&"sword_qi":
+			# 旋空突坠's thrown qi (user reference): a big flat crescent across its flight (+x),
+			# about twice the master's body wide, no trail (user 2026-10-19).
+			return [
+				{"kind": "strands", "curve": [Vector2(-40,-130),Vector2(85,-112),Vector2(85,112),Vector2(-40,130)], "width": 72.0,
+					"inks": [&"mint", &"white", &"blue", &"mint", &"deep"], "delay": 0.0},
+			]
+		&"push_gust":
+			# 旋空突坠's push off (user 2026-10-19: the geometric dome looked wrong): wind bursting
+			# from his feet both ways in the kept painted frames' language. Each side fans into
+			# curving strokes (a wave along the ground, an S at mid height, a hook rising, a thin
+			# wisp) with fat fronts that do the pushing; puffs at his feet, curls on the fronts.
+			return [
+				{"kind": "strands", "curve": [Vector2(20,152),Vector2(140,108),Vector2(200,178),Vector2(318,128)], "width": 44.0,
+					"inks": [&"mint", &"white", &"blue", &"deep"], "delay": 0.0},
+				{"kind": "strands", "curve": [Vector2(25,112),Vector2(150,38),Vector2(172,124),Vector2(296,52)], "width": 30.0,
+					"inks": [&"white", &"mint", &"blue"], "delay": 0.015},
+				{"kind": "strands", "curve": [Vector2(30,72),Vector2(62,-42),Vector2(192,42),Vector2(228,-66)], "width": 20.0,
+					"inks": [&"mint", &"blue"], "delay": 0.03},
+				{"kind": "strands", "curve": [Vector2(40,136),Vector2(150,172),Vector2(232,108),Vector2(282,150)], "width": 10.0,
+					"inks": [&"cyan"], "delay": 0.02},
+				{"kind": "curl", "at": Vector2(318,104), "radius": 26.0, "turn": 1.0, "delay": 0.08},
+				{"kind": "curl", "at": Vector2(296,34), "radius": 18.0, "turn": 1.0, "delay": 0.09},
+				{"kind": "strands", "curve": [Vector2(-20,152),Vector2(-140,108),Vector2(-200,178),Vector2(-318,128)], "width": 44.0,
+					"inks": [&"mint", &"white", &"blue", &"deep"], "delay": 0.0},
+				{"kind": "strands", "curve": [Vector2(-25,112),Vector2(-150,38),Vector2(-172,124),Vector2(-296,52)], "width": 30.0,
+					"inks": [&"white", &"mint", &"blue"], "delay": 0.015},
+				{"kind": "strands", "curve": [Vector2(-30,72),Vector2(-62,-42),Vector2(-192,42),Vector2(-228,-66)], "width": 20.0,
+					"inks": [&"mint", &"blue"], "delay": 0.03},
+				{"kind": "strands", "curve": [Vector2(-40,136),Vector2(-150,172),Vector2(-232,108),Vector2(-282,150)], "width": 10.0,
+					"inks": [&"cyan"], "delay": 0.02},
+				{"kind": "curl", "at": Vector2(-318,104), "radius": 26.0, "turn": -1.0, "delay": 0.08},
+				{"kind": "curl", "at": Vector2(-296,34), "radius": 18.0, "turn": -1.0, "delay": 0.09},
+				{"kind": "puffs", "at": [Vector2(-110,150),Vector2(-50,148),Vector2(50,148),Vector2(110,150)], "radius": 26.0, "delay": 0.0},
+			]
+		&"plunge_crash":
+			# 旋空突坠's landing: a big crown, wind streaking out along the ground both ways.
+			return [
+				{"kind": "crown", "at": Vector2(60,160), "height": 190.0, "spikes": 11, "delay": 0.0},
+				{"kind": "strands", "curve": [Vector2(20,150),Vector2(120,128),Vector2(230,150),Vector2(335,146)], "width": 28.0,
+					"inks": [&"mint", &"blue"], "delay": 0.02},
+				{"kind": "strands", "curve": [Vector2(0,152),Vector2(-100,134),Vector2(-200,150),Vector2(-300,150)], "width": 24.0,
+					"inks": [&"mint", &"blue"], "delay": 0.03},
+				{"kind": "curl", "at": Vector2(255,132), "radius": 30.0, "turn": 1.0, "delay": 0.06},
+				{"kind": "curl", "at": Vector2(-235,135), "radius": 28.0, "turn": -1.0, "delay": 0.07},
+			]
+		_:
+			# Down cut (press-return draft): the painted F08 bundle with its landing crown.
+			return [
+				{"kind": "strands", "curve": [Vector2(-135,-125),Vector2(-15,-195),Vector2(240,-90),Vector2(200,118)], "width": 84.0,
+					"inks": [&"mint", &"white", &"mint", &"blue", &"deep"], "delay": 0.0},
+				{"kind": "crown", "at": Vector2(200,160), "height": 95.0, "spikes": 7, "delay": 0.08},
+			]
+
 func _draw_master_wind() -> void:
 	if age >= duration+hold+fade: return
-	var curves: Array
-	if wind_profile == &"return_lift":
-		curves = [
-			[Vector2(-115,115),Vector2(-30,175),Vector2(260,-60),Vector2(105,-165),32.0,0.0],
-			[Vector2(-150,110),Vector2(-40,70),Vector2(205,-30),Vector2(90,-140),20.0,0.012],
-			[Vector2(-55,130),Vector2(140,140),Vector2(275,-40),Vector2(185,-120),14.0,0.025],
-			[Vector2(-165,90),Vector2(-190,20),Vector2(-100,45),Vector2(-120,70),12.0,0.006],
-			[Vector2(60,-110),Vector2(95,-210),Vector2(165,-185),Vector2(170,-140),10.0,0.035],
-		]
-	else:
-		curves = [
-			[Vector2(-130,-130),Vector2(-15,-190),Vector2(235,-95),Vector2(195,115),32.0,0.0],
-			[Vector2(-85,-150),Vector2(105,-205),Vector2(270,-30),Vector2(215,100),18.0,0.012],
-			[Vector2(-35,-155),Vector2(180,-155),Vector2(220,10),Vector2(245,95),11.0,0.025],
-			[Vector2(-90,108),Vector2(-50,115),Vector2(-120,35),Vector2(-135,95),10.0,0.018],
-			[Vector2(100,115),Vector2(210,110),Vector2(170,35),Vector2(130,80),16.0,0.035],
-		]
-	for index in curves.size():
-		var curve: Array = curves[index]
-		var local_age := age - float(curve[5])
+	_inks = MASTER_RED_INK if palette == PALETTES[&"master_red"] else (MASTER_GOLD_INK if palette == PALETTES[&"master_gold"] else MASTER_INK)
+	for element: Dictionary in _master_elements():
+		var local_age := age - float(element.delay)
 		if local_age <= 0: continue
 		var opening := ease_swing(local_age / duration)
 		var erode := clampf((local_age-duration-hold)/fade,0,1)
 		if erode >= 1: continue
-		# Rip from the trailing edge; the tip stays sharp instead of alpha-fading
-		# a single unchanging crescent. Each ribbon has a different silhouette.
-		var first := erode * 0.83
-		var thickness := float(curve[4]) * width / 32.0 * (1.0-erode*0.8)
-		_wind_band(curve,first,opening,thickness,0.0,palette[2],erode,index)
-		if erode < 0.78 and index < 3:
-			_wind_band(curve,first+0.04,opening-0.04,thickness*0.19,thickness*0.22,palette[1],erode,index)
-		if erode < 0.32 and index == 0:
-			_wind_band(curve,maxf(first,0.63),minf(opening,0.90),thickness*0.10,thickness*0.29,palette[0],0,index)
+		match element.kind:
+			"strands": _master_strands(element, opening, erode)
+			"crown": _master_crown(element, local_age, erode)
+			"curl": _master_curl(element, opening, erode)
+			"puffs": _master_puffs(element, opening, erode)
 
-func _wind_band(curve: Array, first: float, last: float, thickness: float, offset: float,
-		colour: Color, erode: float, ribbon: int) -> void:
-	if last-first < 0.008: return
-	const SAMPLES := 84
+## A blade: a solid wave-shaped mass (thin tail, swelling to a blunt head at the end of the
+## swing) in the base ink, with overlapping streaks inside it; the first ink is the outer
+## edge, the last the inner edge. It erodes from the tail and breaks into dashes.
+func _master_strands(element: Dictionary, opening: float, erode: float) -> void:
+	var blade: float = float(element.width) * width / 32.0 * (1.0 - erode * 0.45)
+	var first := erode * 0.85
+	var last := opening
+	if last - first < 0.01: return
+	var silhouette := func(a: float) -> float: return blade * _wedge(a, last)
+	_master_ribbon(element.curve, first, last, silhouette, 1.0, 0.0, _inks[element.get("base", &"blue")], erode, 0)
+	var inks: Array = element.inks
+	for i in inks.size():
+		var lane := (float(i) + 0.5) / inks.size() - 0.5
+		var stagger := 0.5 + 0.5 * sin(float(i) * 2.7 + 1.3)
+		var s0 := maxf(first, 0.08 + 0.42 * stagger * absf(lane) * 2.0)
+		var s1 := last * (1.0 - 0.05 * stagger)
+		var colour: Color = _inks[inks[i]]
+		if i % 3 == 2: colour.a = 0.9
+		_master_ribbon(element.curve, s0, s1, silhouette, 0.18 + 0.14 * stagger, lane * 0.78, colour, erode, i + 1)
+	if blade < 30.0: return
+	var feathers := [[1.25, 0.10, 0.62, &"mint"], [-1.2, 0.08, 0.5, &"blue"], [1.55, 0.06, 0.42, &"mint"]]
+	for f in feathers.size():
+		var feather: Array = feathers[f]
+		var flat := func(a: float) -> float: return blade * maxf(_wedge(a, last), 0.35)
+		_master_ribbon(element.curve, first + 0.02 * f, minf(last, float(feather[2])), flat, float(feather[1]), float(feather[0]), _inks[feather[3]], erode, 20 + f)
+
+## Thickness along a blade, relative to its current tip: thin tail, full at 82%, then a
+## blunt head about half as thick.
+func _wedge(a: float, tip: float) -> float:
+	var x := clampf(a / maxf(tip, 0.01), 0.0, 1.0)
+	if x < 0.82: return pow(x / 0.82, 1.25)
+	return lerpf(1.0, 0.5, (x - 0.82) / 0.18)
+
+## A band along `curve` between `first` and `last`: `frac` of the silhouette's thickness,
+## its centre `rel` half-thicknesses off the curve. Eroding bands open stable gaps.
+func _master_ribbon(curve: Variant, first: float, last: float, silhouette: Callable, frac: float, rel: float,
+		colour: Color, erode: float, seed: int) -> void:
+	const SAMPLES := 90
 	for k in SAMPLES:
-		var a := float(k)/SAMPLES
-		var b := float(k+1)/SAMPLES
+		var a := float(k) / SAMPLES
+		var b := float(k + 1) / SAMPLES
 		if b <= first or a >= last: continue
-		# Stable authored notches open into gaps during erosion, not random noise.
-		if erode > 0.28 and (k+7*ribbon)%23 in [6,7,8]: continue
-		if erode > 0.60 and (k+3*ribbon)%13 in [2,3,4,5,6]: continue
-		a = maxf(a,first)
-		b = minf(b,last)
-		var pa: Vector2 = (curve[0] as Vector2).bezier_interpolate(curve[1],curve[2],curve[3],a)
-		var pb: Vector2 = (curve[0] as Vector2).bezier_interpolate(curve[1],curve[2],curve[3],b)
-		var normal := (pb-pa).normalized().orthogonal()
-		var wa := thickness*_wind_width(a,last,ribbon)
-		var wb := thickness*_wind_width(b,last,ribbon)
-		var points := PackedVector2Array([
-			(pa+normal*(wa*0.5+offset))/pixel_size,
-			(pb+normal*(wb*0.5+offset))/pixel_size,
-			(pb+normal*(-wb*0.5+offset))/pixel_size,
-			(pa+normal*(-wa*0.5+offset))/pixel_size])
-		if not Geometry2D.triangulate_polygon(points).is_empty():
-			_canvas.draw_colored_polygon(points,colour)
+		if erode > 0.25 and (k + 7 * seed) % 19 in [5, 6, 7]: continue
+		if erode > 0.55 and (k + 3 * seed) % 11 in [2, 3, 4, 5]: continue
+		a = maxf(a, first)
+		# Overlap the next segment a little: abutting quads leave single-texel holes on the
+		# outside of a curve.
+		b = minf(b + 0.6 / SAMPLES, last)
+		var pa := _curve_at(curve, a)
+		var pb := _curve_at(curve, b)
+		var normal := (pb - pa).normalized().orthogonal()
+		var sa: float = silhouette.call(a)
+		var sb: float = silhouette.call(b)
+		var wa := sa * frac * (1.0 + 0.15 * sin(a * 31.0 + float(seed)))
+		var wb := sb * frac * (1.0 + 0.15 * sin(b * 31.0 + float(seed)))
+		if maxf(wa, wb) < pixel_size * 0.8: continue
+		wa = maxf(wa, pixel_size)
+		wb = maxf(wb, pixel_size)
+		var oa := sa * 0.5 * rel
+		var ob := sb * 0.5 * rel
+		var points := PackedVector2Array([(pa + normal * (oa + wa * 0.5)) / pixel_size, (pb + normal * (ob + wb * 0.5)) / pixel_size,
+			(pb + normal * (ob - wb * 0.5)) / pixel_size, (pa + normal * (oa - wa * 0.5)) / pixel_size])
+		if not Geometry2D.triangulate_polygon(points).is_empty(): _canvas.draw_colored_polygon(points, colour)
 
-func _wind_width(along: float, tip: float, ribbon: int) -> float:
-	var lens := pow(maxf(0.0,sin(PI*along)),0.62)
-	var sharp_tip := clampf((tip-along)/0.12,0,1)
-	var variation := 1.0+0.22*sin(along*23.0+float(ribbon)*2.1)
-	return lens*sharp_tip*variation
+## A point along a blade path: a cubic bezier [p0..p3] or {"ellipse": [centre, rx, ry, from, to]}.
+func _curve_at(curve: Variant, t: float) -> Vector2:
+	if curve is Dictionary:
+		var e: Array = curve.ellipse
+		var angle := deg_to_rad(lerpf(float(e[3]), float(e[4]), t))
+		return (e[0] as Vector2) + Vector2(cos(angle) * float(e[1]), sin(angle) * float(e[2]))
+	return (curve[0] as Vector2).bezier_interpolate(curve[1], curve[2], curve[3], t)
+
+## A crown of spikes thrown up where the blade lands (painted attack 1 F09/F10).
+func _master_crown(element: Dictionary, local_age: float, erode: float) -> void:
+	var grow := ease_swing(local_age / 0.05)
+	var height: float = float(element.height) * grow * (1.0 - erode * 0.75)
+	if height < 3.0: return
+	var base: Vector2 = element.at
+	var spikes: int = element.spikes
+	var inks := [&"mint", &"blue", &"white", &"blue", &"cyan"]
+	for i in spikes:
+		var along := (float(i) + 0.5) / spikes
+		var angle := deg_to_rad(lerpf(-158.0, -22.0, along) + 7.0 * sin(float(i) * 3.1))
+		var long := i % 2 == 0
+		var length := height * (1.0 if long else 0.55) * (0.75 + 0.25 * sin(float(i) * 1.7 + 0.4)) * (0.6 + 0.4 * sin(PI * along))
+		var foot := base + Vector2((along - 0.5) * height * 0.9, 0)
+		var dir := Vector2.from_angle(angle)
+		var half := dir.orthogonal() * maxf(height * 0.11, pixel_size)
+		var points := PackedVector2Array([(foot + half) / pixel_size, (foot + dir * length) / pixel_size, (foot - half) / pixel_size])
+		if not Geometry2D.triangulate_polygon(points).is_empty(): _canvas.draw_colored_polygon(points, _inks[inks[i % 5]])
+
+## A comma-shaped wave curl (painted attack 2 F15): a thick hooked head, a tapering tail.
+func _master_curl(element: Dictionary, opening: float, erode: float) -> void:
+	var r: float = float(element.radius) * (0.6 + 0.4 * opening)
+	var turn: float = element.turn
+	var sweep := deg_to_rad(210.0) * opening * (1.0 - erode * 0.6)
+	var c: Vector2 = element.at
+	_canvas.draw_circle((c + Vector2(0, -r)) / pixel_size, r * 0.5 * (1.0 - erode * 0.6) / pixel_size, _inks[&"blue"])
+	for k in 18:
+		var a := float(k) / 18.0
+		var b := float(k + 1) / 18.0
+		if b * sweep < 0.001: continue
+		var ta: float = -PI * 0.5 + turn * a * sweep
+		var tb: float = -PI * 0.5 + turn * b * sweep
+		var na := Vector2.from_angle(ta)
+		var nb := Vector2.from_angle(tb)
+		var pa := c + na * r * (1.0 - a * 0.55)
+		var pb := c + nb * r * (1.0 - b * 0.55)
+		var wa := r * 0.95 * (1.0 - a * 0.85) * (1.0 - erode * 0.6)
+		var wb := r * 0.95 * (1.0 - b * 0.85) * (1.0 - erode * 0.6)
+		var points := PackedVector2Array([(pa + na * wa * 0.5) / pixel_size, (pb + nb * wb * 0.5) / pixel_size,
+			(pb - nb * wb * 0.5) / pixel_size, (pa - na * wa * 0.5) / pixel_size])
+		if not Geometry2D.triangulate_polygon(points).is_empty(): _canvas.draw_colored_polygon(points, _inks[&"blue"])
+
+## Translucent cloud puffs with a bright rim (painted attack 2 F16).
+func _master_puffs(element: Dictionary, opening: float, erode: float) -> void:
+	var fill: Color = _inks[&"cyan"]
+	fill.a = 0.3
+	var centres: Array = element.at
+	for i in centres.size():
+		var r: float = float(element.radius) * (0.8 + 0.25 * sin(float(i) * 2.3)) * opening * (1.0 - erode * 0.8)
+		if r < pixel_size: continue
+		var c: Vector2 = centres[i]
+		_canvas.draw_circle(c / pixel_size, r / pixel_size, fill)
+		_canvas.draw_arc(c / pixel_size, r / pixel_size, PI * 1.05, PI * 1.95, 10, _inks[&"cyan"], 1.0)
 
 func _draw_arc_trail() -> void:
 	for i in range(1, _samples.size()):
