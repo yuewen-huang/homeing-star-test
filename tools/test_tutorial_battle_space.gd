@@ -1,8 +1,8 @@
 extends SceneTree
 
 
-const MAP_HALF_WIDTH := 1920.0
-const ACTOR_LIMIT := 1824.0
+const MAP_HALF_WIDTH := 1280.0
+const ACTOR_LIMIT := 1184.0
 const MAX_COMBAT_SEPARATION := 1088.0
 
 
@@ -98,7 +98,7 @@ func run_test() -> void:
 		return
 	if not require(
 		player.position.x >= -ACTOR_LIMIT and player.position.x <= ACTOR_LIMIT,
-		"Player escaped the three-screen map bounds"
+		"Player escaped the two-screen map bounds"
 	):
 		return
 	if not require(
