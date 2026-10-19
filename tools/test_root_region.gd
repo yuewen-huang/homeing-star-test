@@ -5,7 +5,7 @@ extends SceneTree
 ## Each section starts from a fixed position and water level, so one failure
 ## does not cascade.
 ##
-##   "<godot>" --headless --path . --fixed-fps 60 --script res://tools/test_root_region.gd
+##   homeing-star-test/run-tests.ps1 -Test test_root_region
 ##
 ## Uses an in-memory SaveProgress fixture; real completion/checkpoints stay intact.
 

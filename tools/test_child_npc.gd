@@ -13,7 +13,7 @@ extends SceneTree
 ##    （只 set _config / _loaded，从不调 mark_completed）。
 ##    这一点很重要——开发机上跑测试时用户常常正开着游戏，真实存档不能被碰。
 ##
-## 跑法：<godot> --headless --path <项目> --script res://tools/test_child_npc.gd
+## 跑法：homeing-star-test/run-tests.ps1 -Test test_child_npc
 
 const TOWN_SCENE := "res://scenes/sideview/homeward_town.tscn"
 

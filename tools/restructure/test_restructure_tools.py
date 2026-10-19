@@ -16,6 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import check_res_paths  # noqa: E402
+import find_unused_assets  # noqa: E402
 import move_res_paths  # noqa: E402
 import res_paths as rp  # noqa: E402
 
@@ -191,6 +192,41 @@ class MoveResPathsTest(unittest.TestCase):
         self.assertEqual(pairs, [("assets/a", "assets/b")])
         with self.assertRaises(ValueError):
             move_res_paths.parse_mapping("assets/a assets/b\n")
+
+
+class FindUnusedAssetsTest(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.ws = Workspace(Path(self.temp.name))
+        game = self.ws.root / rp.GAME
+        # A resource only a dead resource uses, a nested file under a code-built folder,
+        # and a file named only in a used manifest.
+        write(game / "assets/dead/old.tres", '[gd_resource format=3]\n[ext_resource path="res://assets/dead/old.png" id="1"]\n')
+        write(game / "assets/dead/old.png", "PNG")
+        write(game / "assets/npc/ali/normal.png", "PNG")
+        write(game / "scripts/npc.gd", 'func face(id, e): return load("res://assets/npc/%s/%s.png" % [id, e])\n')
+        write(game / "assets/listed_only/listed.png", "PNG")
+        write(game / "scripts/manifest_user.gd", 'const M := preload("res://assets/listed_only/manifest.json")\n')
+        write(game / "assets/listed_only/manifest.json", '{"extra": "listed.png"}\n')
+        write(game / "assets/twin_a.png", "SAME")
+        write(game / "assets/twin_b.png", "SAME")
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def test_classifies_by_reference_kind(self):
+        result = find_unused_assets.classify(self.ws.root / rp.GAME)
+        kinds = {rel: kind for kind, rows in result.items() for rel, _ in rows}
+        self.assertEqual(kinds["assets/old_fx/wave_186x81_4f.png"], "path")
+        self.assertEqual(kinds["assets/npc/ali/normal.png"], "folder")
+        self.assertEqual(kinds["assets/listed_only/listed.png"], "name")
+        self.assertEqual(kinds["assets/dead/old.tres"], "unused")
+        self.assertEqual(kinds["assets/dead/old.png"], "unused", "only a dead resource refers to it")
+        self.assertNotIn("assets/old_fx/wave_186x81_4f.png.import", kinds)
+
+    def test_finds_duplicates(self):
+        groups = find_unused_assets.duplicates(self.ws.root / rp.GAME)
+        self.assertIn(["assets/twin_a.png", "assets/twin_b.png"], groups)
 
 
 if __name__ == "__main__":

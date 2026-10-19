@@ -19,7 +19,7 @@ extends SceneTree
 ##
 ## ⚠️ **全程不写盘**：存档是往 autoload 的 SaveProgress **内存**里注入的假 config。
 ##
-## 跑法：<godot> --headless --path <项目> --script res://tools/test_navigation_climb_ledge.gd
+## 跑法：homeing-star-test/run-tests.ps1 -Test test_navigation_climb_ledge
 
 const TOWN_SCENE := "res://scenes/sideview/homeward_town.tscn"
 

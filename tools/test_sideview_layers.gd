@@ -8,7 +8,7 @@ extends SceneTree
 ##   · 城镇 NPC 的待机是微动，速度走 TownNpcAnim 的全局值，
 ##     不能再出现某个 NPC 自己写 6 fps 播得像抽搐。
 ##
-## 用法：<godot> --headless --path . --script res://tools/test_sideview_layers.gd
+## 用法：homeing-star-test/run-tests.ps1 -Test test_sideview_layers
 ## 摆位好不好看、挡没挡住，仍然由人开游戏看——这里只管数值关系。
 
 var _failures := 0

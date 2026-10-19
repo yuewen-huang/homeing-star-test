@@ -42,6 +42,8 @@ def check(ws: rp.Workspace):
             where = f"{repo_name}/{path.relative_to(repo).as_posix()}"
             if repo_name == rp.TEST and where.startswith(f"{rp.TEST}/tools/restructure/"):
                 continue  # these tools and their tests hold example paths on purpose
+            if repo_name == rp.DOC and path.name.startswith("restructure_") and path.name.endswith("_unused_assets.md"):
+                continue  # archive records: they list paths that were moved out on purpose
             for match in rp.RES_RE.finditer(text):
                 rel = rp.clean(match.group(0)[len("res://"):])
                 if not rel or rel.startswith(".godot/") or rel in KNOWN_MISSING:

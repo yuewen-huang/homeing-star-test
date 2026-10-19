@@ -1,7 +1,7 @@
 extends SceneTree
 
 ## 导航馆红线区域的关卡几何回归检查。
-## 用法：<godot> --headless --path . --script res://tools/test_navigation_climb_geometry.gd
+## 用法：homeing-star-test/run-tests.ps1 -Test test_navigation_climb_geometry
 
 var failures := 0
 var checks := 0
