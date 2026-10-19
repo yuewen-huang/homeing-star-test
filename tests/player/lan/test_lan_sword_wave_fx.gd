@@ -1,31 +1,15 @@
-extends SceneTree
+extends "../../support/harness.gd"
 ## Effects of Lan's sword wave (H, LanSwordWaveFX / LanSwordWaveProjectile, 2026-10-19): gather on
 ## frames 1–3, smears on the three cuts, three mini ground waves (the user's pixel art) that
 ## really hit a training dummy once each, mana per hit, facing both ways, cleanup, every smear baked,
 ## progress untouched. Optional user args: an output folder, then "frames" to save every
 ## frame of the move against the dummy.
 
-class MemoryProgress extends SaveProgressService:
-	func _ready() -> void:
-		_config = ConfigFile.new()
-		_loaded = true
-	func save_progress() -> bool: return true
-	func is_ability_unlocked(_ability: StringName) -> bool: return true
-
 var room: Node2D
 var player: LanPlayer
 var dummy: Node2D
-var checks := 0
-var failures := 0
 var hits: Array[int] = []
 var output := ""
-
-func _initialize() -> void: call_deferred("run")
-
-func check(ok: bool, message: String) -> void:
-	checks += 1
-	if not ok: failures += 1
-	print("OK " if ok else "FAIL ", message)
 
 func baked(piece: PixelSlash) -> bool:
 	return is_instance_valid(piece) and not piece._clip.is_empty()
@@ -71,14 +55,7 @@ func run() -> void:
 	var args := OS.get_cmdline_user_args()
 	if not args.is_empty(): output = args[0]
 	var capture := args.size() > 1 and args[1] == "frames"
-	var exists := FileAccess.file_exists(SaveProgressService.SAVE_PATH)
-	var saved := FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) if exists else PackedByteArray()
-	var previous := root.get_node("SaveProgress")
-	root.remove_child(previous)
-	previous.free()
-	var memory := MemoryProgress.new()
-	memory.name = "SaveProgress"
-	root.add_child(memory)
+	use_memory_progress()
 	room = Node2D.new()
 	root.add_child(room)
 	current_scene = room
@@ -126,9 +103,7 @@ func run() -> void:
 		probe.free()
 	check(missing.is_empty(), "Every sword wave effect is baked (missing %s)" % str(missing))
 
-	check(FileAccess.file_exists(SaveProgressService.SAVE_PATH) == exists, "Save existence unchanged")
-	if exists: check(FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) == saved, "In-memory fixture leaves progression byte-identical")
+	expect_save_untouched()
 	current_scene = null
 	room.free()
-	print("LAN SWORD WAVE FX: %d checks, %d failures" % [checks, failures])
-	quit(1 if failures else 0)
+	finish("LAN SWORD WAVE FX")

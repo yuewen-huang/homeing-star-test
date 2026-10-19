@@ -146,6 +146,8 @@ def plan_or_apply(ws: rp.Workspace, pairs, apply: bool) -> int:
     names = {Path(old).name: (old, new) for old, new in pairs if not kinds[old]}
     for repo_name, repo, suffixes in ws.repos():
         for path in rp.text_files(repo, suffixes):
+            if rp.is_restructure_record(repo_name, repo, path):
+                continue
             text = rp.read_text(path)
             if text is None:
                 continue

@@ -1,4 +1,4 @@
-extends "test_deer_story.gd"
+extends "../test_deer_story.gd"
 ## Actual approved M09 art, entry gating, full-view persistence and repeat card.
 
 func run() -> void:

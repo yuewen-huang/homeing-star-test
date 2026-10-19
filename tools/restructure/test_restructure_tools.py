@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import check_res_paths  # noqa: E402
 import find_unused_assets  # noqa: E402
 import move_res_paths  # noqa: E402
+import move_test_files  # noqa: E402
 import res_paths as rp  # noqa: E402
 
 
@@ -227,6 +228,51 @@ class FindUnusedAssetsTest(unittest.TestCase):
     def test_finds_duplicates(self):
         groups = find_unused_assets.duplicates(self.ws.root / rp.GAME)
         self.assertIn(["assets/twin_a.png", "assets/twin_b.png"], groups)
+
+
+class MoveTestFilesTest(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.ws = Workspace(Path(self.temp.name))
+        test = self.ws.root / rp.TEST
+        write(test / "tests/support/test_harness.gd", "extends SceneTree\n")
+        write(test / "tools/test_base.gd", 'extends "../tests/support/test_harness.gd"\n')
+        write(test / "tools/test_child.gd", 'extends "test_base.gd"\nconst H := preload("./helper.gd")\n')
+        write(test / "tools/test_base.gd.uid", "uid://base1\n")
+        write(test / "tools/helper.gd", "extends RefCounted\n")
+        write(test / "docs/notes.md", "Run `tools/test_base.gd`; see homeing-star-test/tools/test_child.gd.\n")
+        write(self.ws.root / rp.DOC / "docs/testing.md", "`tools/test_base.gd` and `tools/test_base.gd.uid`\n")
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def text(self, rel):
+        return (self.ws.root / rp.TEST / rel).read_text(encoding="utf-8")
+
+    def test_moves_and_relinks(self):
+        args = ["--root", str(self.ws.root), "--apply",
+                "--pair", "tools/test_base.gd", "tests/combat/test_base.gd",
+                "--pair", "tools/test_child.gd", "tests/player/lan/test_child.gd"]
+        code, out = quietly(move_test_files.main, args)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.text("tests/combat/test_base.gd"), 'extends "../support/test_harness.gd"\n')
+        child = self.text("tests/player/lan/test_child.gd")
+        self.assertIn('extends "../../combat/test_base.gd"', child)
+        self.assertIn('preload("../../../tools/helper.gd")', child)
+        self.assertTrue((self.ws.root / rp.TEST / "tests/combat/test_base.gd.uid").exists())
+        notes = self.text("docs/notes.md")
+        self.assertIn("`tests/combat/test_base.gd`", notes)
+        self.assertIn("homeing-star-test/tests/player/lan/test_child.gd", notes)
+        doc = (self.ws.root / rp.DOC / "docs/testing.md").read_text(encoding="utf-8")
+        self.assertIn("`tests/combat/test_base.gd`", doc)
+        self.assertIn("`tools/test_base.gd.uid`", doc, "a longer name is not a mention")
+
+    def test_dry_run_and_refusals(self):
+        code, out = quietly(move_test_files.main, ["--root", str(self.ws.root), "--pair", "tools/test_base.gd", "tests/x/test_base.gd"])
+        self.assertEqual(code, 0)
+        self.assertTrue((self.ws.root / rp.TEST / "tools/test_base.gd").exists())
+        code, out = quietly(move_test_files.main, ["--root", str(self.ws.root), "--pair", "tools/nothing.gd", "tests/x/nothing.gd"])
+        self.assertEqual(code, 2)
 
 
 if __name__ == "__main__":

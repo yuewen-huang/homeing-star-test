@@ -1,4 +1,4 @@
-extends SceneTree
+extends "../../support/harness.gd"
 ## Lan's sword wave (H) body and input contract: input binding, native frames and timing,
 ## facing pivots, completion, held input, cancels, freezes, boss control, hits, airborne
 ## and ability locks. Rebuilt 2026-10-19 from the run log of the original test, which was
@@ -6,27 +6,8 @@ extends SceneTree
 ## cost" became "Sword wave has no resource cost": the move now has effects and projectiles,
 ## see test_lan_sword_wave_fx.gd, but still costs nothing.)
 
-class LocalProgress extends SaveProgressService:
-	var attack_locked := false
-	func _ready() -> void:
-		_config = ConfigFile.new()
-		_loaded = true
-	func save_progress() -> bool: return true
-	func show_toast(_message: String) -> void: pass
-	func is_ability_unlocked(ability: StringName) -> bool:
-		return not (attack_locked and ability == SaveProgressService.ABILITY_ATTACK)
-
-var failures := 0
-var checks := 0
 var player: LanPlayer
-var progress: LocalProgress
-
-func _initialize() -> void: call_deferred("run")
-
-func check(ok: bool, label: String) -> void:
-	checks += 1
-	if not ok: failures += 1
-	print("PASS " if ok else "FAIL ", label)
+var progress: MemoryProgress
 
 func tick(frames := 1) -> void:
 	for i in frames: player._physics_process(1.0 / 60.0)
@@ -64,11 +45,7 @@ func finish_animation() -> void:
 	player.on_animation_finished()
 
 func run() -> void:
-	var original := root.get_node("SaveProgress")
-	root.remove_child(original)
-	progress = LocalProgress.new()
-	progress.name = "SaveProgress"
-	root.add_child(progress)
+	progress = use_memory_progress()
 	var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
 	var was_invincible := assist.player_invincible
 	assist.set_player_invincible(false)
@@ -179,16 +156,13 @@ func run() -> void:
 	release_h()
 
 	reset()
-	progress.attack_locked = true
+	progress.locked.append(SaveProgressService.ABILITY_ATTACK)
 	press_h()
 	check(player.attack_state != LanPlayer.AttackState.SWORD_WAVE, "Existing prologue attack lock also blocks H")
 	release_h()
-	progress.attack_locked = false
+	progress.locked.clear()
 
 	current_scene = null
 	world.free()
-	progress.free()
-	root.add_child(original)
 	assist.set_player_invincible(was_invincible)
-	print("SWORD WAVE: %d checks, %d failures" % [checks, failures])
-	quit(1 if failures else 0)
+	finish("SWORD WAVE")

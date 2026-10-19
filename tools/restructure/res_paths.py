@@ -93,6 +93,15 @@ def static_prefix(path: str) -> str:
     return path[:cut].rsplit("/", 1)[0]
 
 
+def is_restructure_record(repo_name: str, repo: Path, path: Path) -> bool:
+    """The restructure tools, their tests and move tables, and archive lists: they hold old
+    and example paths on purpose and are never rewritten or checked."""
+    rel = path.relative_to(repo).as_posix()
+    if repo_name == TEST and rel.startswith("tools/restructure/"):
+        return True
+    return repo_name == DOC and path.name.startswith("restructure_") and path.name.endswith("_unused_assets.md")
+
+
 def collect_uids(game: Path) -> set[str]:
     uids: set[str] = set()
     header = re.compile(r"uid=\"(uid://[a-z0-9]+)\"")

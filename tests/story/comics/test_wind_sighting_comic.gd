@@ -1,4 +1,4 @@
-extends "test_forest_trail_story.gd"
+extends "../test_forest_trail_story.gd"
 ## Actual approved M07 artwork exercised through its production map interaction.
 
 const ART_NAMES := ["01_distant_back", "02_recognition", "03_backpack_glimmer", "04_calling", "05_losing_sight", "06_empty_branches"]
