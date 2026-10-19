@@ -123,10 +123,10 @@ func run_test() -> void:
 			return
 	var back_dodge_timeline: Animation = player.combat_timeline.get_animation(&"back_dodge")
 	if not require(
-		back_dodge_timeline.track_get_key_value(1, 0).get("method") == &"_timeline_set_back_dodge_invulnerable"
-		and back_dodge_timeline.track_get_key_value(1, 1).get("method") == &"_timeline_open_back_dodge_attack_cancel"
-		and back_dodge_timeline.track_get_key_value(1, 2).get("args") == [false],
-		"Back dodge windows are not owned by timeline events",
+		back_dodge_timeline.track_get_key_count(1) == 1
+		and back_dodge_timeline.track_get_key_value(1, 0).get("method") == &"_timeline_open_back_dodge_attack_cancel"
+		and is_equal_approx(back_dodge_timeline.track_get_key_time(1, 0), 9.0 / 35.0),
+		"Back dodge attack branch must remain on frame 9; invulnerability belongs to the whole dodge state",
 	):
 		return
 
@@ -159,10 +159,8 @@ func run_test() -> void:
 			return
 
 	if not require(
-		player.BACK_DODGE_INVULNERABLE_START_FRAME == 3
-		and player.BACK_DODGE_INVULNERABLE_END_FRAME == 14
-		and player.BACK_DODGE_ATTACK_CANCEL_FRAME == 9,
-		"Back dodge windows changed before timeline migration",
+		player.BACK_DODGE_ATTACK_CANCEL_FRAME == 9,
+		"Back dodge attack cancel frame changed",
 	):
 		return
 	if not require(

@@ -66,6 +66,9 @@ func e() -> void:
 	await frames(10)
 
 func travel(marker: Node2D) -> void:
+	if current_scene is Chapter1DeerBossRoom and current_scene.story.comic != null:
+		current_scene.story.comic._request_finish(true)
+		await frames(2)
 	release_inputs()
 	player.set_physics_process(false)
 	player.position = marker.global_position

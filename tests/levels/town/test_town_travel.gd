@@ -83,7 +83,7 @@ func run() -> void:
 	await process_frame
 	await process_frame
 	await capture("town_travel_stele")
-	save._config.erase_section("steles")
+	if save._config.has_section("steles"): save._config.erase_section("steles")
 	key(KEY_E)
 	await process_frame
 	check(is_instance_valid(stele._menu) and stele._menu.destinations.is_empty(), "E opens an empty destination menu")
@@ -104,7 +104,7 @@ func run() -> void:
 	await create_timer(3.0).timeout
 	check(current_scene.scene_file_path == scene_path, "Arrives in selected map")
 	check(absf(current_scene.player.position.x - 336.0) < 1.0, "Arrives beside selected stele")
-	check(transition.music_player.stream == music and transition.music_player.get_playback_position() > playback, "Teleport preserves BGM and playback")
+	check(transition.current_music_path == TravelCatalog.music_for(&"mist_puzzle_entry").resource_path and transition.music_player.playing, "Cross-region teleport selects the destination's designated forest BGM")
 	await capture("town_travel_arrival")
 	save._config = ConfigFile.new()
 	save._config.parse(original_config)

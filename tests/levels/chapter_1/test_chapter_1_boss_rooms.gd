@@ -46,6 +46,9 @@ func press_e() -> void:
 	Input.parse_input_event(key)
 
 func travel(marker: Node2D) -> bool:
+	if current_scene is Chapter1DeerBossRoom and current_scene.story.comic != null:
+		current_scene.story.comic._request_finish(true)
+		await frames(2)
 	var player := current_scene.get_node("Lan") as LanPlayer
 	player.set_physics_process(false)
 	player.position = marker.global_position
@@ -101,6 +104,7 @@ func run() -> void:
 		var marker_path := NodePath(data[1] if data[0]=="mist" else "Portals/"+data[1])
 		check(not origin.has_node("Mechanisms/HeartSeal"),"%s has no core blocking seal" % data[0])
 		var marker := origin.get_node(marker_path) as Node2D
+		if data[0] == "mist": marker = origin._portals[2].anchor
 		if not await travel(marker):
 			continue
 		var boss := current_scene as Chapter1BossRoom
@@ -129,7 +133,8 @@ func run() -> void:
 		check(current_scene.scene_file_path==region_path,"Boss return reaches original region")
 		var returned := current_scene.get_node("Lan") as LanPlayer
 		returned.set_physics_process(false)
-		check(returned.position.distance_to(current_scene.get_node(marker_path).global_position)<6,"Return lands at matching current portal anchor")
+		var return_marker: Node2D = current_scene._portals[2].anchor if data[0] == "mist" else current_scene.get_node(marker_path)
+		check(returned.global_position.distance_to(return_marker.global_position)<6,"Return lands at matching current portal anchor")
 		check(transition.current_music_path==Chapter1Music.FOREST.resource_path and transition.music_player.playing,"Boss return restores forest BGM")
 	Engine.time_scale = 1
 	check(user_save==FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH),"User save remains untouched")

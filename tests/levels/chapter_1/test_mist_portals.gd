@@ -58,8 +58,9 @@ func run_tests() -> void:
 	player.position = Vector2(820,555)
 	room.camera.position_smoothing_enabled = false
 	await capture("left_stairs")
-	player.position = Vector2(621,555)
-	var route := [1,3,4]
+	var first_step := room.get_node("WindSteps/WindStep2") as TerrainPiece
+	player.position = Vector2(first_step.position.x + first_step._walk_length() * 0.5, 555)
+	var route := [2,3,4]
 	for index in range(route.size()):
 		var piece := room.get_node("WindSteps/WindStep%d" % route[index]) as TerrainPiece
 		var direction := signf(piece.position.x + piece._walk_length() / 2 - player.position.x)
@@ -122,7 +123,7 @@ func run_tests() -> void:
 	for i in range(8):
 		await physics_frame
 	check(player.position.distance_to(room.get_node("WindSteps/WindStep4/PortalToWind").global_position)<2, "Wind return did not stay on top step")
-	player.position = room.get_node("PortalToSpecialBoss").position
+	player.global_position = room._portals[2].anchor.global_position
 	player.velocity = Vector2.ZERO
 	player.set_physics_process(false)
 	await capture("right_portals")
@@ -138,7 +139,7 @@ func run_tests() -> void:
 	room = current_scene
 	check(room.scene_file_path.ends_with("chapter_1_mist_room.tscn"), "Special Boss return wrong target")
 	player = prepare_room(room)
-	check(player.position.distance_to(room.get_node("PortalToSpecialBoss").position) < 12.0, "Special Boss return unsafe")
+	check(player.global_position.distance_to(room._portals[2].anchor.global_position) < 12.0, "Special Boss returns beside its floor-aligned portal")
 	room.queue_free()
 	await process_frame
 	# Emulate editor movement and saving/reopening the scene, without touching the user's scene file.

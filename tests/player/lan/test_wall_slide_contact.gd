@@ -80,11 +80,12 @@ func run() -> void:
 	quit(1 if failures else 0)
 
 func check_entrance_wall_animation() -> void:
-	var room := preload("res://scenes/levels/chapter_1/chapter_1_wind_room.tscn").instantiate() as Chapter1Layout
+	var room := terrain_wall_fixture(0.0)
 	root.add_child(room)
 	await process_frame
-	var wall := room.get_node("Terrain/S9_Wall_23") as TerrainPiece
-	var player := room.player
+	var wall := room.get_node("Wall") as TerrainPiece
+	var player := room.get_node("Lan") as LanPlayer
+	wall.register_to(player)
 	player.position = wall.position + Vector2(-12.1, 45)
 	player.velocity = Vector2.ZERO
 	player.air_state = LanPlayer.AirState.FALLING
@@ -115,7 +116,7 @@ func check_entrance_wall_animation() -> void:
 				min_hand_y = minf(min_hand_y, hand_y)
 				max_hand_y = maxf(max_hand_y, hand_y)
 				break
-	check(lost_slide == 0, "screenshot entrance wall: uninterrupted slide")
+	check(lost_slide == 0, "production TerrainPiece wall: uninterrupted slide")
 	check(seen_frames.size() == 3, "entrance wall samples the whole slide animation")
 	check(max_hand_y - min_hand_y < 1.0, "wall hand stays anchored across loop: %.2f px" % (max_hand_y - min_hand_y))
 	Input.action_release(&"ui_right")
@@ -123,11 +124,12 @@ func check_entrance_wall_animation() -> void:
 	await process_frame
 
 func check_wind_wall() -> void:
-	var room := preload("res://scenes/levels/chapter_1/chapter_1_wind_room.tscn").instantiate() as Chapter1Layout
+	var room := terrain_wall_fixture(0.0042785)
 	root.add_child(room)
 	await process_frame
-	var piece := room.get_node("Terrain/S6_SlopeDown_78") as TerrainPiece
-	var player := room.player
+	var piece := room.get_node("Wall") as TerrainPiece
+	var player := room.get_node("Lan") as LanPlayer
+	piece.register_to(player)
 	# Right face of the actual tilted wall, below its registered top surface.
 	player.position = piece.position + Vector2(piece.size.x + 12.1, 45)
 	player.velocity = Vector2.ZERO
@@ -140,10 +142,30 @@ func check_wind_wall() -> void:
 		await process_frame
 		if i > 5 and (player.air_state != LanPlayer.AirState.WALL_SLIDING or player.animated_sprite.animation != &"wall_slide"):
 			lost_slide += 1
-	check(lost_slide == 0, "actual wind room tilted wall: lost slide frames=%d" % lost_slide)
+	check(lost_slide == 0, "production TerrainPiece tilted wall: lost slide frames=%d" % lost_slide)
 	Input.action_release(&"ui_left")
 	await physics_frame
 	await process_frame
 	check(player.air_state == LanPlayer.AirState.FALLING, "releasing direction exits actual wind wall slide")
 	room.queue_free()
 	await process_frame
+
+func terrain_wall_fixture(angle: float) -> Node2D:
+	# The wind map was rebuilt without S6/S9. Preserve their collision and hand
+	# anchor regressions using the production wall piece, not deleted map nodes.
+	var fixture := Node2D.new()
+	var wall := TerrainPiece.new()
+	wall.name = "Wall"
+	wall.kind = "wall"
+	wall.size = Vector2(40, 4000)
+	wall.position = Vector2(640, 0)
+	wall.rotation = angle
+	fixture.add_child(wall)
+	var lan := load("res://scenes/player/lan/lan_player.tscn").instantiate() as LanPlayer
+	lan.name = "Lan"
+	lan.position = Vector2(300, 200)
+	lan.world_min_x = 0
+	lan.world_max_x = 1280
+	lan.fallback_ground_y = 4000
+	fixture.add_child(lan)
+	return fixture

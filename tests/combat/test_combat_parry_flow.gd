@@ -30,13 +30,15 @@ func spawn_player(room: Node2D, name_suffix: String) -> LanPlayer:
 
 
 func run_test() -> void:
+	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_player_invincible(false)
+	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	var room := Node2D.new()
 	root.add_child(room)
 	current_scene = room
 	var camera := Camera2D.new()
 	camera.enabled = true
 	room.add_child(camera)
-	var source := Node2D.new()
+	var source := DamageReceiver2D.new()
 	source.position = Vector2(100.0, 0.0)
 	room.add_child(source)
 
@@ -46,9 +48,9 @@ func run_test() -> void:
 	var parry_duration := 0.0
 	for frame_index in frames.get_frame_count(&"parry"):
 		parry_duration += frames.get_frame_duration(&"parry", frame_index) / frames.get_animation_speed(&"parry")
-	if not require(is_equal_approx(parry_duration, 0.35), "Parry startup + active duration is not 350ms"):
+	if not require(is_equal_approx(parry_duration, 0.36), "Parry must preserve three 40ms startup frames and two 120ms active frames"):
 		return
-	if not require(frames.get_frame_count(&"parry_nothing") == 5, "Parry nothing phase must contain five 100ms frames"):
+	if not require(frames.get_frame_count(&"parry_nothing") == 5, "Parry nothing phase must contain five 70ms frames"):
 		return
 	var nothing_first := frames.get_frame_texture(&"parry_nothing", 0) as AtlasTexture
 	var nothing_last := frames.get_frame_texture(&"parry_nothing", 4) as AtlasTexture
@@ -79,6 +81,9 @@ func run_test() -> void:
 	active_player.parry_input_buffer_remaining = active_player.COMBAT_INPUT_BUFFER
 	var active_health := active_player.combat_stats.health
 	var active_result := active_player.receive_combat_hit(make_attack(source, &"active"))
+	# The hitbox reports a successful defense back to the attacker; the receiver
+	# owns shared contact feedback now, rather than Lan's state transition.
+	source.on_attack_parried(make_attack(source, &"active_feedback"), active_player.defense_contact_point(source.global_position))
 	if not require(active_result == CombatHitResult.Type.PARRY_SUCCESS, "Active contact did not parry"):
 		return
 	if not require(active_player.combat_stats.health == active_health and active_player.defense_state == active_player.DefenseState.PARRY_SUCCESS, "Successful parry changed health or skipped its animation"):
@@ -86,7 +91,7 @@ func run_test() -> void:
 	if not require(active_player.defense_recoil_active and active_player.velocity.x < 0.0 and not active_player.hit_reaction_active, "Successful parry did not apply its light defensive recoil"):
 		return
 	var feedback := root.get_node("CombatFeedback") as CombatFeedbackService
-	if not require(feedback.shake_remaining >= active_player.PARRY_SUCCESS_SHAKE_DURATION, "Successful parry did not request clash screen shake"):
+	if not require(feedback.shake_remaining >= CombatFeedbackService.SHAKE_DURATION, "Successful parry did not request shared clash screen shake"):
 		return
 	if not require(feedback.shake_target == camera, "Successful parry shake was not applied to the active camera"):
 		return

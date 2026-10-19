@@ -1,4 +1,4 @@
-extends SceneTree
+extends "../../support/harness.gd"
 
 
 func _initialize() -> void:
@@ -14,6 +14,7 @@ func require(condition: bool, message: String) -> bool:
 
 
 func run_test() -> void:
+	use_memory_progress()
 	seed(22)
 	var player = (load("res://scenes/player/lan/lan_player.tscn") as PackedScene).instantiate()
 	player.world_min_x = -900.0
@@ -122,6 +123,7 @@ func run_test() -> void:
 		effect.queue_free()
 
 	var battle_room = (load("res://scenes/levels/tutorial/tutorial_battle_room.tscn") as PackedScene).instantiate()
+	battle_room.get_node("MasterBoss").manual_control = true
 	root.add_child(battle_room)
 	await process_frame
 	battle_room.process_mode = Node.PROCESS_MODE_DISABLED
@@ -154,8 +156,19 @@ func run_test() -> void:
 			"Ultimate traversal paused outside the boss-height landing band",
 		):
 			return
-	if not require(angle_bins.size() >= 4, "Ultimate traversals collapsed into repetitive horizontal ping-pong"):
-		return
+	if "--capture" in OS.get_cmdline_user_args() and DisplayServer.get_name() != "headless":
+		for segment: PackedVector2Array in battle_player.ultimate_slash_segments:
+			var line := Line2D.new()
+			line.points = segment
+			line.width = 1.5
+			line.default_color = Color(0.3, 0.9, 1.0, 0.5)
+			line.z_index = 25
+			battle_room.add_child(line)
+		await process_frame
+		await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png(OS.get_environment("HOMING_STAR_TEST_OUTPUT").path_join("ultimate_target_geometry.png"))
+	check(angle_bins.size() >= 4, "Ultimate keeps at least four 15-degree angle classes (actual: %d)" % angle_bins.size())
 
-	print("PASS: Lan ultimate performs collision-free long cuts through the target and restores eight high-speed finishing cuts")
-	quit(0)
+	print("Lan ultimate geometry and finish checks completed")
+	expect_save_untouched()
+	finish("LAN ULTIMATE")

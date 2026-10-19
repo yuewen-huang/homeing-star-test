@@ -30,6 +30,7 @@ func settle() -> void:
 		await physics_frame
 
 func new_arena() -> void:
+	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_player_invincible(false)
 	if is_instance_valid(arena):
 		arena.queue_free()
 		await process_frame

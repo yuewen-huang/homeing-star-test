@@ -74,7 +74,14 @@ func run() -> void:
 	progress.name = "SaveProgress"
 	root.add_child(progress)
 	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
+	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_player_invincible(false)
 	room = load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate() as Chapter1DeerBossRoom
+	# Combat-only fixture: intro viewing is covered by the dedicated comic suite.
+	var empty_comic := WindSightingComic.new()
+	var intro := PackedScene.new()
+	intro.pack(empty_comic)
+	empty_comic.free()
+	room.deer_intro_scene = intro
 	root.add_child(room)
 	current_scene = room
 	boss = room.deer

@@ -211,6 +211,11 @@ func run() -> void:
 	check(field.camera.position.x<=6560 and screen_feet.y<=600.01 and screen_feet.y>=359.99,
 		"Map limits do not prevent the camera from keeping the pawn inside the vertical dead zone")
 	await capture("salt_field_southeast_edge")
+	# A discovered core now starts the production crab encounter on reload.
+	# Exercise exploration inputs in a fresh exploration fixture, not that fight.
+	clear_scene()
+	save._config = ConfigFile.new()
+	await enter()
 	field.feet = field.SPAWN
 	var event := InputEventKey.new()
 	event.physical_keycode = KEY_W; event.keycode = KEY_W; event.pressed = true
@@ -222,6 +227,7 @@ func run() -> void:
 	event = InputEventKey.new()
 	event.physical_keycode = KEY_L; event.keycode = KEY_L; event.pressed = true
 	root.push_input(event)
+	await process_frame
 	field._physics_process(1.0/60)
 	check(field.dodge_remaining>0,"L input starts the horizontal dodge through viewport input")
 	clear_scene()

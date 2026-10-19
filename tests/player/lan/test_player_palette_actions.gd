@@ -54,14 +54,14 @@ func run_test() -> void:
 		player.attack_queued = true
 		player.on_combat_timeline_finished(&"attack_1x")
 		second_attack_states[player.attack_state] = true
-		if not require(player.attack_state in [player.AttackState.ATTACK_2X, player.AttackState.ATTACK_2X_1, player.AttackState.ATTACK_2X_2], "Ground combo selected an invalid second attack"):
+		if not require(player.attack_state in [player.AttackState.ATTACK_2X_1, player.AttackState.ATTACK_2X_2], "Ground combo selected an invalid light second attack"):
 			return
 		player.attack_queued = true
 		player.on_combat_timeline_finished(player.animated_sprite.animation)
-		if not require(player.attack_state == player.AttackState.ATTACK_3X, "Ground combo did not finish with attack 3x"):
+		if not require(player.attack_state == player.AttackState.ATTACK_2X, "Ground combo did not finish with the authored attack_2x slash"):
 			return
-		player.on_combat_timeline_finished(&"attack_3x")
-	if not require(second_attack_states.size() == 3, "Random second attack did not exercise all three variants"):
+		player.on_combat_timeline_finished(&"attack_2x")
+	if not require(second_attack_states.size() == 2, "Random second attack did not exercise both light variants"):
 		return
 
 	player.attack_state = player.AttackState.NONE
@@ -75,7 +75,7 @@ func run_test() -> void:
 	player.queued_attack_direction = -1.0
 	player.attack_queued = true
 	player.on_combat_timeline_finished(player.animated_sprite.animation)
-	if not require(player.attack_state == player.AttackState.ATTACK_3X and is_equal_approx(player.facing_direction, -1.0), "Ground combo did not apply the buffered direction on attack 3x"):
+	if not require(player.attack_state == player.AttackState.ATTACK_2X and is_equal_approx(player.facing_direction, -1.0), "Ground combo did not apply the buffered direction on its attack_2x finisher"):
 		return
 
 	player.attack_state = player.AttackState.JUMP_ATTACK_1X
@@ -166,7 +166,6 @@ func run_test() -> void:
 		return
 	if not require(is_equal_approx(player.get_action_movement_direction(), 1.0), "Directional dodge did not preserve its requested movement direction"):
 		return
-	player._timeline_set_back_dodge_invulnerable(true)
 	if not require(player.is_invulnerable() and not player.can_receive_hit(), "Dodge invulnerability window was not active"):
 		return
 
@@ -195,7 +194,7 @@ func run_test() -> void:
 	player.update_player_resources(1.0)
 	if not require(is_equal_approx(player.combat_stats.stamina, 56.0), "Stamina did not recover at its configured rate"):
 		return
-	player._on_attack_effect_hit_landed(null)
+	player._on_attack_effect_hit_landed(null, null)
 	if not require(is_equal_approx(player.combat_stats.mana, player.MANA_GAIN_PER_HIT), "Attack hits did not generate mana"):
 		return
 
