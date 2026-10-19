@@ -54,6 +54,7 @@ const PALETTES := {
 	&"master_wind": [Color("eeeeee"), Color("00e0dd"), Color("009fe8"), Color("007fc3")],
 	&"master_red": [Color("fff0dd"), Color("ff9c66"), Color("e2412f"), Color("6e1222")],
 	&"master_gold": [Color("fffbe2"), Color("ffe189"), Color("e4ab35"), Color("80530f")],
+	&"lan_wind": [Color("ffffff"), Color("d6f3ff"), Color("78c4ea"), Color("33618f")],
 	&"master": [Color("e8e4db"), Color("c5c7c8"), Color("6b8494"), Color("2b3948")],
 	&"crab": [Color("f1f2e6"), Color("bee5d8"), Color("3cada8"), Color("174d54")],
 	&"violet": [Color("fff4ff"), Color("f3b6ff"), Color("c25fe6"), Color("4f1c72")],
@@ -403,6 +404,9 @@ const MASTER_RED_INK := {&"white": Color("fff0dd"), &"pale": Color("ffd9c0"), &"
 	&"mint": Color("ffb38a"), &"blue": Color("e2412f"), &"deep": Color("a8262a"), &"deeper": Color("6e1222")}
 const MASTER_GOLD_INK := {&"white": Color("fffbe2"), &"pale": Color("fff0c0"), &"cyan": Color("ffe189"),
 	&"mint": Color("fff0a8"), &"blue": Color("e4ab35"), &"deep": Color("b07a1c"), &"deeper": Color("80530f")}
+## Lan's white-blue: the same strokes in her parry crescent's colours.
+const LAN_INK := {&"white": Color("ffffff"), &"pale": Color("eef8ff"), &"cyan": Color("bfeaff"),
+	&"mint": Color("d6f3ff"), &"blue": Color("78c4ea"), &"deep": Color("4a86b8"), &"deeper": Color("33618f")}
 var _inks: Dictionary = MASTER_INK
 
 ## Elements per profile, in effect space (x forward, y down; the feet are at y = 160).
@@ -476,6 +480,43 @@ func _master_elements() -> Array:
 					"inks": [&"mint"], "delay": 0.03},
 				{"kind": "curl", "at": Vector2(-150,112), "radius": 26.0, "turn": 1.0, "delay": 0.04},
 			]
+		&"lan_gather":
+			# Lan's sword wave charge (F1–F3): aqua leaves and motes drawn in to the blade,
+			# a small white glint as they arrive. Centred on the blade behind her.
+			return [
+				{"kind": "gather", "radius": 70.0, "count": 9, "delay": 0.0},
+			]
+		&"lan_cut1":
+			# Lan's sword wave (user reference: master phase-two uppercut ground wave): crescents
+			# with a white leading edge over pale aqua, and overlapping sickle tails swept back
+			# from a solid white front. Drawn around her feet (y 0), forward +x.
+			# First cut (F8): a low sweep at the waist from behind to in front.
+			return [
+				{"kind": "crescent", "outer": [Vector2(-52,-66),Vector2(30,-96),Vector2(120,-74),Vector2(156,-30)],
+					"inner": [Vector2(-52,-66),Vector2(26,-64),Vector2(98,-52),Vector2(156,-30)], "sweep": true,
+					"layers": [[1.0, &"aqua"], [0.62, &"light"], [0.3, &"core"]], "delay": 0.0},
+				{"kind": "leaves", "at": [Vector2(150,-60),Vector2(122,-96)], "size": 9.0, "drift": Vector2(40,-25), "delay": 0.04},
+			]
+		&"lan_cut2":
+			# Second cut (F14): from behind, up over her head, down in front.
+			return [
+				{"kind": "crescent", "outer": [Vector2(-58,-24),Vector2(-66,-156),Vector2(104,-160),Vector2(136,-52)],
+					"inner": [Vector2(-58,-24),Vector2(-34,-118),Vector2(80,-124),Vector2(136,-52)], "sweep": true,
+					"layers": [[1.0, &"aqua"], [0.62, &"light"], [0.3, &"core"]], "delay": 0.0},
+				{"kind": "leaves", "at": [Vector2(-68,-128),Vector2(146,-96)], "size": 8.0, "drift": Vector2(0,-30), "delay": 0.05},
+			]
+		&"lan_cut3":
+			# Third cut (F21): a diagonal chop into the ground; the ground flares where it lands.
+			return [
+				{"kind": "crescent", "outer": [Vector2(-4,-136),Vector2(96,-138),Vector2(146,-64),Vector2(146,0)],
+					"inner": [Vector2(-4,-136),Vector2(72,-110),Vector2(112,-58),Vector2(146,0)], "sweep": true,
+					"layers": [[1.0, &"aqua"], [0.62, &"light"], [0.3, &"core"]], "delay": 0.0},
+				{"kind": "sickles", "base": [Vector2(150,0),Vector2(150,-2),Vector2(146,-4),Vector2(140,-6)], "count": 4,
+					"angle": [-8.0, -40.0], "turn": [-6.0, -20.0], "length": [70.0, 40.0], "width": [10.0, 12.0],
+					"inks": [&"light", &"core"], "delay": 0.06},
+				{"kind": "sickles", "base": [Vector2(150,-1),Vector2(150,-1),Vector2(150,-1),Vector2(150,-1)], "count": 2,
+					"angle": [182.0, 178.0], "length": [90.0, 90.0], "width": [6.0, 6.0], "inks": [&"core"], "delay": 0.06},
+			]
 		&"sword_qi":
 			# 旋空突坠's thrown qi (user reference): a big flat crescent across its flight (+x),
 			# about twice the master's body wide, no trail (user 2026-10-19).
@@ -532,7 +573,7 @@ func _master_elements() -> Array:
 
 func _draw_master_wind() -> void:
 	if age >= duration+hold+fade: return
-	_inks = MASTER_RED_INK if palette == PALETTES[&"master_red"] else (MASTER_GOLD_INK if palette == PALETTES[&"master_gold"] else MASTER_INK)
+	_inks = MASTER_RED_INK if palette == PALETTES[&"master_red"] else (MASTER_GOLD_INK if palette == PALETTES[&"master_gold"] else (LAN_INK if palette == PALETTES[&"lan_wind"] else MASTER_INK))
 	for element: Dictionary in _master_elements():
 		var local_age := age - float(element.delay)
 		if local_age <= 0: continue
@@ -544,6 +585,10 @@ func _draw_master_wind() -> void:
 			"crown": _master_crown(element, local_age, erode)
 			"curl": _master_curl(element, opening, erode)
 			"puffs": _master_puffs(element, opening, erode)
+			"sickles": _lan_sickles(element, opening, erode)
+			"crescent": _lan_crescent(element, opening, erode)
+			"leaves": _lan_leaves(element, opening, erode)
+			"gather": _lan_gather(element, opening, erode)
 
 ## A blade: a solid wave-shaped mass (thin tail, swelling to a blunt head at the end of the
 ## swing) in the base ink, with overlapping streaks inside it; the first ink is the outer
@@ -616,6 +661,146 @@ func _curve_at(curve: Variant, t: float) -> Vector2:
 		var angle := deg_to_rad(lerpf(float(e[3]), float(e[4]), t))
 		return (e[0] as Vector2) + Vector2(cos(angle) * float(e[1]), sin(angle) * float(e[2]))
 	return (curve[0] as Vector2).bezier_interpolate(curve[1], curve[2], curve[3], t)
+
+## Lan's sword wave inks (user reference: the master's phase-two uppercut ground wave): a
+## white-hot core, aqua body and tongues, soft aqua glow; no outlines or brush stripes.
+const LAN_CORE := Color("f4fffd")
+const LAN_LIGHT := Color("b4f4ea")
+const LAN_AQUA := Color("7ef0de")
+const LAN_DEEP := Color("3ccdb8")
+
+func _lan_hash(i: int, salt: float) -> float:
+	return 0.5 + 0.5 * sin(float(i) * 12.9898 + salt * 78.233)
+
+## Sickle tails (after the user's reference ground wave: overlapping curved tails swept
+## back from a solid white front). Each sickle starts on `base` (a curve), leaves at an angle
+## from `angle` [start, end] (degrees, y down) across the base and turns by `turn` over its
+## length, fat near its root and sharp at its tip. Strands draw in base order, so put the
+## back ones first; `inks` cycle across them. Opaque colours only: translucent layers bake
+## to a dark fringe. The tails grow out as it opens, then shorten, thin and drop away.
+func _lan_sickles(element: Dictionary, opening: float, erode: float) -> void:
+	var count: int = element.count
+	var angle: Array = element.angle
+	var turn: Array = element.get("turn", [0.0, 0.0])
+	var lengths: Array = element.length
+	var widths: Array = element.width
+	var inks: Array = element.inks
+	var grow := clampf(opening * 1.4, 0.0, 1.0)
+	for i in count:
+		var t := (float(i) + 0.5) / count if count > 1 else 0.5
+		var leave := clampf(erode * 1.5 - _lan_hash(i, 4.0) * 0.5, 0.0, 1.0)
+		if leave >= 1.0 or grow <= 0.0: continue
+		var root := _curve_at(element.base, t)
+		var heading := deg_to_rad(lerpf(float(angle[0]), float(angle[1]), t) + (_lan_hash(i, 1.0) - 0.5) * 8.0)
+		var bend := deg_to_rad(lerpf(float(turn[0]), float(turn[1]), t))
+		var length := lerpf(float(lengths[0]), float(lengths[1]), t) * (0.8 + 0.35 * _lan_hash(i, 2.0)) * grow * (1.0 - leave * 0.7)
+		var width := lerpf(float(widths[0]), float(widths[1]), t) * (0.85 + 0.3 * _lan_hash(i, 3.0)) * (1.0 - leave * 0.55)
+		const STEPS := 18
+		var left := PackedVector2Array()
+		var right := PackedVector2Array()
+		var at := root
+		for k in STEPS + 1:
+			var u := float(k) / STEPS
+			var direction := Vector2.from_angle(heading + bend * u)
+			var half := width * 0.5 * pow(1.0 - u, 1.15) * (0.55 + 0.45 * minf(1.0, u * 4.0))
+			left.append((at + direction.orthogonal() * half) / pixel_size)
+			right.append((at - direction.orthogonal() * half) / pixel_size)
+			at += direction * length / STEPS
+		right.reverse()
+		_lan_fill(left + right, _lan_ink(inks[i % inks.size()]))
+
+## A crescent between an `outer` and an `inner` curve, pointed at both ends; `layers`
+## [[depth, ink], ...] draw it from the full depth (aqua) to a thin white band on the outer
+## edge. With `sweep` it opens along its length and its start falls away first (a cut's
+## smear); otherwise it pops open and thins as it fades (a flying sword qi).
+func _lan_crescent(element: Dictionary, opening: float, erode: float) -> void:
+	var sweep: bool = element.get("sweep", false)
+	var first := erode * 0.85 if sweep else 0.0
+	var last := opening if sweep else 1.0
+	var thin := 1.0 if sweep else clampf(opening * 2.0, 0.0, 1.0) * (1.0 - erode * 0.7)
+	if last - first < 0.02 or thin <= 0.0: return
+	for layer: Array in element.layers:
+		var depth: float = float(layer[0]) * thin
+		const SAMPLES := 40
+		var outline := PackedVector2Array()
+		var inside := PackedVector2Array()
+		for k in SAMPLES + 1:
+			var t := lerpf(first, last, float(k) / SAMPLES)
+			var envelope := pow(maxf(sin(PI * float(k) / SAMPLES), 0.0), 0.7)
+			var out := _curve_at(element.outer, t)
+			outline.append(out / pixel_size)
+			inside.append(out.lerp(_curve_at(element.inner, t), depth * envelope) / pixel_size)
+		inside.reverse()
+		_lan_fill(outline + inside, _lan_ink(layer[1]))
+
+func _lan_ink(name: StringName) -> Color:
+	match name:
+		&"core": return LAN_CORE
+		&"light": return LAN_LIGHT
+		&"deep": return LAN_DEEP
+	return LAN_AQUA
+
+## Fills a polygon triangle by triangle (strokes may be concave).
+func _lan_fill(points: PackedVector2Array, colour: Color) -> void:
+	if points.size() < 3: return
+	var triangles := Geometry2D.triangulate_polygon(points)
+	for t in range(0, triangles.size(), 3):
+		_canvas.draw_colored_polygon(PackedVector2Array([points[triangles[t]], points[triangles[t + 1]], points[triangles[t + 2]]]), colour)
+
+## Small aqua leaves with a white midrib, drifting as they fade.
+func _lan_leaves(element: Dictionary, opening: float, erode: float) -> void:
+	var size: float = element.size
+	var drift: Vector2 = element.drift
+	var at: Array = element.at
+	for i in at.size():
+		var c: Vector2 = (at[i] as Vector2) + drift * (opening * 0.3 + erode)
+		var angle := -0.6 + 1.2 * _lan_hash(i, 4.0) + erode * 0.8
+		var length := size * (0.8 + 0.4 * _lan_hash(i, 5.0)) * minf(opening * 1.5, 1.0)
+		if length < 1.0: continue
+		_lan_leaf(c, length, angle, 1.0 - erode)
+
+func _lan_leaf(c: Vector2, length: float, angle: float, alpha: float) -> void:
+	var points := PackedVector2Array()
+	for k in 9:
+		var t := float(k) / 8.0
+		points.append((c + Vector2(lerpf(-length, length, t), -sin(PI * t) * length * 0.38).rotated(angle)) / pixel_size)
+	for k in range(7, 0, -1):
+		var t := float(k) / 8.0
+		points.append((c + Vector2(lerpf(-length, length, t), sin(PI * t) * length * 0.22).rotated(angle)) / pixel_size)
+	var colour := LAN_AQUA
+	colour.a = 0.85 * alpha
+	if not Geometry2D.triangulate_polygon(points).is_empty(): _canvas.draw_colored_polygon(points, colour)
+	var rib := LAN_CORE
+	rib.a = 0.8 * alpha
+	_canvas.draw_line((c + Vector2(-length * 0.8, 0).rotated(angle)) / pixel_size, (c + Vector2(length * 0.8, 0).rotated(angle)) / pixel_size, rib, 1.0)
+
+## The charge: leaves and motes drawn in from a ring to the centre, a white glint as they arrive.
+func _lan_gather(element: Dictionary, opening: float, erode: float) -> void:
+	var r: float = element.radius
+	var count: int = element.count
+	for i in count:
+		var angle := TAU * float(i) / count + 0.4 * _lan_hash(i, 6.0)
+		var dist := r * (0.6 + 0.4 * _lan_hash(i, 7.0)) * (1.0 - opening)
+		var c := Vector2.from_angle(angle) * dist
+		if i % 2 == 0:
+			_lan_leaf(c, 7.0 * (0.4 + 0.6 * (1.0 - opening)), angle + PI * 0.5, 1.0 - erode)
+		else:
+			var mote := LAN_LIGHT
+			mote.a = 0.9 * (1.0 - erode)
+			_canvas.draw_circle(c / pixel_size, 2.0 / pixel_size + 1.0, mote)
+	var glint := clampf((opening - 0.7) / 0.3, 0.0, 1.0) * (1.0 - erode)
+	if glint <= 0.0: return
+	var halo := LAN_AQUA
+	halo.a = 0.3 * glint
+	_canvas.draw_circle(Vector2.ZERO, 14.0 * glint / pixel_size, halo)
+	var star := LAN_CORE
+	star.a = glint
+	for k in 4:
+		var d := Vector2.from_angle(PI * 0.25 + PI * 0.5 * k)
+		var side := d.orthogonal() * 2.5
+		var points := PackedVector2Array([side / pixel_size, d * 22.0 * glint / pixel_size, -side / pixel_size])
+		if not Geometry2D.triangulate_polygon(points).is_empty(): _canvas.draw_colored_polygon(points, star)
+	_canvas.draw_circle(Vector2.ZERO, 4.0 * glint / pixel_size, star)
 
 ## A crown of spikes thrown up where the blade lands (painted attack 1 F09/F10).
 func _master_crown(element: Dictionary, local_age: float, erode: float) -> void:
