@@ -31,7 +31,7 @@ func run() -> void:
 	master.spirit_aura.update_visual(0)
 	check(not master.spirit_aura.visible, "Zero spirit has no blue aura")
 	check(not master.use_sobering_item(), "Sobering item refuses phase one")
-	for i in range(1, 5):
+	for i in range(1, master.CHARGED_POWER_MAX + 1):
 		var id: StringName = &"return_chain" if i % 2 else &"air_plunge"
 		master.start_clash_rhythm(id)
 		# Finish the real rhythm without needing to let its hardest hit injure Lan.
@@ -47,12 +47,14 @@ func run() -> void:
 			ticks += 1
 		check(master.charged_power == i, "Finishing drink %d grants exactly one spirit layer" % i)
 		master.spirit_aura.update_visual(0)
-		if i < 4:
-			check(is_equal_approx(master.spirit_aura.strength, float(i)/4.0), "Blue aura increases with layer %d" % i)
+		if i < master.CHARGED_POWER_MAX:
+			check(is_equal_approx(master.spirit_aura.strength, float(i)/float(master.CHARGED_POWER_MAX)), "Blue aura increases with layer %d" % i)
 			check(master.spirit_aura.spirit_material.get_shader_parameter("aura_colour") == Color("248cff"), "Phase-one aura is blue")
 			master.play_idle()
 			await capture("spirit_blue_%d" % i)
-	check(master.phase == 2 and master.state == MasterBoss.State.TRANSFORM, "Four completed drinks enter phase two")
+	check(master.phase == 2 and master.state == MasterBoss.State.TRANSFORM, "Six completed drinks enter phase two")
+	check(master.charged_power == master.CHARGED_POWER_MAX, "Phase two starts with the full six layers")
+	check(is_zero_approx(master.phase_2_buff_remaining), "Layers alone never grant the phase-two buff")
 	while master.state == MasterBoss.State.TRANSFORM: await physics_frame
 	master._start_phase_2_howl()
 	master.spirit_aura.update_visual(0)

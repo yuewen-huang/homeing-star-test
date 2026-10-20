@@ -93,7 +93,7 @@ func run() -> void:
 	for stack in range(1, master.CHARGED_POWER_MAX + 1):
 		master._finish_drink()
 		check(master.charged_power == stack, "Completed drink settles one charged-power stack")
-	check(master.phase == 2 and master.state == master.State.TRANSFORM and master.combat_stats.health == master.combat_stats.max_health, "Four drinks start phase two with full health")
+	check(master.phase == 2 and master.state == master.State.TRANSFORM and master.combat_stats.health == master.combat_stats.max_health, "Six drinks start phase two with full health")
 	master._on_body_animation_finished()
 	check(master.state == master.State.PHASE_2_IDLE and master.animated_sprite.animation == &"phase_2_idle", "Transformation returns to second-phase idle")
 	expect_save_untouched()
