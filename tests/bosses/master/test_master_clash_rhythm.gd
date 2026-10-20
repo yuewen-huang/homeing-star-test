@@ -124,6 +124,17 @@ func run() -> void:
 	master.attack_hitbox.hit_resolved.connect(func(target: Node, result: int) -> void:
 		if target == player: outcomes.append(result))
 	(root.get_node("CombatFeedback") as CombatFeedbackService).parry_landed.connect(func(_r, _a, _c, _red) -> void: parries += 1)
+	master.combat_stats.restore_poise()
+	var normal_parry := CombatAttackData.new(&"test_normal_parry", master, 0, 0, 0, 0, CombatAttackData.DangerType.NORMAL)
+	master.on_attack_parried(normal_parry, player.global_position)
+	check(master.combat_stats.poise == master.combat_stats.max_poise - CombatTuning.BOSS_NORMAL_PARRY_POISE,
+		"Master ordinary parry removes the shared normal poise amount")
+	place()
+	var red_parry := CombatAttackData.new(&"test_red_parry", master, 0, 0, 0, 0, CombatAttackData.DangerType.COUNTERABLE_DANGER)
+	master.on_attack_parried(red_parry, player.global_position)
+	check(master.combat_stats.poise == master.combat_stats.max_poise - CombatTuning.BOSS_RED_PARRY_POISE,
+		"Master red parry removes the shared red poise amount")
+	place()
 
 	for id: StringName in PARRIED:
 		place()

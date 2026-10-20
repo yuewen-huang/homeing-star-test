@@ -210,15 +210,15 @@ func run() -> void:
 	player.defense_state = LanPlayer.DefenseState.PARRY_ACTIVE
 	check(is_equal_approx(boss.position.x, 1000), "Close-range charge no longer teleports the boss")
 	advance(1.04)
-	check(player.combat_stats.health == 82 and not boss.poise_broken, "K cannot parry a gold charge")
+	check(player.combat_stats.health == 76 and not boss.poise_broken, "K cannot parry a gold charge")
 	player.defense_state = LanPlayer.DefenseState.NONE
 	advance(0.25)
-	check(player.combat_stats.health == 60 and player.velocity.y < 0, "Follow-up uppercut turns toward the target and launches for 22 damage")
+	check(player.combat_stats.health == 52 and player.velocity.y < 0, "Follow-up uppercut turns toward the target and launches for 24 gold damage")
 
 	reset()
 	player.position = Vector2(1100, 555)
 	player.start_back_dodge(-1)
-	boss.open_attack(&"dodge_case", Rect2(0, -120, 180, 120), 18, CombatAttackData.DangerType.UNPARRYABLE_DANGER)
+	boss.open_attack(&"dodge_case", Rect2(0, -120, 180, 120), CombatAttackData.DangerType.UNPARRYABLE_DANGER)
 	boss.resolve_attack_contact()
 	check(player.combat_stats.health == 100 and is_equal_approx(boss.get_action_time_scale(), 0.18), "Successful dodge triggers boss action slow motion")
 	var earlier := boss._time

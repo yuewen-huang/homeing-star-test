@@ -41,9 +41,10 @@ func place() -> void:
 	crab.start_idle()
 	if crab.poise_broken: crab.finish_stagger()
 	crab.red_parry_hold = false
+	crab.short_stun_remaining = 0.0
 	crab._parry_pause = 0
 	crab.combat_stats.restore_health()
-	crab.combat_stats.restore_poise_to(120)
+	crab.combat_stats.restore_poise_to(crab.combat_stats.max_poise)
 	crab.position = Vector2(820,555)
 	lan.reset_after_map_fall(Vector2(900,555))
 	lan.combat_stats.restore_health()
@@ -91,6 +92,11 @@ func run() -> void:
 	room.add_child(crab)
 	crab.set_physics_process(false)
 	crab.attack_hitbox.hit_resolved.connect(func(_target, result): results.append(result))
+	crab.short_stun_remaining = CombatTuning.BOSS_RED_PARRY_STAGGER
+	crab.start_quake(&"left", lan.position)
+	crab._physics_process(1.0 / 120.0)
+	check(is_zero_approx(crab.quake_time), "Red-parry short stagger pauses the crab's next action timeline")
+	place()
 	for danger in [1,2]:
 		crab.quake_vfx.cue(danger,0.10,crab.get_counter_slash_point())
 		check(crab.quake_vfx.glint_pieces.size()==2 and crab.quake_vfx.glint_pieces.all(func(piece): return not piece._clip.is_empty()),"Red/gold warning uses the current baked star and converging shards %d" % danger)
@@ -130,7 +136,7 @@ func run() -> void:
 	crab.start_quake(&"triple",lan.position)
 	tick(1.80,true)
 	check(results.size()==3 and results.all(func(r): return r==CombatHitResult.Type.PARRY_SUCCESS),"Hard difficulty parries three ground pulses through real Lan settlement")
-	check(crab.combat_stats.poise==45,"Each ground parry removes 25 poise; the combo does not refill it")
+	check(crab.combat_stats.poise==crab.combat_stats.max_poise-3*CombatTuning.BOSS_NORMAL_PARRY_POISE,"Each ground parry removes the shared normal poise amount; the combo does not refill it")
 	check(crab.quake_vfx.pieces.all(func(e): return e.shape==&"quake"),"Crab attacks contain only ground art, no slash crescents")
 	place()
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.NORMAL)
@@ -147,7 +153,7 @@ func run() -> void:
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	crab.start_quake(&"heavy",lan.position)
 	tick(1.25,true)
-	check(crab.red_parry_hold and crab.poise_broken and crab.rhythm==null,"Manual red quake parry interrupts the score and starts PLUS")
+	check(crab.red_parry_hold and not crab.poise_broken and crab.short_stun_remaining==CombatTuning.BOSS_RED_PARRY_STAGGER and crab.rhythm==null,"Manual red quake parry interrupts the score, starts PLUS and applies a short stagger without breaking poise")
 	check(crab.quake_vfx.last_impact==&"double" and crab.quake_vfx.impact_voices.any(func(voice): return voice.playing),"Parry stagger does not cut off the landed double-slam sound")
 	place()
 	crab.start_quake(&"gold",lan.position)
