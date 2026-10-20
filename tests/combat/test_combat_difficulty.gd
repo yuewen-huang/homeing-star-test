@@ -216,6 +216,8 @@ func test_wind_cue() -> void:
 	var later := deer.clash_phase.next_parry_contact_in()
 	check(absf((first - later) - 0.1) < 0.02, "prediction counts down on the action clock (%.2f -> %.2f)" % [first, later])
 	check(lan.parry_cue.source == deer and absf(lan.parry_cue.time_to_contact - later) < 0.001 and lan.parry_cue.should_show(), "the deer reports the cue and it shows on normal")
+	lan.parry_cue._process(0.0)
+	check(lan.parry_cue._display.is_visible_in_tree(), "the baked blue cue sprite is actually visible, not only its parent")
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	check(not lan.parry_cue.should_show(), "no blue cue on hard")
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.NORMAL)

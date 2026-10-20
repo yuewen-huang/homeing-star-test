@@ -58,8 +58,9 @@ func run() -> void:
 	current_scene = room
 	await process_frame
 	room.select_boss(1)
+	room.select_combo(2)
 	add_caption()
-	check(room.segment_picker.item_count == 19,"Two missing strike submoves are available beside the eleven source actions")
+	check(room.segment_picker.item_count == 20,"Two missing strike submoves are available beside the twelve source actions")
 	check(room.adapter.combo_library_names().size() == 10,"Six body routes coexist with legacy and effect-draft options")
 	for index in MasterPhase1Motion.IDS.size():
 		start(index)

@@ -45,6 +45,8 @@ func check(ok: bool, message: String) -> void:
 ## Swaps the SaveProgress autoload for a MemoryProgress and remembers the real save file's
 ## bytes for expect_save_untouched().
 func use_memory_progress() -> MemoryProgress:
+	# Gameplay tests exercise collisions without modal demonstrations; UI tests opt in.
+	set_meta(&"suppress_combat_lesson_videos", true)
 	_save_existed = FileAccess.file_exists(SaveProgressService.SAVE_PATH)
 	_save_bytes = FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) if _save_existed else PackedByteArray()
 	var previous := root.get_node_or_null("SaveProgress")

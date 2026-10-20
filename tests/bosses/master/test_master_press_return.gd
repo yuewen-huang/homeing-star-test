@@ -84,7 +84,7 @@ func run() -> void:
 	room.select_boss(1)
 	room.select_combo(1)
 	check(room.library_picker.get_item_text(0) == "咆哮强化","Same-sized phase libraries refresh their visible labels")
-	room.select_combo(0)
+	room.select_combo(2)
 	room.select_combo_library(3)
 	room.reset_room()
 	check(room.adapter.library_index == 3,"Reset keeps the displayed draft option and adapter selection in sync")

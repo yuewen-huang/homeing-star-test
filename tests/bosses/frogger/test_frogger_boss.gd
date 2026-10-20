@@ -91,7 +91,7 @@ func run() -> void:
 	check(frog.attack_hitbox.attack == null and room.dummy.contacts.is_empty(), "spit inflation does not deal damage before F7")
 	await capture("frogger_spit_warning")
 	tick(6)
-	check(room.dummy.contacts.size() == 1 and room.dummy.contacts[0].damage == 14 and frog.animated_sprite.frame == 7, "painted water contacts once at F7")
+	check(room.dummy.contacts.size() == 1 and room.dummy.contacts[0].damage == CombatTuning.BOSS_PLAYER_NORMAL_DAMAGE and frog.animated_sprite.frame == 7, "painted water contacts once at F7")
 	room.show_hitboxes = true
 	await capture("frogger_spit_active")
 	room.show_hitboxes = false
@@ -118,10 +118,11 @@ func run() -> void:
 	start(3)
 	frog.combat_stats.health = 100
 	tick(55)
-	check(frog.combat_stats.health == 130 and room.dummy.contacts.is_empty(), "authored heal restores 30 only at F9 and has no damage")
+	var healed_health := 100 + roundi(CombatTuning.FROGGER_HEALTH * CombatTuning.FROGGER_HEAL_RATIO)
+	check(frog.combat_stats.health == healed_health and room.dummy.contacts.is_empty(), "authored heal restores shared ratio only at F9 and has no damage")
 	await capture("frogger_heal")
 	tick(70)
-	check(frog.combat_stats.health == 130, "heal only settles once per action")
+	check(frog.combat_stats.health == healed_health, "heal only settles once per action")
 	start(3)
 	frog.receive_hit(1, Vector2.ZERO)
 	check(frog.action == &"hurt", "normal hit interrupts healing")
@@ -149,7 +150,7 @@ func run() -> void:
 	await process_frame
 	frog = room.adapter.boss as FroggerBoss
 	frog.set_physics_process(false)
-	check(room.player.dodge_evaded_attack.get_connections().size() == 1, "switching does not accumulate frog player-signal connections")
+	check(room.player.dodge_evaded_attack.get_connections().filter(func(connection: Dictionary) -> bool: return connection.callable.get_object() is FroggerBoss).size() == 1, "switching does not accumulate frog player-signal connections")
 	await test_encounter()
 	current_scene = null
 	room.free()
@@ -182,7 +183,7 @@ func test_encounter() -> void:
 	check(not progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_MAX_USED), "Max before normal demonstration cannot complete tutorial")
 	frog.receive_skill_hit(normal, Vector2.ZERO)
 	check(progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_NORMAL_USED) and not frog.is_poise_broken(), "normal special registers without prematurely breaking poise")
-	for hit in 40: frog.receive_hit(1, Vector2.ZERO)
+	for hit in ceili(float(CombatTuning.FROGGER_HEALTH) / CombatTuning.BOSS_LIGHT_HIT_HEALTH) + 2: frog.receive_hit(1, Vector2.ZERO)
 	check(frog.combat_stats.health == 1 and frog.poise_broken and not progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SLIMES_DEFEATED), "tutorial preserves last HP and leaves a broken-poise Max window")
 	frog.receive_skill_hit(max_hit, Vector2.ZERO)
 	check(progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_TUTORIAL_COMPLETE) and not frog.tutorial_protected and frog.combat_stats.health == 0, "broken Max completes lesson, removes protection and settles killing damage")
@@ -205,7 +206,7 @@ func test_encounter() -> void:
 	await create_timer(1.0).timeout
 	frog = encounter.frog_boss
 	frog.set_physics_process(false)
-	check(room.player.combat_stats.health == 100 and frog.combat_stats.health == 240 and not frog.tutorial_protected, "retry rebuilds clean boss while retaining completed lesson")
+	check(room.player.combat_stats.health == 100 and frog.combat_stats.health == CombatTuning.FROGGER_HEALTH and not frog.tutorial_protected, "retry rebuilds clean boss while retaining completed lesson")
 	# Production AI and shared player damage/guard/parry contracts, outside preview.
 	frog.combat_target = room.player
 	frog._cooldown = 0.0
@@ -254,14 +255,14 @@ func test_encounter() -> void:
 	player.start_parry(true)
 	frog.start_action(&"tongue")
 	frog._physics_process(0.35)
-	check(player.combat_stats.health == 100 and frog.combat_stats.poise == 75, "real successful parry preserves health and removes 25 frog poise")
-	for counter in 3:
+	check(player.combat_stats.health == 100 and frog.combat_stats.poise == CombatTuning.FROGGER_POISE - CombatTuning.BOSS_NORMAL_PARRY_POISE, "real successful parry preserves health and removes shared frog poise")
+	for counter in ceili(float(CombatTuning.FROGGER_POISE) / CombatTuning.BOSS_NORMAL_PARRY_POISE) - 1:
 		player.reset_after_map_fall(Vector2(500,555))
 		player.start_parry(true)
 		frog._parry_pause = 0
 		frog.start_action(&"tongue")
 		frog._physics_process(0.35)
-	check(frog.poise_broken and frog.action == &"hurt" and frog.attack_hitbox.attack == null, "four shared parries break frog poise and cancel the attack")
+	check(frog.poise_broken and frog.action == &"hurt" and frog.attack_hitbox.attack == null, "shared parries break frog poise and cancel the attack")
 	assist.set_difficulty(prior_difficulty)
 	assist.set_player_invincible(prior_invincible)
 	frog.free()

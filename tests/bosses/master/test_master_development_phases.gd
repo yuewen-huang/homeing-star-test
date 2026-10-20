@@ -29,7 +29,7 @@ func run() -> void:
 	await frames(2)
 	room.select_boss(1)
 	await frames(2)
-	check(room.combo_picker.item_count == 2, "Both master phases selectable")
+	check(room.combo_picker.item_count == 3, "Formal phases and separate source-art mode selectable")
 	await frames(120)
 	check(not room.adapter.master.combat_timeline.is_playing(), "Manual phase one stays idle")
 	for phase in 2:
@@ -42,7 +42,7 @@ func run() -> void:
 			await capture("phase_%d_action_%d_warning" % [phase + 1, action + 1])
 			await frames(30)
 			await capture("phase_%d_action_%d_active" % [phase + 1, action + 1])
-			await frames(220)
+			await frames(380)
 			check(master.attack_hitbox.attack == null, "Action releases its production hitbox")
 			await capture("phase_%d_action_%d_recovery" % [phase + 1, action + 1])
 		for option in room.adapter.combo_library_names().size():
