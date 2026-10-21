@@ -71,14 +71,15 @@ func run() -> void:
 	master.set_process(false)
 	master.attack_hitbox.set_physics_process(false)
 	lan.set_physics_process(false)
-	for pair in [[&"press_return", &"master_ground_chain"], [&"blink_return", &"master_blink_chain"], [&"spin_delayed", &"master_heavy_chain"], [&"air_plunge", &"master_air_chain"]]:
+	# The retired chain lessons are gone; the three motion samples must not pause the
+	# fight waiting for a demonstration that no longer exists.
+	for id: StringName in [&"inertia_combo", &"lunge_combo", &"air_qi_combo"]:
 		master._interrupt_for_special(0)
 		teaching._pending.clear()
-		master.start_clash_rhythm(pair[0])
+		master.start_clash_rhythm(id)
 		await process_frame
 		teaching._process(0)
-		check(paused and teaching.lesson_player.lesson_id == pair[1], "Master rhythm %s queues the matching demonstration" % pair[0])
-		teaching.lesson_player.close_lesson(true)
+		check(not paused and teaching._pending.is_empty(), "Sample %s queues no retired demonstration" % id)
 	master._interrupt_for_special(0)
 	master.state = MasterBoss.State.PHASE_2_ATTACK
 	master.phase = 2

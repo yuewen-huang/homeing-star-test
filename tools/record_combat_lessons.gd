@@ -83,7 +83,7 @@ func run() -> void:
 		while lan.ultimate_active: await process_frame
 		_end()
 		master.set_process(true)
-	for pair in [[&"parry", &"basic_down"], [&"parry_chain", &"return_chain"], [&"red_parry", &"spin_delayed"], [&"gold_dodge", &"air_plunge"]]:
+	for pair in [[&"parry", &"basic_down"], [&"parry_chain", &"return_chain"]]:
 		_reset_take()
 		_begin(pair[0], ["L"] if pair[0] == &"gold_dodge" else ["K"])
 		await _wait(0.5)

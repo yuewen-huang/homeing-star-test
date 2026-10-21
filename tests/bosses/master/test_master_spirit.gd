@@ -16,7 +16,9 @@ func run() -> void:
 	var save := use_memory_progress()
 	save.add_item(ItemCatalog.HANGOVER_PILL)
 	save.equip_special_item(ItemCatalog.HANGOVER_PILL)
-	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_player_invincible(false)
+	# The fifth drink is now the spirit-blade exam; the spirit test only checks layers,
+	# so keep Lan alive through it instead of asking her to parry six full-arena cuts.
+	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_player_invincible(true)
 	room = load("res://scenes/levels/tutorial/tutorial_battle_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
@@ -32,7 +34,7 @@ func run() -> void:
 	check(not master.spirit_aura.visible, "Zero spirit has no blue aura")
 	check(not master.use_sobering_item(), "Sobering item refuses phase one")
 	for i in range(1, master.CHARGED_POWER_MAX + 1):
-		var id: StringName = &"return_chain" if i % 2 else &"air_plunge"
+		var id: StringName = &"return_chain" if i % 2 else &"inertia_combo"
 		master.start_clash_rhythm(id)
 		# Finish the real rhythm without needing to let its hardest hit injure Lan.
 		master.clash_rhythm.advance(master.clash_rhythm.duration + 0.01)
@@ -42,7 +44,8 @@ func run() -> void:
 		check(master.state == MasterBoss.State.DRINK, "Recovery actually starts the drink")
 		check(CombatLessonCatalog.text(&"spirit").contains("蓝色") and not CombatLessonCatalog.text(&"spirit").contains("变身"), "First-drink dialogue describes only the visible spirit")
 		var ticks := 0
-		while master.state == MasterBoss.State.DRINK and ticks < 240:
+		# The fifth drink runs the full spirit-blade exam before the layer lands.
+		while master.state == MasterBoss.State.DRINK and ticks < 1100:
 			await physics_frame
 			ticks += 1
 		check(master.charged_power == i, "Finishing drink %d grants exactly one spirit layer" % i)

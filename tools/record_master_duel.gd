@@ -44,14 +44,14 @@ func run() -> void:
 	first_health = lan.combat_stats.health
 	running = true
 	await _wait(0.35)
-	var routes := [&"basic_down", &"press_return", &"return_chain", &"air_plunge", &"blink_return", &"spin_delayed", &"air_plunge", &"return_chain", &"air_plunge"]
+	var routes := [&"basic_down", &"return_chain", &"inertia_combo", &"lunge_combo", &"air_qi_combo", &"return_chain", &"inertia_combo", &"air_qi_combo"]
 	for id: StringName in routes:
 		if master.phase != 1: break
 		await _rhythm_take(id)
 		await _punish_break()
 	for i in 5:
 		if master.phase != 1: break
-		await _rhythm_take(&"air_plunge")
+		await _rhythm_take(&"air_qi_combo")
 	check(master.phase == 2, "Continuous duel reaches phase two through real drinks")
 	while master.state == MasterBoss.State.TRANSFORM: await physics_frame
 	_log("phase_2_ready")

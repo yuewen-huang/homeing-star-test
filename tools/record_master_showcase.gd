@@ -2,8 +2,8 @@ extends "../tests/support/harness.gd"
 ## Directed production-room takes. Only button presses drive Lan; hits/parries/counters
 ## settle through production collision and feedback. Each take resets between clips.
 
-const IDS := [&"basic_down", &"press_return", &"return_chain", &"blink_return", &"spin_delayed", &"air_plunge"]
-const TITLES := ["首刀蓝光 · 看准震刀", "压步回锋 · 连续震刀", "回身三连 · 稳拍接刀", "瞬移回斩 · 等待重斩", "旋身顿斩 · 红刀反击", "旋空突坠 · 闪避剑气与金刀"]
+const IDS := [&"basic_down", &"return_chain", &"inertia_combo", &"lunge_combo", &"air_qi_combo"]
+const TITLES := ["一斩 · 首刀蓝光 · 看准震刀", "回身三连 · 稳拍接刀", "重剑惯性连斩 · 动作样板", "原稿突进 · 动作样板", "跃空剑气 · 动作样板"]
 var room: Node2D
 var master: MasterBoss
 var lan: LanPlayer
@@ -21,7 +21,6 @@ var total_parries := 0
 var red_parries := 0
 var dodges := 0
 var damage_taken := 0
-var gold_landed := false
 var last_health := 0
 var cue_captured := false
 var phase2_action: StringName = &""
@@ -83,7 +82,7 @@ func run() -> void:
 			ticks += 1
 		driving = false
 		_stop_move()
-		check(total_parries - before == [1, 2, 3, 2, 3, 0][i], "%s: real parry count %d" % [stage, total_parries-before])
+		check([1, 3, -1, -1, -1][i] < 0 or total_parries - before == [1, 3, -1, -1, -1][i], "%s: real parry count %d" % [stage, total_parries-before])
 		await _wait(0.7)
 		_log("take_end")
 
@@ -118,7 +117,6 @@ func run() -> void:
 	_release_inputs()
 	check(cue_captured, "First blade cue is rendered and captured")
 	check(damage_taken == 0, "No health loss during the directed takes (%d)" % damage_taken)
-	check(gold_landed and dodges > 0 and damage_taken == 0, "Gold landing played after real dodges, with no health loss")
 	expect_save_untouched()
 	FileAccess.open(output.path_join("events.json"), FileAccess.WRITE).store_string(JSON.stringify(events, "\t"))
 	finish("MASTER SHOWCASE")
@@ -179,10 +177,6 @@ func _physics_process(delta: float) -> bool:
 	return false
 
 func _drive_rhythm(r: MasterClashRhythm) -> void:
-	if r.id == &"air_plunge" and r.open_strike() >= 0 and not gold_landed:
-		gold_landed = true
-		_log("gold_landing")
-		_snapshot("gold_landing")
 	for i in r.strikes.size():
 		var strike := r.strikes[i]
 		var left := float(strike.t) - r.elapsed

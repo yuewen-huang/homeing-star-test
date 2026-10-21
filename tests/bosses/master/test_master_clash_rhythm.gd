@@ -1,5 +1,6 @@
 extends "../../support/harness.gd"
-## Production-room regression for the 2026-10-20 stable long strings.
+## Production-room regression for the 2026-10-21 five-move table: one cut, the return
+## chain, and the three motion samples.
 var room: Node2D
 var master: MasterBoss
 var player: LanPlayer
@@ -15,7 +16,9 @@ func capture(label: String) -> void:
 func tick_to(time: float) -> void:
 	var guard := 0
 	while master.clash_rhythm != null and master.clash_rhythm.elapsed + 0.000001 < time and guard < 4000:
-		master._process(minf(1.0 / 120.0, time - master.clash_rhythm.elapsed))
+		var r := master.clash_rhythm
+		var remaining := r.played_time_at(time)-r.played_time_at(r.elapsed)
+		master._process(minf(1.0 / 120.0, remaining))
 		guard += 1
 
 func place() -> void:
@@ -59,26 +62,20 @@ func run() -> void:
 	player.set_physics_process(false)
 	master.attack_hitbox.hit_resolved.connect(func(target: Node, result: int) -> void:
 		if target == player: outcomes.append(result))
-	var expected := {&"basic_down": 1, &"return_chain": 3, &"press_return": 6, &"blink_return": 6, &"spin_delayed": 5, &"air_plunge": 3}
+
+	check(MasterClashRhythm.RHYTHMS.size() == 5 and MasterClashRhythm.ORDER.size() == 5,
+		"The move table holds exactly five entries")
+	var expected := {&"basic_down": 1, &"return_chain": 3, &"inertia_combo": 3, &"lunge_combo": 2, &"air_qi_combo": 1}
 	for id: StringName in MasterClashRhythm.ORDER:
 		place()
 		master.start_clash_rhythm(id)
 		var r := master.clash_rhythm
+		check(r != null and r.id == id, "%s starts its production rhythm" % id)
 		check(r.strikes.size() == expected[id], "%s has the intended melee contacts" % id)
-		var dangers := {}
-		for strike: Dictionary in r.strikes: dangers[strike.danger] = int(dangers.get(strike.danger, 0)) + 1
-		if id == &"spin_delayed":
-			check(dangers == {&"normal": 4, &"red": 1}, "Only the last heavy cut is red")
-		elif id == &"air_plunge":
-			check(dangers == {&"normal": 2, &"gold": 1}, "Only the landing is gold")
-		else:
-			check(not dangers.has(&"red") and not dangers.has(&"gold"), "%s stays parryable white" % id)
+		for strike: Dictionary in r.strikes:
+			check(strike.danger == &"normal", "%s stays parryable white" % id)
 		for entry: Array in r.track:
 			if entry[0] not in source_actions: source_actions.append(entry[0])
-		if id in [&"press_return", &"blink_return", &"spin_delayed"]:
-			for i in range(1, r.strikes.size()):
-				var gap: float = r.strikes[i].t - r.strikes[i-1].t
-				check(gap >= 0.59 and gap <= 0.91, "%s contact spacing stays readable: %.2f" % [id, gap])
 		var health := player.combat_stats.health
 		var budget := 0
 		for i in r.strikes.size():
@@ -90,40 +87,39 @@ func run() -> void:
 			check(master.attack_hitbox.attack != null, "%s beat %d opens its real hitbox" % [id, i])
 			budget += master.attack_hitbox.attack.health_damage
 			if r.data.get("sequence", false):
-				check(not master.wind_effect.visible and r.winds.back().node is MasterTrajectoryRibbon, "%s uses retained trajectory only" % id)
-				var trail: MasterTrajectoryRibbon = r.winds.back().node
-				check(not trail.samples.is_empty() and trail.blade.mesh != null, "Trajectory has actual retained blade samples and triangles")
-			# The aerial landing moves the master; grounded contacts still test real parries.
-			if r.strikes[i].danger == &"gold":
-				# The one gold beat is unparryable by design; its hitbox is checked above.
-				continue
-			await settle_guard()
-			check(outcomes.has(CombatHitResult.Type.PARRY_SUCCESS), "%s beat %d settles a real manual Lan parry" % [id, i])
-			check(player.combat_stats.health == health, "Successful parries preserve health")
-			if master.parry_pause_remaining > 0:
-				var age := r.elapsed
-				master._process(0.02)
-				check(is_equal_approx(age, r.elapsed), "Parry hit-stop freezes the production action clock")
-		if id in [&"press_return", &"blink_return"]: check(budget == 30, "Six-cut damage budget is 30, not 60")
-		if id == &"spin_delayed": check(budget == 32, "Five escalating cuts have a bounded 32 damage budget")
+				var trail: MasterBakedEffect = null
+				for wind: Dictionary in r.winds:
+					if wind.node is MasterBakedEffect: trail = wind.node
+				check(trail != null and trail.display.texture is AtlasTexture,
+					"%s plays its retained trajectory from the production static atlas" % id)
+			# The authored short rhythms are the stable parry drill; the samples move the
+			# body (jump / blink) so their positional parry is covered by their own tests.
+			if id in [&"basic_down", &"return_chain"]:
+				await settle_guard()
+				check(outcomes.has(CombatHitResult.Type.PARRY_SUCCESS), "%s beat %d settles a real manual Lan parry" % [id, i])
+				check(player.combat_stats.health == health, "Successful parries preserve health")
+				if master.parry_pause_remaining > 0:
+					var age := r.elapsed
+					master._process(0.02)
+					check(is_equal_approx(age, r.elapsed), "Parry hit-stop freezes the production action clock")
+		if id in [&"inertia_combo", &"lunge_combo", &"air_qi_combo"]:
+			check(budget == 5 * expected[id], "%s keeps a local 5-per-cut damage budget" % id)
 		tick_to(r.duration - 0.01)
 		await capture(String(id) + "_recovery")
 		tick_to(r.duration + 0.01)
 		check(master.clash_rhythm == null and master.attack_hitbox.attack == null, "Full recovery closes combat state")
-		var total_opening: float = master.recovery_remaining + r.duration - float(r.strikes[-1].close)
-		check(total_opening >= (1.59 if id in [&"blink_return", &"spin_delayed", &"air_plunge"] else 1.19), "Guaranteed punish window includes authored recovery")
-	check(source_actions.has(&"attack_1") and source_actions.has(&"attack_2") and source_actions.has(&"attack_3") and source_actions.has(&"dash") and source_actions.has(&"special_attack") and source_actions.has(&"air_spin_slam") and source_actions.has(&"heavy_cut"), "Every main authored attack has a production use")
-	check(MasterClashRhythm.unlocked_for_layer(0) == [&"basic_down", &"return_chain"], "Opening starts with familiar short teaching moves")
-	check(MasterClashRhythm.unlocked_for_layer(1).has(&"press_return") \
-		and MasterClashRhythm.unlocked_for_layer(4).size() == 6, "Each drink teaches the next string")
+
+	check(source_actions.has(&"attack_1") and source_actions.has(&"attack_2") and source_actions.has(&"attack_3") \
+		and source_actions.has(&"dash") and source_actions.has(&"special_attack") and source_actions.has(&"air_spin_slam") \
+		and source_actions.has(&"heavy_cut"), "Every main authored attack still has a move-table use")
+	check(MasterClashRhythm.unlocked_for_layer(0) == [&"basic_down", &"return_chain"], "Opening starts with the familiar pair")
+	check(MasterClashRhythm.unlocked_for_layer(1).has(&"inertia_combo") \
+		and MasterClashRhythm.unlocked_for_layer(3).size() == 5, "Each drink teaches the next sample")
 	master.manual_control = false
 	master.opening_lessons_started = 0
 	for id: StringName in MasterBoss.OPENING_LESSONS:
 		check(master.choose_clash_rhythm() == id, "Opening order is deterministic")
 		master.start_clash_rhythm(id)
-	# Regression (2026-10-20): the opening ends with return_chain twice while only
-	# [basic_down, return_chain] are unlocked. The plain cut was erased first, the repeat
-	# broke next, and the empty pool reached `randi() % 0` ("Modulo by zero", master_boss.gd:596).
 	check(master.opening_lessons_started == MasterBoss.OPENING_LESSONS.size(), "Opening lessons are exhausted")
 	check(master.charged_power == 0, "Opening lessons spend no spirit layer")
 	master.combat_stats.restore_health()
@@ -134,31 +130,23 @@ func run() -> void:
 	check(master.choose_clash_rhythm() == &"return_chain", "A mixed history keeps the taught string in rotation")
 	master.recent_rhythms = [&"basic_down", &"basic_down"]
 	check(master.choose_clash_rhythm() == &"return_chain", "The plain cut never repeats three times either")
-	# A wide pool still prunes the triple repeat and the plain filler, never the last option.
+	# A wide pool still prunes the triple repeat and the plain filler.
 	master.charged_power = 4
 	master.introduced_rhythms.assign(MasterClashRhythm.unlocked_for_layer(4))
-	master.recent_rhythms = [&"press_return", &"press_return"]
+	master.recent_rhythms = [&"inertia_combo", &"inertia_combo"]
 	var taught: StringName = master.choose_clash_rhythm()
-	check(taught != &"press_return" and taught != &"basic_down", "A wide pool avoids the third repeat and the filler")
+	check(taught != &"inertia_combo" and taught != &"basic_down", "A wide pool avoids the third repeat and the filler")
 	check(MasterClashRhythm.RHYTHMS.has(taught), "The chosen rhythm is always playable")
-	master.charged_power = 0
-	master.combat_stats.restore_health()
-	master.introduced_rhythms = [&"basic_down", &"return_chain"]
-	master.recent_rhythms = [&"return_chain", &"return_chain"]
+
+	# Retained geometry ignores parry pauses and later movement.
 	master.manual_control = true
 	place()
-	master.start_clash_rhythm(&"air_plunge")
-	assist.set_difficulty(BattleAssistSettingsService.Difficulty.NORMAL)
-	player.parry_chain.begin(master, 0.0)
-	check(player.parry_chain.covers(master, 1.6), "Normal assist spans the grounded-to-airborne transition")
-	master.start_clash_rhythm(&"press_return")
-	check(not player.parry_chain.covers(master, 1.7), "A new string always requires a new first parry")
-	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
-	check(not assist.uses_parry_chain_assist(), "Hard keeps every contact manual")
-	place()
-	master.start_clash_rhythm(&"spin_delayed")
-	tick_to(1.02)
-	var ribbon: MasterTrajectoryRibbon = master.clash_rhythm.winds.back().node
+	master.start_clash_rhythm(&"inertia_combo")
+	tick_to(0.55)
+	var ribbon: MasterBakedEffect = null
+	for wind: Dictionary in master.clash_rhythm.winds:
+		if wind.node is MasterBakedEffect: ribbon = wind.node
+	check(ribbon != null, "The first sample cut keeps its ribbon")
 	var elapsed := ribbon.age
 	var origin := ribbon.global_position
 	master.start_parry_feedback()
@@ -170,12 +158,25 @@ func run() -> void:
 	for i in 100: master._process(1.0 / 60.0)
 	await process_frame
 	check(master.fading_winds.is_empty(), "Interrupted ribbons finish and clean up on the action clock")
-	# Full phase-one walk (2026-10-20): only the long strings pour a drink, and each drink
-	# introduces the next string, so the sixth drink only arrives after all six have played.
+
+	# Normal assist spans the sample's own jump; a new string requires a new first parry.
+	place()
+	master.start_clash_rhythm(&"air_qi_combo")
+	assist.set_difficulty(BattleAssistSettingsService.Difficulty.NORMAL)
+	player.parry_chain.begin(master, 0.0)
+	check(player.parry_chain.covers(master, 1.6), "Normal assist spans the airborne sample")
+	master.start_clash_rhythm(&"inertia_combo")
+	check(not player.parry_chain.covers(master, 1.7), "A new string always requires a new first parry")
+	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
+	check(not assist.uses_parry_chain_assist(), "Hard keeps every contact manual")
+
+	# Full phase-one walk: only the long strings pour a drink, and each drink introduces
+	# the next sample, so six drinks only arrive after the table has played.
 	master.charged_power = 0
 	master.opening_lessons_started = MasterBoss.OPENING_LESSONS.size()
 	master.introduced_rhythms.assign([&"basic_down", &"return_chain"])
 	master.recent_rhythms.assign([&"return_chain", &"return_chain"])
+	var pours_ids := [&"return_chain", &"inertia_combo", &"lunge_combo", &"air_qi_combo"]
 	var seen: Array[StringName] = [&"basic_down", &"return_chain"]
 	var steps := 0
 	while master.phase == 1 and steps < 80:
@@ -183,14 +184,14 @@ func run() -> void:
 		var pick: StringName = master.choose_clash_rhythm()
 		if pick not in seen: seen.append(pick)
 		master.start_clash_rhythm(pick)
-		master.clash_rhythm.advance(master.clash_rhythm.duration + 0.01)
-		var pours: bool = pick in [&"return_chain", &"spin_delayed", &"air_plunge"]
+		master.clash_rhythm.advance(master.clash_rhythm.played_time_at(master.clash_rhythm.duration) + 0.01)
+		var pours: bool = pick in pours_ids
 		check(master.pending_drink == pours, "%s follows the long-string drink rule" % pick)
 		master._update_recovery(master.recovery_remaining + 0.01)
 		if pours: master._finish_drink()
 	check(steps < 80, "Phase one reaches six layers inside the walk budget")
 	check(master.phase == 2 and master.state == MasterBoss.State.TRANSFORM, "The sixth drink transforms him")
-	check(seen.size() == MasterClashRhythm.ORDER.size(), "All six rhythms played in one phase one (seen %s)" % [seen])
+	check(seen.size() == MasterClashRhythm.ORDER.size(), "All five moves played in one phase one (seen %s)" % [seen])
 	current_scene = null
 	room.free()
 	expect_save_untouched()

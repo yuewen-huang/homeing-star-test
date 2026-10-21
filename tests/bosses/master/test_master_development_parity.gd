@@ -28,11 +28,9 @@ func run() -> void:
 	check(room.adapter.master.scale == expected_scale, "Development master inherits the production encounter scale")
 	check(room.combo_picker.item_count == 3 and not room.segment_row.visible, "Formal combat and source-art modes are separate")
 	var observer_health := room.player.combat_stats.health
+	check(room.library_picker.visible == false, "The five-move table needs no secondary move picker")
 	for i in MasterClashRhythm.ORDER.size():
-		if i < 4: room.play_action(i)
-		else:
-			room.select_combo_library(i - 4)
-			room.play_action(4)
+		room.play_action(i)
 		var master: MasterBoss = room.adapter.master
 		master.set_process(false)
 		master.attack_hitbox.set_physics_process(false)
@@ -42,17 +40,19 @@ func run() -> void:
 		var rhythm: MasterClashRhythm = master.clash_rhythm
 		var duration := rhythm.duration
 		tick_to(float(rhythm.strikes[0].t) - 0.15)
-		if i in [0, 5]: await capture("rhythm_%d_warning" % i)
+		if i in [0, 4]: await capture("rhythm_%d_warning" % i)
 		tick_to(float(rhythm.strikes[0].t) + 0.02)
 		check(master.attack_hitbox.attack != null, "Production damage window opens on the first rhythm beat")
 		check(room.adapter.action_sample().clip == String(rhythm.id), "Readout reports the live production rhythm")
-		if i in [0, 5]: await capture("rhythm_%d_active" % i)
+		if i in [0, 4]: await capture("rhythm_%d_active" % i)
 		tick_to(duration - 0.01)
-		if i in [0, 5]: await capture("rhythm_%d_recovery" % i)
+		if i in [0, 4]: await capture("rhythm_%d_recovery" % i)
 		check(not room.dummy.contacts.is_empty(), "Production probes reach the dummy for %s" % rhythm.id)
-		if i == 5:
-			var qi_contacts := room.dummy.contacts.filter(func(contact: Dictionary) -> bool: return String(contact.id).begins_with("clash_air_qi"))
-			check(qi_contacts.size() == 3, "Dummy samples all three production sword-qi projectiles")
+		if rhythm.id == &"air_qi_combo":
+			# The three projectiles carry indexes 100-102; the landing melee is index 0
+			# and its id also starts with the move's prefix.
+			var qi_contacts := room.dummy.contacts.filter(func(contact: Dictionary) -> bool: return String(contact.id).contains("_segment_10"))
+			check(qi_contacts.size() == 3, "Dummy samples all three sword-qi projectiles")
 	room.select_combo(2)
 	check(room.segment_row.visible and room.adapter.action_names()[0].contains("旧稿"), "Legacy material is clearly labeled and exposes source segments only here")
 	room.play_action(0)

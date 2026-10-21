@@ -113,7 +113,6 @@ func run() -> void:
 	_release_inputs()
 	check(cue_captured, "First blade cue is rendered and captured")
 	check(damage_taken == 0, "No health loss during the directed takes (%d)" % damage_taken)
-	check(gold_landed and dodges > 0 and damage_taken == 0, "Gold landing played after real dodges, with no health loss")
 	expect_save_untouched()
 	FileAccess.open(output.path_join("events.json"), FileAccess.WRITE).store_string(JSON.stringify(events, "\t"))
 	finish("MASTER SHOWCASE")

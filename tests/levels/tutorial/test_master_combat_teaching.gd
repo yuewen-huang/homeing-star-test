@@ -45,14 +45,13 @@ func run() -> void:
 	check(not assist.uses_parry_chain_assist(), "Nightmare uses manual parries")
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.NORMAL)
 
-	master.start_clash_rhythm(&"spin_delayed")
+	# The three motion samples are not taught by a dedicated video; they still start on
+	# the production action clock without queueing a removed lesson.
+	teaching._pending.clear()
+	master.start_clash_rhythm(&"inertia_combo")
 	teaching._process(0)
-	check(CombatLessonCatalog.text(&"master_heavy_chain").contains("五刀"), "Heavy chain explains the fixed five-cut pattern")
-	await capture("teaching_red")
-	master.start_clash_rhythm(&"air_plunge")
-	teaching._process(0)
-	check(CombatLessonCatalog.text(&"master_air_chain").contains("三道剑气"), "Air chain explains the ordinary parry sequence")
-	await capture("teaching_gold")
+	check(teaching._pending.is_empty(), "Motion samples queue no retired chain lesson")
+	await capture("teaching_sample")
 	master._interrupt_for_special(0)
 	master.state = MasterBoss.State.CHASE
 	master.combat_stats.restore_poise()
