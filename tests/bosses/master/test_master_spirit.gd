@@ -37,7 +37,7 @@ func run() -> void:
 		var id: StringName = &"return_chain" if i % 2 else &"inertia_combo"
 		master.start_clash_rhythm(id)
 		# Finish the real rhythm without needing to let its hardest hit injure Lan.
-		master.clash_rhythm.advance(master.clash_rhythm.duration + 0.01)
+		master.clash_rhythm.advance(master.clash_rhythm.played_time_at(master.clash_rhythm.duration) + 0.01)
 		check(master.pending_drink, "%s completion queues its drink even without a landed hit" % id)
 		check(master.recovery_remaining >= 0.0, "Authored recovery has a valid remaining opening")
 		master._update_recovery(master.recovery_remaining + 0.01)

@@ -31,6 +31,12 @@ func place() -> void:
 	player.set_physics_process(false)
 
 func settle_guard() -> void:
+	# Test the actual moving blade, which no longer fills the old broad rectangle.
+	var collision := master.attack_collision_shape
+	var center := Vector2.ZERO
+	for point in (collision.shape as ConvexPolygonShape2D).points: center += point
+	center /= float((collision.shape as ConvexPolygonShape2D).points.size())
+	player.position = collision.to_global(center) + Vector2(0, 43)
 	player.defense_state = LanPlayer.DefenseState.NONE
 	player.defense_recoil_active = false
 	player.hit_reaction_active = false
@@ -87,11 +93,11 @@ func run() -> void:
 			check(master.attack_hitbox.attack != null, "%s beat %d opens its real hitbox" % [id, i])
 			budget += master.attack_hitbox.attack.health_damage
 			if r.data.get("sequence", false):
-				var trail: MasterBakedEffect = null
+				var trail: MasterTrajectoryRibbon = null
 				for wind: Dictionary in r.winds:
-					if wind.node is MasterBakedEffect: trail = wind.node
-				check(trail != null and trail.display.texture is AtlasTexture,
-					"%s plays its retained trajectory from the production static atlas" % id)
+					if wind.node is MasterTrajectoryRibbon: trail = wind.node
+				check(trail != null and not trail.samples.is_empty(),
+					"%s grows its live retained blade trajectory" % id)
 			# The authored short rhythms are the stable parry drill; the samples move the
 			# body (jump / blink) so their positional parry is covered by their own tests.
 			if id in [&"basic_down", &"return_chain"]:
@@ -143,9 +149,9 @@ func run() -> void:
 	place()
 	master.start_clash_rhythm(&"inertia_combo")
 	tick_to(0.55)
-	var ribbon: MasterBakedEffect = null
+	var ribbon: MasterTrajectoryRibbon = null
 	for wind: Dictionary in master.clash_rhythm.winds:
-		if wind.node is MasterBakedEffect: ribbon = wind.node
+		if wind.node is MasterTrajectoryRibbon: ribbon = wind.node
 	check(ribbon != null, "The first sample cut keeps its ribbon")
 	var elapsed := ribbon.age
 	var origin := ribbon.global_position

@@ -162,6 +162,9 @@ def main():
         clip["art"] = "user_edited_pre_painted_vfx"
         clip["source_aseprite"] = ase_path.name
         clip.pop("source_strip", None)
+        # Always export each source under its own filename before the runtime
+        # facing correction below; rerunning the importer must be idempotent.
+        clip["pages"] = [name + "_00.png"]
         columns = int(clip["columns"])
         page = Image.new("RGBA", (new_w * columns, new_h * math.ceil(len(frames) / columns)), (0, 0, 0, 0))
         for index, frame in enumerate(frames):
@@ -169,6 +172,14 @@ def main():
         page.save(GAME_ASSETS / clip["pages"][0], optimize=True)
         total_frames += len(frames)
         print(f"{name}: {len(frames)} frames, {new_w}x{new_h}, source duration {clip['duration']:.3f}s, pivot {clip['pivot']}")
+
+    # The artist's first lunge-cut files are labelled in the opposite facing.
+    # Swap their artwork and canvas pivots together, keeping the motion's hilt
+    # anchors and timing attached to the intended gameplay direction.
+    left = manifest["clips"]["lunge_combo/cut_1_left"]
+    right = manifest["clips"]["lunge_combo/cut_1_right"]
+    for field in ("pages", "pivot", "source_aseprite"):
+        left[field], right[field] = right[field], left[field]
 
     manifest["art_pipeline"] = "aseprite_manual_edit/pre_painted_compact_109"
     (GAME_ASSETS / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

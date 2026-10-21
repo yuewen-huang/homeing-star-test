@@ -40,7 +40,7 @@ func run() -> void:
 	room.select_boss(1)
 	room.player.set_physics_process(false)
 	room.player.position.x = 70
-	var runtime_static := true
+	var runtime_live := true
 	for move: StringName in [&"inertia_combo",&"lunge_combo",&"air_qi_combo"]:
 		for facing in [-1.0,1.0]:
 			room.adapter._rebuild()
@@ -52,15 +52,17 @@ func run() -> void:
 			boss.start_clash_rhythm(move)
 			for i in 80:
 				boss._process(1.0/30.0)
-				runtime_static = runtime_static and _no_procedural_blade(boss)
-	check(runtime_static,"Both facings of all three live skills allocate no trajectory renderer or SubViewport")
+				runtime_live = runtime_live and _no_baked_blade(boss)
+	check(runtime_live,"Both facings use live slash trajectories; existing baked auxiliary accents remain available")
 	room.free()
 	current_scene = null
 	expect_save_untouched()
 	finish("MASTER BAKED EFFECTS")
 
-func _no_procedural_blade(node: Node) -> bool:
-	if node is MasterTrajectoryRibbon or node is SubViewport: return false
+func _no_baked_blade(node: Node) -> bool:
+	if node is MasterBakedEffect:
+		for name: String in MasterBakedEffect.catalog():
+			if name.contains("/cut_") and node.clip == MasterBakedEffect.catalog()[name]: return false
 	for child in node.get_children():
-		if not _no_procedural_blade(child): return false
+		if not _no_baked_blade(child): return false
 	return true

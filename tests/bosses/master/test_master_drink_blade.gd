@@ -93,7 +93,7 @@ func run() -> void:
 
 	tick_to(5.00)
 	var second_key := master.get_parry_chain_key()
-	check(first_key != second_key, "Every beat is its own parry-chain key, so normal assist cannot chain them")
+	check(first_key != second_key, "Pressure beats have independent parry keys")
 	check(master.attack_hitbox.attack != null, "The second beat opens its own hitbox")
 	await capture("blade_beat_1")
 
@@ -102,6 +102,12 @@ func run() -> void:
 	check(master.attack_hitbox.attack != null, "The fourth beat is active on its angle")
 	check(sword._edge_flash > 0.0, "The last three beats are edge contacts")
 	check((master.attack_collision_shape.shape as RectangleShape2D).size.x > 1000.0, "The blade beats are judged by the blade body")
+	var edge_key := master.get_parry_chain_key()
+	check(edge_key != second_key, "The blade group starts separately from the pressure beats")
+	tick_to(8.65)
+	check(master.get_parry_chain_key() == edge_key, "The fifth beat belongs to the blade group")
+	tick_to(9.15)
+	check(master.get_parry_chain_key() == edge_key, "The sixth beat belongs to the blade group")
 
 	tick_to(9.50)
 	await capture("blade_ground")
