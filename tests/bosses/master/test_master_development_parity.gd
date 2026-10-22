@@ -3,9 +3,12 @@ var room: BossDevelopmentRoom
 
 func tick_to(time: float) -> void:
 	var master: MasterBoss = room.adapter.master
-	while master.clash_rhythm != null and master.clash_rhythm.elapsed < time:
+	var guard := 0
+	while master.clash_rhythm != null and master.clash_rhythm.elapsed + 0.000001 < time and guard < 4000:
 		master._process(minf(1.0 / 120, time - master.clash_rhythm.elapsed))
 		room._physics_process(0)
+		guard += 1
+	check(guard < 4000, "Preview clock reaches the requested action time")
 
 func capture(label: String) -> void:
 	if DisplayServer.get_name() == "headless": return
@@ -29,6 +32,11 @@ func run() -> void:
 	check(room.combo_picker.item_count == 3 and not room.segment_row.visible, "Formal combat and source-art modes are separate")
 	var observer_health := room.player.combat_stats.health
 	check(room.library_picker.visible == false, "The five-move table needs no secondary move picker")
+	check(room.adapter.action_names().size() == 4 and not room.ultimate_button.visible and room.blade_button.visible and room.smear_button.visible,
+		"Four formal actions omit the retired return chain while preserving independent ultimate and combo shortcuts")
+	room.play_action(4)
+	check(room.adapter.master.clash_rhythm == null, "The retired fifth action shortcut cannot index outside the four-move table")
+	check(not MasterClashRhythm.RHYTHMS.has(&"return_chain"), "The retired return chain cannot be started as a production rhythm")
 	for i in MasterClashRhythm.ORDER.size():
 		room.play_action(i)
 		var master: MasterBoss = room.adapter.master
@@ -49,10 +57,8 @@ func run() -> void:
 		if i in [0, 4]: await capture("rhythm_%d_recovery" % i)
 		check(not room.dummy.contacts.is_empty(), "Production probes reach the dummy for %s" % rhythm.id)
 		if rhythm.id == &"air_qi_combo":
-			# The three projectiles carry indexes 100-102; the landing melee is index 0
-			# and its id also starts with the move's prefix.
-			var qi_contacts := room.dummy.contacts.filter(func(contact: Dictionary) -> bool: return String(contact.id).contains("_segment_10"))
-			check(qi_contacts.size() == 3, "Dummy samples all three sword-qi projectiles")
+			check(rhythm is MasterAnnotatedCombo and rhythm.strikes.size() == 8 and rhythm.projectiles.is_empty(),
+				"The aerial slot plays the reviewed eight-cut melee string")
 	room.select_combo(2)
 	check(room.segment_row.visible and room.adapter.action_names()[0].contains("旧稿"), "Legacy material is clearly labeled and exposes source segments only here")
 	room.play_action(0)

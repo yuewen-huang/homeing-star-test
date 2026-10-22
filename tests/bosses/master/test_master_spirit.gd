@@ -34,7 +34,7 @@ func run() -> void:
 	check(not master.spirit_aura.visible, "Zero spirit has no blue aura")
 	check(not master.use_sobering_item(), "Sobering item refuses phase one")
 	for i in range(1, master.CHARGED_POWER_MAX + 1):
-		var id: StringName = &"return_chain" if i % 2 else &"inertia_combo"
+		var id: StringName = &"lunge_combo" if i % 2 else &"inertia_combo"
 		master.start_clash_rhythm(id)
 		# Finish the real rhythm without needing to let its hardest hit injure Lan.
 		master.clash_rhythm.advance(master.clash_rhythm.played_time_at(master.clash_rhythm.duration) + 0.01)
