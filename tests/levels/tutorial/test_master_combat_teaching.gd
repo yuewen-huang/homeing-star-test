@@ -34,10 +34,7 @@ func run() -> void:
 	check(teaching.lesson_player != null, "Opening owns the video lesson player")
 	teaching._process(0)
 	await capture("teaching_opening")
-	for id: StringName in MasterBoss.OPENING_LESSONS:
-		check(master.choose_clash_rhythm() == id, "Opening demonstrates %s in order" % id)
-		master.start_clash_rhythm(id)
-	check(master.opening_lessons_started == 3, "Opening progresses when an attack actually starts")
+	check(teaching._pending.is_empty(), "No phase-one attack lesson is queued")
 	check(CombatLessonCatalog.text(&"parry_chain", true).contains("普通难度"), "Normal video dialogue explains automatic follow-up parries")
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	check(not assist.uses_parry_chain_assist(), "Hard lesson uses manual parries")
@@ -45,13 +42,6 @@ func run() -> void:
 	check(not assist.uses_parry_chain_assist(), "Nightmare uses manual parries")
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.NORMAL)
 
-	# The three motion samples are not taught by a dedicated video; they still start on
-	# the production action clock without queueing a removed lesson.
-	teaching._pending.clear()
-	master.start_clash_rhythm(&"inertia_combo")
-	teaching._process(0)
-	check(teaching._pending.is_empty(), "Motion samples queue no retired chain lesson")
-	await capture("teaching_sample")
 	master._interrupt_for_special(0)
 	master.state = MasterBoss.State.CHASE
 	master.combat_stats.restore_poise()

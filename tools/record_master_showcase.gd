@@ -2,8 +2,6 @@ extends "../tests/support/harness.gd"
 ## Directed production-room takes. Only button presses drive Lan; hits/parries/counters
 ## settle through production collision and feedback. Each take resets between clips.
 
-const IDS := [&"basic_down", &"return_chain", &"inertia_combo", &"lunge_combo", &"air_qi_combo"]
-const TITLES := ["一斩 · 首刀蓝光 · 看准震刀", "回身三连 · 稳拍接刀", "重剑惯性连斩 · 动作样板", "原稿突进 · 动作样板", "跃空剑气 · 动作样板"]
 var room: Node2D
 var master: MasterBoss
 var lan: LanPlayer
@@ -67,25 +65,6 @@ func run() -> void:
 			_log("evade"))
 	master.attack_hitbox.hit_resolved.connect(_contact)
 	running = true
-	for i in IDS.size():
-		_reset_take()
-		stage = String(IDS[i])
-		caption.text = "脚本动作演示 · 普通难度 · 无敌关闭\n" + TITLES[i]
-		_log("take_start")
-		await _wait(0.8)
-		var before := total_parries
-		master.start_clash_rhythm(IDS[i])
-		driving = true
-		var ticks := 0
-		while (master.clash_rhythm != null or lan.defense_state != LanPlayer.DefenseState.NONE) and ticks < 900:
-			await physics_frame
-			ticks += 1
-		driving = false
-		_stop_move()
-		check([1, 3, -1, -1, -1][i] < 0 or total_parries - before == [1, 3, -1, -1, -1][i], "%s: real parry count %d" % [stage, total_parries-before])
-		await _wait(0.7)
-		_log("take_end")
-
 	# Phase-two red teleport counter, using its ordinary frame-driven attack.
 	_reset_take()
 	stage = "phase_2_transform"
@@ -115,7 +94,6 @@ func run() -> void:
 	_log("take_end")
 	running = false
 	_release_inputs()
-	check(cue_captured, "First blade cue is rendered and captured")
 	check(damage_taken == 0, "No health loss during the directed takes (%d)" % damage_taken)
 	expect_save_untouched()
 	FileAccess.open(output.path_join("events.json"), FileAccess.WRITE).store_string(JSON.stringify(events, "\t"))
@@ -161,54 +139,15 @@ func _physics_process(delta: float) -> bool:
 		_log("hurt")
 	last_health = lan.combat_stats.health
 	if not driving: return false
-	if master.clash_rhythm != null:
-		_drive_rhythm(master.clash_rhythm)
-	elif phase2_action != &"" and master.state == MasterBoss.State.PHASE_2_ATTACK:
+	if phase2_action != &"" and master.state == MasterBoss.State.PHASE_2_ATTACK:
 		var frame := float(master.animated_sprite.frame) + master.animated_sprite.frame_progress
 		var left := (6.0 - frame) / float(master.animated_sprite.sprite_frames.get_animation_speed(phase2_action))
 		if left >= 0.0 and left <= 0.20 and not pressed.has("phase2_red"):
 			pressed["phase2_red"] = true
 			_press(&"parry")
-	if not cue_captured and stage == "basic_down" and lan.parry_cue.time_to_contact <= 0.30 and lan.parry_cue.should_show():
-		lan.parry_cue._process(0.0)
-		if lan.parry_cue._display.is_visible_in_tree():
-			cue_captured = true
-			_snapshot("first_blade_cue")
 	return false
 
-func _drive_rhythm(r: MasterClashRhythm) -> void:
-	for i in r.strikes.size():
-		var strike := r.strikes[i]
-		var left := float(strike.t) - r.elapsed
-		if strike.done or left < 0.0 or pressed.has(i): continue
-		if strike.danger == &"gold":
-			if left <= 0.14:
-				pressed[i] = true
-				_dodge_near_master()
-		elif left <= 0.20:
-			pressed[i] = true
-			_press(&"parry")
-	for candidate in r.projectiles:
-		if not is_instance_valid(candidate) or candidate.is_queued_for_deletion(): continue
-		var qi := candidate as MasterSwordQi
-		var key := qi.get_instance_id()
-		if pressed.has(key): continue
-		var shape := lan.get_node("Hurtbox/CollisionShape2D") as CollisionShape2D
-		var axis := qi.velocity.normalized()
-		var half := shape.shape.get_rect().size * shape.global_scale.abs() * 0.5
-		var target_radius := absf(axis.x) * half.x + absf(axis.y) * half.y
-		var left := ((shape.global_position - qi.global_position).dot(axis) - MasterSwordQi.HITBOX_SIZE.x * 0.5 - target_radius) / MasterSwordQi.SPEED
-		if left >= 0.0 and left <= 0.20:
-			pressed[key] = true
-			# Parry-success recovery cannot be dodge-cancelled. Evade these qi
-			# rather than forcing a cancel before the unavoidable gold landing.
-			_dodge_near_master()
-	# Re-approach between grounded contacts using movement input, without teleporting.
-	var gap := master.position.x - lan.position.x
-	if not r.data.get("air", false) and not r.data.get("blink", false) and absf(gap) > 155.0:
-		_set_move(&"ui_right" if gap > 0.0 else &"ui_left")
-	else:
-		_stop_move()
+
 
 func _dodge_near_master() -> void:
 	# Alternate inward/outward so repeated dodges keep the fight in camera range.

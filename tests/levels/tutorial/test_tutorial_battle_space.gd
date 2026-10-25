@@ -1,20 +1,10 @@
 extends "../../support/harness.gd"
-## Room integration on current rhythms. test_master_clash_rhythm covers all six
-## source tracks, red/gold contacts, wind art, health unlocks and AI choices.
+## Room bounds, player contacts and retained transformation.
 var room: Node2D
 var player: LanPlayer
 var master: Node2D
 
-func start_beat() -> void:
-	master._interrupt_for_special(0.0)
-	master.state = master.State.CHASE
-	master.position = Vector2(260, 555)
-	player.position = Vector2(110, 555)
-	player.finish_hit_reaction()
-	player.finish_defense()
-	master.start_clash_rhythm(&"basic_down")
-	while master.clash_rhythm.elapsed + 0.000001 < 0.60:
-		master._process(minf(1.0 / 120.0, 0.60 - master.clash_rhythm.elapsed))
+
 
 func run() -> void:
 	use_memory_progress()
@@ -52,27 +42,6 @@ func run() -> void:
 	room._process(0)
 	check(camera.position.x == 640 and master.position.x == 0, "Player-led camera clamps without dragging master")
 	check(absf(master.position.x - camera.position.x) > 640 - 96, "Master may leave player-led camera")
-	start_beat()
-	check(master.state == master.State.PHASE_1_COMBO and master.attack_hitbox.attack != null, "Real rhythm opens damage on beat")
-	check(master.wind_effect.visible and master.wind_effect.frame == 8, "Basic beat uses approved painted wind F08")
-	var health := player.combat_stats.health
-	await physics_frame
-	await physics_frame
-	master.attack_hitbox._physics_process(0)
-	check(player.combat_stats.health < health, "Production master hitbox damages Lan")
-	var damaged := player.combat_stats.health
-	master.attack_hitbox._physics_process(0)
-	check(player.combat_stats.health == damaged, "One strike cannot damage Lan twice")
-	start_beat()
-	player.start_parry(true)
-	var poise: int = master.combat_stats.poise
-	await physics_frame
-	await physics_frame
-	master.attack_hitbox._physics_process(0)
-	check(master.combat_stats.poise < poise, "Real parry damages master poise")
-	check(player.defense_state == player.DefenseState.PARRY_SUCCESS, "Ordinary beat gives ordinary parry")
-	check(master.parry_pause_remaining > 0, "Parry pauses rhythm on action time")
-	master._interrupt_for_special(0)
 	player.finish_defense()
 	player.cancel_uncommitted_attack_effects()
 	player.attack_state = player.AttackState.NONE
@@ -93,7 +62,9 @@ func run() -> void:
 	for stack in range(1, master.CHARGED_POWER_MAX + 1):
 		master._finish_drink()
 		check(master.charged_power == stack, "Completed drink settles one charged-power stack")
-	check(master.phase == 2 and master.state == master.State.TRANSFORM and master.combat_stats.health == master.combat_stats.max_health, "Six drinks start phase two with full health")
+	check(master.phase == 1 and master.charged_power == 4, "Four drinks retain phase one")
+	master.combat_stats.apply_health_damage(master.combat_stats.health)
+	check(master.phase == 2 and master.state == master.State.TRANSFORM and master.combat_stats.health == master.combat_stats.max_health, "Depleted phase-one health starts phase two with full health")
 	master._on_body_animation_finished()
 	check(master.state == master.State.PHASE_2_IDLE and master.animated_sprite.animation == &"phase_2_idle", "Transformation returns to second-phase idle")
 	expect_save_untouched()

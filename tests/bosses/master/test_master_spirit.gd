@@ -16,9 +16,6 @@ func run() -> void:
 	var save := use_memory_progress()
 	save.add_item(ItemCatalog.HANGOVER_PILL)
 	save.equip_special_item(ItemCatalog.HANGOVER_PILL)
-	# The fifth drink is now the spirit-blade exam; the spirit test only checks layers,
-	# so keep Lan alive through it instead of asking her to parry six full-arena cuts.
-	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_player_invincible(true)
 	room = load("res://scenes/levels/tutorial/tutorial_battle_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
@@ -34,17 +31,10 @@ func run() -> void:
 	check(not master.spirit_aura.visible, "Zero spirit has no blue aura")
 	check(not master.use_sobering_item(), "Sobering item refuses phase one")
 	for i in range(1, master.CHARGED_POWER_MAX + 1):
-		var id: StringName = &"lunge_combo" if i % 2 else &"inertia_combo"
-		master.start_clash_rhythm(id)
-		# Finish the real rhythm without needing to let its hardest hit injure Lan.
-		master.clash_rhythm.advance(master.clash_rhythm.played_time_at(master.clash_rhythm.duration) + 0.01)
-		check(master.pending_drink, "%s completion queues its drink even without a landed hit" % id)
-		check(master.recovery_remaining >= 0.0, "Authored recovery has a valid remaining opening")
-		master._update_recovery(master.recovery_remaining + 0.01)
-		check(master.state == MasterBoss.State.DRINK, "Recovery actually starts the drink")
+		master._start_drink()
+		check(master.state == MasterBoss.State.DRINK, "Non-attacking drink remains playable")
 		check(CombatLessonCatalog.text(&"spirit").contains("蓝色") and not CombatLessonCatalog.text(&"spirit").contains("变身"), "First-drink dialogue describes only the visible spirit")
 		var ticks := 0
-		# The fifth drink runs the full spirit-blade exam before the layer lands.
 		while master.state == MasterBoss.State.DRINK and ticks < 1100:
 			await physics_frame
 			ticks += 1
@@ -55,8 +45,10 @@ func run() -> void:
 			check(master.spirit_aura.spirit_material.get_shader_parameter("aura_colour") == Color("248cff"), "Phase-one aura is blue")
 			master.play_idle()
 			await capture("spirit_blue_%d" % i)
-	check(master.phase == 2 and master.state == MasterBoss.State.TRANSFORM, "Six completed drinks enter phase two")
-	check(master.charged_power == master.CHARGED_POWER_MAX, "Phase two starts with the full six layers")
+	check(master.phase == 1 and master.charged_power == 4, "Four completed drinks cap spirit without ending phase one")
+	master.combat_stats.apply_health_damage(master.combat_stats.health)
+	check(master.phase == 2 and master.state == MasterBoss.State.TRANSFORM, "Depleted health enters phase two")
+	check(master.charged_power == master.CHARGED_POWER_MAX, "Phase two retains the four spirit layers")
 	check(is_zero_approx(master.phase_2_buff_remaining), "Layers alone never grant the phase-two buff")
 	while master.state == MasterBoss.State.TRANSFORM: await physics_frame
 	master._start_phase_2_howl()

@@ -26,8 +26,6 @@ func freeze_specimen() -> void:
 	room.adapter.boss.set_physics_process(false)
 	if room.selected_boss == 0:
 		(room.adapter.boss as DeerBoss).vfx.set_process(false)
-	else:
-		room.adapter.boss.get_node("CombatTimeline").set_process_internal(false)
 
 func advance(seconds: float) -> void:
 	for tick in ceili(seconds * 60):
@@ -38,7 +36,6 @@ func advance(seconds: float) -> void:
 		else:
 			var master = room.adapter.boss
 			master._process(1.0 / 60)
-			if master.combat_timeline.is_playing(): master.combat_timeline.advance(1.0 / 60)
 		room._physics_process(1.0 / 60)
 
 func capture(name: String) -> void:
@@ -125,28 +122,15 @@ func run() -> void:
 	check(master.manual_control and room.selected_boss == 1, "Dropdown switches to the master manual adapter")
 	at = master.position
 	advance(12)
-	check(master.state == master.State.CHASE and master.position == at and not master.combat_timeline.is_playing(), "Master remains idle without auto chasing or selecting attacks")
+	check(master.state == master.State.CHASE and master.position == at and master.attack_hitbox.attack == null, "Master remains idle without auto chasing or selecting attacks")
 	await capture("master_idle")
 	room.light_button.pressed.emit()
 	master = room.adapter.boss
 	freeze_specimen()
-	check(master.combat_timeline.current_animation == &"attack_1", "Light button runs the master's production timeline")
-	advance(0.2)
-	await capture("master_light")
+	check(master.animated_sprite.animation == &"idle", "First phase offers non-attacking idle")
 	key(KEY_2)
 	master = room.adapter.boss
-	freeze_specimen()
-	check(master.combat_timeline.current_animation == &"attack_2" and is_zero_approx(master.combat_timeline.current_animation_position), "Key 2 interrupts and restarts as master heavy attack")
-	advance(0.3)
-	await capture("master_heavy")
-	room.show_hitboxes = true
-	advance(0.55)
-	check(master.attack_hitbox.attack != null, "Hitbox overlay capture uses an active production attack segment")
-	check(not room.dummy.contacts.is_empty(), "Master production attack also reaches the shared wooden dummy")
-	await capture("master_active_hitbox")
-	room.show_hitboxes = false
-	advance(5)
-	check(not master.combat_timeline.is_playing() and master.attack_hitbox.attack == null and master.state == master.State.CHASE, "Master returns to manual idle after recovery")
+	check(master.animated_sprite.animation == &"walk_start" and master.attack_hitbox.attack == null, "Second phase-one button previews only walk startup")
 	var phase := int(master.phase)
 	key(KEY_F7)
 	master._unhandled_key_input(InputEventKey.new())

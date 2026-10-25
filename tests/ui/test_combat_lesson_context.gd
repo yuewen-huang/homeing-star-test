@@ -21,8 +21,6 @@ func verify_clip(path: String, scene: String, manifest: Dictionary) -> void:
 	check(clip.scene == scene, "Recorded scene matches trigger: %s" % file)
 	if file.begins_with("phase_2_") or file == "ultimate.ogv":
 		check(int(clip.get("phase", 0)) == 2, "Second-form lesson uses the second-form body")
-	if file.begins_with("master_") and file.ends_with("_chain.ogv"):
-		check(clip.get("trajectory_sha256", "") == FileAccess.get_sha256("res://scripts/bosses/master/master_blade_trajectories.gd"), "Lesson recording matches the current source-blade profiles")
 	var hash := HashingContext.new()
 	hash.start(HashingContext.HASH_SHA256)
 	hash.update(FileAccess.get_file_as_bytes(path))

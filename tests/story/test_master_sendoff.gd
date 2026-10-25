@@ -127,12 +127,53 @@ func run() -> void:
 		for i in 5: gift_dialogue.advance()
 		gift.reveal._finish_reveal()
 	check(save.get_item_count(ItemCatalog.SPIRIT_PENDANT) == 1, "Recovery grants exactly one pendant")
+	await process_frame
+	check(master._rematch_choices != null and town.player.input_frozen, "Town gift recovery ends with rematch choices")
+	master._rematch_choices.choose(1)
 	master._unhandled_input(key)
 	dialogue = master._dialogue
 	check(dialogue != null and dialogue.get_line_progress() == Vector2i(0, 3), "E on town master opens short three-line reminder")
 	if dialogue != null:
 		for i in 3: dialogue.advance()
 	check(save.has_completed(SaveProgressService.STORY_C1_MASTER_SENDOFF_SEEN), "Short reminder completes missing sendoff record")
-	check(not town.player.input_frozen and not master.dialogue_open, "Reminder restores movement and interaction")
+	await process_frame
+	check(town.player.input_frozen and master.dialogue_open, "Town reminder keeps player locked for choices")
+	check(master._rematch_choices.options == ["再战？", "离开"], "Town NPC offers rematch and leave after original dialogue")
+	master._rematch_choices.choose(1)
+	check(not town.player.input_frozen and not master.dialogue_open, "Leave restores movement and interaction")
+	master._unhandled_input(key)
+	for i in 3: master._dialogue.advance()
+	await process_frame
+	master._rematch_choices.choose(0)
+	await create_timer(3.0).timeout
+	room = current_scene
+	check(room.scene_file_path == ROOM and room.is_rematch, "Town rematch choice starts an authorized new battle")
+	check(not transition.master_rematch_requested, "Rematch entry request consumed once")
+	check(room.boss.phase == 1 and room.boss.process_mode != Node.PROCESS_MODE_DISABLED, "Rematch starts with active first phase")
+	check(room.get_node_or_null("MasterCombatTeaching") == null, "Rematch skips lesson popups and teaching key hints")
+	check(room._sendoff_dialogue == null, "Rematch starts without story sendoff")
+	room.boss.phase = 2
+	room.set_battle_phase(room.BattlePhase.PHASE_2)
+	room.boss.combat_stats.apply_health_damage(room.boss.combat_stats.max_health)
+	await process_frame
+	await process_frame
+	check(room._sendoff_dialogue == null and room._core_gift == null, "Rematch victory skips first-clear dialogue and gift")
+	await create_timer(3.0).timeout
+	check(current_scene.scene_file_path == TOWN, "Rematch victory returns to town NPC")
+	check(save.get_item_count(ItemCatalog.SPIRIT_PENDANT) == 1, "Rematch does not duplicate unique reward")
+	master = current_scene.world_root.get_node("Master")
+	master.player = current_scene.player
+	master.player_in_range = true
+	master._unhandled_input(key)
+	for i in 3: master._dialogue.advance()
+	await process_frame
+	master._rematch_choices.choose(0)
+	await create_timer(3.0).timeout
+	room = current_scene
+	check(room.is_rematch, "Town NPC supports repeated rematches")
+	room.player.combat_stats.apply_health_damage(room.player.combat_stats.max_health)
+	await create_timer(3.0).timeout
+	check(current_scene.scene_file_path == TOWN, "Losing rematch returns to town without trapping player")
+	check(save.has_completed(SaveProgressService.STORY_MASTER_PHASE_2_DEFEATED), "Rematch loss preserves first-clear progress")
 	print("MASTER SENDOFF: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures else 0)

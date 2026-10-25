@@ -69,12 +69,10 @@ func run() -> void:
 	target.free()
 
 	var lan_wave := LanSwordWaveProjectile.new()
-	var qi := MasterSwordQi.new()
 	var wave := (load("res://scenes/bosses/master/master_ground_wave.tscn") as PackedScene).instantiate()
-	check(lan_wave is CombatProjectile2D and qi is CombatProjectile2D, "Lan's wave and the master's sword qi are combat projectiles")
+	check(lan_wave is CombatProjectile2D, "Lan's wave remains a combat projectile")
 	check(wave is MasterGroundWave and wave is CombatProjectile2D and wave.z_index == 1, "The master's ground wave scene is a combat projectile")
-	check(not qi.self_stepping, "The sword qi waits for its rhythm to step it")
-	for node: Node in [lan_wave, qi, wave]:
+	for node: Node in [lan_wave, wave]:
 		node.free()
 	for node in world.get_children():
 		node.free()

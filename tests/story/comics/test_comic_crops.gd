@@ -6,6 +6,7 @@ const SCENES := [
 	"res://scenes/story/comics/back_alley_pill_comic.tscn",
 	"res://scenes/story/comics/navigation_hall_entry_comic.tscn",
 	"res://scenes/story/comics/navigation_hall_exit_comic.tscn",
+	"res://scenes/story/comics/master_dodge_comic.tscn",
 ]
 var checks := 0
 var failures := 0

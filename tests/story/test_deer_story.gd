@@ -73,8 +73,9 @@ func prepare_human() -> void:
 		if boss.vine_phase.human and boss.vine_phase.step == DeerVinePhase.Step.HOVER: break
 	check(boss.vine_phase.human and boss.vine_phase.step == DeerVinePhase.Step.HOVER, "Actual authored transformation reaches human hover")
 func kill_human() -> void:
+	var already_won := save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED)
 	boss.combat_stats.apply_health_damage(boss.combat_stats.health)
-	check(boss.state == DeerBoss.State.PHASE_END and not save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED), "Lethal hit before final landing is not persisted victory")
+	check(boss.state == DeerBoss.State.PHASE_END and save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED) == already_won, "Lethal hit before final landing preserves previous victory state")
 	for i in 400:
 		boss._physics_process(1.0 / 60)
 		if boss.state == DeerBoss.State.COMPLETE: break
@@ -90,7 +91,7 @@ func run() -> void:
 	await enter(fixture_intro(true))
 	check(story.comic == null and not paused and boss.is_physics_processing(), "Missing M09 art allows immediate production battle without placeholder")
 	check(save.has_completed(SaveProgressService.STORY_C1_DEER_ENCOUNTERED) and save.get_cinematic_status(SaveProgressService.CINEMATIC_C1_DEER_INTRO) == 0, "Battle attempt is independent of comic handling")
-	check(not story.body_prompt.available and not story.trace_prompt.available, "No post-battle inspections during live fight")
+	check(story.resident == null and not story.body_prompt.available and not story.trace_prompt.available, "No resident or post-battle interactions during live fight")
 	for phase in [1, 2, 3, 4]: room._on_phase_completed(phase)
 	check(not save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED), "Signals without actual final human completion cannot fake victory")
 	# M10 short reactions use only production facts and never pause combat.
@@ -126,21 +127,24 @@ func run() -> void:
 	inventory[ItemCatalog.DEER_RELIC] = 1
 	save.load_progress()
 	check(save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED), "Victory reloads from disk")
-	check(boss.state == DeerBoss.State.COMPLETE and boss.animated_sprite.animation == &"human_fall_ING" and not boss.is_physics_processing(), "Defeated human stays down on approved final pose")
+	check(boss.state == DeerBoss.State.COMPLETE and not boss.visible and not boss.is_physics_processing() and story.resident != null, "Persisted victory replaces completed combat body with permanent resident")
+	check(not boss.is_in_group("damageable") and (boss.get_node("Hurtbox") as Area2D).collision_layer == 0, "Resident has no lingering combat target or hurtbox")
 	check(boss.vine_phase.strikes.is_empty() and boss.root_phase.nodules.is_empty() and not room.mist_field.hunting, "Final cleanup leaves no attacking vines, root terrain or hunt")
 	check(save.get_stele_state(&"vine_puzzle_high_swing") == 0 and save.get_stele_state(&"vine_combat_branch_arena") == 0 \
 		and not save.has_completed(SaveProgressService.STORY_C1_XIAOSUI_MET) and save.get_inventory_items() == inventory, "Direct boss route grants only the relic without residents or steles")
 	await stand(boss.position + Vector2(-70, 0))
 	key()
 	await process_frame
-	check(story.dialogue != null and story.dialogue._label.text == "……这是什么？" and paused, "M11 is a voluntary one-line body inspection")
-	await capture("deer_body_inspection")
+	check(story.dialogue != null and story.dialogue._label.text == "……这回，听得清林子里的声音了。" and paused, "First resident conversation is voluntary and pauses the world")
+	await capture("deer_npc_dialogue_right")
+	story.dialogue.advance()
+	await capture("deer_npc_dialogue_left")
 	key(KEY_ESCAPE)
 	await process_frame
 	check(not save.has_completed(SaveProgressService.STORY_C1_DEER_BODY_INSPECTED) and not paused, "Cancelled M11 retains victory but leaves inspection undone")
 	clear_scene()
 	await enter(fixture_intro())
-	check(story.comic == null and boss.phase == 4 and boss.state == DeerBoss.State.COMPLETE and not boss.is_physics_processing(), "Victory reload restores corpse without battle or late intro")
+	check(story.comic == null and boss.phase == 4 and boss.state == DeerBoss.State.COMPLETE and not boss.visible and story.resident != null, "Victory reload restores resident without battle or late intro")
 	await capture("deer_victory_reentry")
 	await stand(story.trace.position + Vector2(-45, 0))
 	key()
@@ -154,8 +158,55 @@ func run() -> void:
 	key()
 	await process_frame
 	story.dialogue.advance()
+	story.dialogue.advance()
+	story.dialogue.advance()
 	check(save.has_completed(SaveProgressService.STORY_C1_DEER_BODY_INSPECTED), "M11 may complete after M12")
+	check(story.choices != null and story.choices.options == ["再战？", "离开"] and paused, "First resident dialogue ends with rematch choices")
+	story.choices.choose(1)
+	story._process(0)
+	check(story.body_prompt.available, "Resident remains interactable after completed conversation")
+	await process_frame
+	key()
+	await process_frame
+	check(story.choices != null and paused, "Repeat interaction offers optional conversation topics")
+	key(KEY_2)
+	await process_frame
+	check(story.dialogue != null and story.dialogue._label.text.contains("根还活着"), "Forest topic uses resident dialogue")
+	story.dialogue.advance()
+	check(story.choices != null and story.choices.options == ["再战？", "离开"], "Existing topic reply ends with rematch choices")
+	story.choices.choose(1)
+	await process_frame
+	await process_frame
+	key()
+	await process_frame
+	key(KEY_ESCAPE)
+	await process_frame
+	check(story.choices == null and not paused and not room.player.input_frozen, "Escape exits topic menu and restores control")
 	check(room._return_prompt.available and not paused, "All investigations leave return passage available")
+	story._talk_to_resident()
+	story.choices.choose(0)
+	story.dialogue.advance()
+	story.choices.choose(0)
+	await create_timer(3.0).timeout
+	room = current_scene as Chapter1DeerBossRoom
+	story = room.story
+	boss = room.deer
+	check(story.is_rematch and story.comic == null and boss.phase == 1 and boss.is_physics_processing(), "Resident rematch starts full fight without intro comic")
+	check(story.resident == null and not story.chapter_gate.visible, "Rematch has no resident or chapter portal during live combat")
+	check(not (root.get_node("SceneTransition") as SceneTransitionService).deer_rematch_requested, "Rematch entry request consumed once")
+	room.player.combat_stats.apply_health_damage(room.player.combat_stats.max_health)
+	await process_frame
+	await process_frame
+	check(boss.phase == 1 and room.player.combat_stats.health > 0 and story.is_rematch, "Rematch death resets first phase and revives player")
+	await prepare_human()
+	await kill_human()
+	check(story._settled and story.resident != null and not boss.visible, "Rematch final defeat restores resident NPC")
+	check(story.reward_reveal == null and save.get_item_count(ItemCatalog.DEER_RELIC) == 1, "Rematch does not replay or duplicate first-clear reward")
+	story._talk_to_resident()
+	story.choices.choose(1)
+	story.dialogue.advance()
+	check(story.choices != null and story.choices.options == ["再战？", "离开"], "Resident can offer another rematch after victory")
+	story.choices.choose(1)
 	clear_scene()
 
 	# Failure: the finished fight remains safe and settlement is explicitly retryable.
@@ -166,7 +217,7 @@ func run() -> void:
 	failed._loaded = true
 	story.save = failed
 	await kill_human()
-	check(story.victory_pending and not failed.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED) and boss.state == DeerBoss.State.COMPLETE, "Failed victory save keeps safe corpse and pending settlement")
+	check(story.victory_pending and story.resident == null and boss.visible and not failed.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED) and boss.state == DeerBoss.State.COMPLETE, "Failed victory save keeps safe body for retry without spawning resident")
 	check(not story.trace.visible and not story.trace_prompt.available and not paused, "Unsaved victory does not unlock investigations or freeze player")
 	failed.failing = false
 	await stand(boss.position + Vector2(-70, 0))
@@ -174,9 +225,13 @@ func run() -> void:
 	await process_frame
 	check(failed.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED) and story.reward_reveal != null, "Body E retries victory first, then presents its reward")
 	await dismiss_reward()
+	await process_frame
+	await process_frame
 	key()
 	await process_frame
 	failed.failing = true
+	story.dialogue.advance()
+	story.dialogue.advance()
 	story.dialogue.advance()
 	check(story.choices != null and not failed.has_completed(SaveProgressService.STORY_C1_DEER_BODY_INSPECTED), "Failed M11 save never rolls back battle victory")
 	key(KEY_2)
