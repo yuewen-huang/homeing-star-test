@@ -88,7 +88,7 @@ func run() -> void:
 	master.parry_pause_remaining = 0
 	master.action_clock.extend_dodge_slow(1.0)
 	master._process(0.1)
-	check(is_equal_approx(held.elapsed, 0.01), "Dodge bullet time slows body, trail and lunge together")
+	check(is_equal_approx(held.elapsed, 0.025), "Dodge bullet time slows body, trail and lunge together")
 	master.action_clock.clear()
 	for id: StringName in MasterActionLibrary.MECHANISM_IDS:
 		check(master.play_phase_1_mechanism(id), "Mechanism body is callable: " + id)

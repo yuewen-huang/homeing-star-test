@@ -32,6 +32,7 @@ func run() -> void:
 			var effect_indices: Dictionary={}
 			var effects_match:=true
 			var fixed_scale:=true
+			var current_style := true
 			while master.phase_2_body_action!=null and ticks<800:
 				master._process(1.0/120.0)
 				body_only=body_only and not master.wind_effect.visible
@@ -39,6 +40,10 @@ func run() -> void:
 				if master.phase_2_body_action!=null:
 					for effect_index: int in action.vfx.spawned: effect_indices[effect_index]=true
 					for row: Dictionary in action.vfx.effects.values():
+						if row.event.do=="slash":
+							var claw: Node2D = row.effect.claw
+							current_style = current_style and claw.look=="pixel" and is_equal_approx(claw.pixel,2.0) and is_equal_approx(claw.debris_size,.35)
+							current_style = current_style and claw._material.shader.resource_path.ends_with("claw_mark.gdshader")
 						if row.event.do=="slash" and row.event.has("claw_width"):
 							effects_match=effects_match and is_equal_approx(float(row.effect.claw.width),float(row.event.claw_width))
 						if row.event.do=="quake": effects_match=effects_match and is_equal_approx(float(row.effect.spec.width),float(row.event.width))
@@ -51,6 +56,7 @@ func run() -> void:
 			check(body_only and combat_source,"New actions use real combat data and keep retired painted wind hidden")
 			check(effects_match and effect_indices.size()==(6 if n==1 else 5 if n==0 else 8),"All saved Studio effects spawn with the user's tuned thickness and range")
 			check(fixed_scale,"All combo clips and idle handoffs keep one fixed body scale")
+			check(current_style,"All production claws use the current Studio pixel renderer and fine debris")
 			check(master.state==MasterBoss.State.PHASE_2_IDLE,"Combo returns to normal recovery")
 			check(not action.active,"Finishing disables all gameplay collision immediately")
 			await process_frame
@@ -69,7 +75,7 @@ func run() -> void:
 	master.parry_pause_remaining=0
 	master.action_clock.extend_dodge_slow(1)
 	master._process(.1)
-	check(is_equal_approx(held.elapsed,.01),"Dodge slow motion uses the shared action clock")
+	check(is_equal_approx(held.elapsed,.025),"Dodge slow motion uses the shared action clock")
 	master.action_clock.clear()
 	master._interrupt_phase_2_action(0)
 	var lan: LanPlayer=room.get_node("Lan")
@@ -77,7 +83,7 @@ func run() -> void:
 	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_player_invincible(false)
 	lan.combat_stats.restore_health()
 	master.start_phase_2_body_action(MasterPhase2BodyAction.IDS[0])
-	master._process(.19)
+	master._process(.69)
 	var box: CombatHitbox2D=master.phase_2_body_action.hitboxes.values()[0]
 	var collision:=box.get_child(1) as CollisionShape2D
 	var target_collision:=lan.hurtbox.get_node("CollisionShape2D") as CollisionShape2D
@@ -92,7 +98,7 @@ func run() -> void:
 	master._interrupt_phase_2_action(0)
 	lan.global_position.y=master.global_position.y
 	master.start_phase_2_body_action(MasterPhase2BodyAction.IDS[2])
-	for tick in 342: master._process(1.0/120.0)
+	for tick in 378: master._process(1.0/120.0)
 	var quake: Dictionary={}
 	for row: Dictionary in master.phase_2_body_action.vfx.effects.values():
 		if row.event.do=="quake": quake=row

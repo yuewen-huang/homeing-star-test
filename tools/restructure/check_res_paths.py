@@ -24,6 +24,12 @@ import res_paths as rp  # noqa: E402
 LEGACY_KEY_FILES = {"scripts/autoload/save_path_migration.gd"}
 # Test files that use old paths on purpose (to prove they are migrated).
 LEGACY_TEST_FILES = {"tests/autoload/test_save_path_migration.gd"}
+# Importers contain literal paths belonging to their source Godot project.
+# Resolve only these exact references there; all production paths still use the game.
+STUDIO_REFERENCES = {
+    "tools/art/import_master_phase2_arrangements.py": {"combos/", "vfx/combo_player.gd"},
+    "tools/art/import_master_phase2_studio.py": {"tools/export_master_runtime.gd", "vfx/"},
+}
 
 # Paths that are missing on purpose: path → why.
 KNOWN_MISSING = {
@@ -51,6 +57,10 @@ def check(ws: rp.Workspace):
             for match in rp.RES_RE.finditer(text):
                 rel = rp.clean(match.group(0)[len("res://"):])
                 if not rel or rel.startswith(".godot/") or rel in KNOWN_MISSING:
+                    continue
+                if repo_name == rp.TEST and rel in STUDIO_REFERENCES.get(path.relative_to(repo).as_posix(), set()):
+                    if not exists(ws.root / "combat-vfx-studio", rel):
+                        errors[where].append(f"Studio source missing: {rel}")
                     continue
                 if rp.is_dynamic(rel):
                     prefix = rp.static_prefix(rel)

@@ -104,11 +104,11 @@ func run() -> void:
 	player.begin_evaded_action_slow(response,response.duration("finger_flick")+0.1)
 	player.velocity = Vector2(120,0)
 	player.move_on_action_clock()
-	check(normal_travel > 0 and is_equal_approx((player.position.x-player_at.x)/normal_travel,ActionClock.DODGE_SLOW), "Physics displacement actually slows, not just the movement timers")
+	check(normal_travel > 0 and is_equal_approx((player.position.x-player_at.x)/normal_travel,player.evaded_action_clock.dodge_slow), "Physics displacement actually slows, not just the movement timers")
 	player.position = player_at
 	player._set_body_speed(1.3)
 	player._set_timeline_speed(1.4)
-	check(is_equal_approx(player.animated_sprite.speed_scale,1.3 * ActionClock.DODGE_SLOW) and is_equal_approx(player.combat_timeline.speed_scale,1.4 * ActionClock.DODGE_SLOW), "Body and combat timeline share local slowdown, including new animations")
+	check(is_equal_approx(player.animated_sprite.speed_scale,1.3 * player.evaded_action_clock.dodge_slow) and is_equal_approx(player.combat_timeline.speed_scale,1.4 * player.evaded_action_clock.dodge_slow), "Body and combat timeline share local slowdown, including new animations")
 	var player_health := player.combat_stats.health
 	player.defense_state = LanPlayer.DefenseState.PARRY_ACTIVE
 	master._process(1.69)

@@ -146,7 +146,7 @@ func run() -> void:
 	check(spy.calls == 1 and spy.last.health_damage > 0 and spy.last.danger_type == CombatAttackData.DangerType.NORMAL,"Blue blade uses shared damage and settles only once per cut")
 	spy.result = CombatHitResult.Type.EVADED
 	combat.strike("evade",a,b,a,b)
-	check(not combat.settled.has("evade"),"Dodged contact can retry only while the current blade remains active")
+	check(combat.settled.has("evade"),"A successfully dodged blade cannot retry damage during its remaining swing")
 	spy.result = CombatHitResult.Type.NORMAL_HIT
 	combat.strike("gold",a,b,a,b,true)
 	check(spy.last.danger_type == CombatAttackData.DangerType.UNPARRYABLE_DANGER,"Final gold cut uses the shared unparryable danger type")

@@ -8,7 +8,7 @@ func run() -> void:
 	var clock := ActionClock.new()
 	check(is_equal_approx(clock.scale(), 1.0), "A fresh clock runs at full speed")
 	clock.start_dodge_slow(0.5)
-	check(is_equal_approx(clock.scale(), ActionClock.DODGE_SLOW) and is_equal_approx(ActionClock.DODGE_SLOW, 0.18), "A dodge slows the attacker to 0.18")
+	check(is_equal_approx(clock.scale(), ActionClock.DODGE_SLOW) and is_equal_approx(ActionClock.DODGE_SLOW, 0.25), "A perfect dodge slows the attacker to 0.25")
 	clock.advance(0.3)
 	check(is_equal_approx(clock.dodge_remaining, 0.2) and clock.is_slowed(), "Bullet time counts down in real seconds")
 	clock.start_dodge_slow(0.1)
@@ -30,7 +30,7 @@ func run() -> void:
 
 	var boss := BossBase.new()
 	boss._dodge_remaining = 0.7
-	check(is_equal_approx(boss.action_clock.dodge_remaining, 0.7) and is_equal_approx(boss.get_action_time_scale(), 0.18), "BossBase._dodge_remaining still sets the boss's bullet time")
+	check(is_equal_approx(boss.action_clock.dodge_remaining, 0.7) and is_equal_approx(boss.get_action_time_scale(), 0.25), "BossBase._dodge_remaining still sets the boss's bullet time")
 	boss._parry_pause = 0.2
 	check(is_equal_approx(boss.action_clock.pause_remaining, 0.2) and is_zero_approx(boss.get_action_time_scale()), "BossBase._parry_pause still pauses the boss")
 	boss.action_clock.clear()
@@ -46,6 +46,6 @@ func run() -> void:
 	boss.free()
 
 	var master := MasterBoss.new()
-	check(is_equal_approx(master.action_clock.dodge_slow, 0.10), "The master keeps its slower 0.10 bullet time")
+	check(is_equal_approx(master.action_clock.dodge_slow, 0.25), "Master and other bosses share the perfect-dodge slowdown")
 	master.free()
 	finish("ACTION CLOCK")

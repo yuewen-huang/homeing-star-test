@@ -126,7 +126,7 @@ func run_test() -> void:
 		back_dodge_timeline.track_get_key_count(1) == 1
 		and back_dodge_timeline.track_get_key_value(1, 0).get("method") == &"_timeline_open_back_dodge_attack_cancel"
 		and is_equal_approx(back_dodge_timeline.track_get_key_time(1, 0), 9.0 / 35.0),
-		"Back dodge attack branch must remain on frame 9; invulnerability belongs to the whole dodge state",
+		"Back dodge attack branch remains on frame 9; the shorter defense window is checked separately",
 	):
 		return
 

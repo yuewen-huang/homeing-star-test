@@ -139,7 +139,7 @@ func run() -> void:
 	await snapshot("pierce_active")
 	await run_until(func() -> bool: return vine.step == DeerVinePhase.Step.HOVER, 900, watch)
 	var damages: Array = room.dummy.contacts.map(func(contact: Dictionary) -> int: return contact.damage)
-	check(damages == [12, 12, 18], "Unparried triple pierce hits the dummy 12, 12, then 18 (got %s)" % [damages])
+	check(damages == [CombatTuning.BOSS_PLAYER_NORMAL_DAMAGE, CombatTuning.BOSS_PLAYER_NORMAL_DAMAGE, CombatTuning.BOSS_PLAYER_RED_DAMAGE], "Unparried triple pierce uses shared normal/normal/red damage (got %s)" % [damages])
 	var sides: Array = seen.sides.values()
 	check(seen.red, "Third pierce shows the red flash before it is sent")
 	check(sides.size() == 3 and sides[0] != sides[1] and sides[1] != sides[2], "Successive blinks alternate sides of the target %s" % [sides])
@@ -181,7 +181,7 @@ func run() -> void:
 	check(not lash.is_active() and lash._lash_trails.is_empty(), "Recovery has no damage and all downstroke trails have faded")
 	await snapshot("slam_recovery")
 	await run_until(func() -> bool: return vine.step == DeerVinePhase.Step.HOVER and vine.strikes.is_empty(), 300)
-	check(room.dummy.contacts.size() == 1 and room.dummy.contacts[0].damage == 15 and vine.shield == 3, "Gold slam strikes the dummy once for 15 and is never parried")
+	check(room.dummy.contacts.size() == 1 and room.dummy.contacts[0].damage == CombatTuning.BOSS_PLAYER_GOLD_DAMAGE and vine.shield == 3, "Gold slam uses shared gold damage exactly once and is never parried")
 	# Mirror validation uses the same live strike and clears within the specimen subtree.
 	var forward := vine.spawn_strike(&"ground_lash", dummy_x, dummy_x - 300.0, 0.0)
 	for i in 59: forward.step(1.0 / 60.0)

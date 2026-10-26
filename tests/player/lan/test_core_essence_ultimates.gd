@@ -80,8 +80,10 @@ func run() -> void:
 	deer.vine_test_mode = false
 	deer.manual_control = false
 	check(not deer.has_vine_snare() and not deer.root_phase.item_available, "Formal encounter does not grant vine or mist skills by default")
-	save.claim_unique_reward(ForestCoreRelic.REWARD_ID, ItemCatalog.SPIRIT_PENDANT)
-	save.try_complete_fact(ForestCoreRelic.power_id(2))
+	# The development room installs its own isolated progress service.
+	var preview_save := root.get_node("SaveProgress") as SaveProgressService
+	preview_save.claim_unique_reward(ForestCoreRelic.REWARD_ID, ItemCatalog.SPIRIT_PENDANT)
+	preview_save.try_complete_fact(ForestCoreRelic.power_id(2))
 	check(deer.root_phase.item_available and not deer.has_core_power(3), "Mist slot alone unlocks the decoy")
 	deer.vine_test_mode = true
 	deer.manual_control = true
@@ -175,7 +177,7 @@ func run() -> void:
 	check(is_instance_valid(vine.god_statue) and vine.ultimate_active, "Counter preserves the statue's native dissolution")
 	var hp := deer.combat_stats.health
 	check(until(func() -> bool: return vine.step == DeerVinePhase.Step.FALL), "After the finale the shield counter knocks the caster down")
-	check(deer.combat_stats.health == hp - DeerVinePhase.ULTIMATE_DAMAGE and vine.shield == 0, "Wind counter deals one backlash and breaks vine armour")
+	check(deer.combat_stats.health == hp - CombatTuning.DEER_VINE_ULTIMATE_DAMAGE and vine.shield == 0, "Wind counter deals one backlash and breaks vine armour")
 	check(not vine.ultimate_active and vine.wind_shield.remaining == 0, "Counter clears shield and ultimate state")
 	check(until(func() -> bool: return vine.step == DeerVinePhase.Step.STAGGER), "Counter opens the grounded damage window")
 	await capture("vine_wind_counter")

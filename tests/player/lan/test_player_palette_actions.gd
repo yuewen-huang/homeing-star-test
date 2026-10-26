@@ -194,8 +194,11 @@ func run_test() -> void:
 	player.update_player_resources(1.0)
 	if not require(is_equal_approx(player.combat_stats.stamina, 56.0), "Stamina did not recover at its configured rate"):
 		return
-	player._on_attack_effect_hit_landed(null, null)
-	if not require(is_equal_approx(player.combat_stats.mana, player.MANA_GAIN_PER_HIT), "Attack hits did not generate mana"):
+	var normal_effect := preload("res://scripts/player/lan/lan_attack_effect.gd").new()
+	var mana_before: float = player.combat_stats.mana
+	player._on_attack_effect_hit_landed(null, normal_effect)
+	normal_effect.free()
+	if not require(is_equal_approx(player.combat_stats.mana, mana_before + player.MANA_GAIN_PER_NORMAL_HIT), "Attack hits did not generate mana"):
 		return
 
 	print("PASS: attacks, resources, cooldowns, HUD, hitboxes, and input buffers all load")
