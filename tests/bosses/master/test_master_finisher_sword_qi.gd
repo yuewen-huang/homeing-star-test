@@ -55,6 +55,11 @@ func run() -> void:
 			check(is_equal_approx(qi.starts_at+qi.Profile.impact_time(qi.effect.spec),float(cut.contact_at)),"Qi lands on the measured last-cut contact, without retiming the body")
 			check(qi.attack==action._attack_for_cut(action._qi_cut) and qi.attack.danger_type==CombatAttackData.DangerType.NORMAL,"Final body and qi share one normal parryable attack")
 			check(qi.effect.spec.gb_opacity==.62 and qi.effect.style=="real","Production uses the approved translucent metal look")
+			var saved: Dictionary=qi.Ground.normalized(qi.studio_profile("hinge" if move==&"combo_four" else "plunge").event)
+			var synced: bool=qi.effect.spec.gb_surface==saved.gb_surface
+			for key in ["gb_opacity","gb_hold","gb_fade","gb_echo","debris_density","debris_height","dust_density","dust_height","dust_spread"]:
+				synced=synced and is_equal_approx(float(qi.effect.spec[key]),float(saved[key]))
+			check(synced,"Saved surface, fading, debris and dust parameters reach the actual final attack")
 			var landed := qi.Blade.pose(qi.effect.spec,qi.Profile.impact_time(qi.effect.spec))
 			var blade_start := qi.to_global(landed*qi.Blade.blade_point(qi.effect.spec,0,1))
 			var blade_end := qi.to_global(landed*qi.Blade.blade_point(qi.effect.spec,1,1))

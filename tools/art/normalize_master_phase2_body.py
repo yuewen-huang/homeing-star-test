@@ -16,6 +16,13 @@ BODY=ROOT/'homeing-star-game/assets/bosses/master/body/boss/phase2'
 OUT=ROOT/'homeing-star-test/artifacts/master_phase2_body_size'
 BACKUP=ROOT/'homeing-star-temp-assert/Archive/master-phase2-size-normalization-20261026'
 SCALE=1.7
+# Fixed registration measured from the shared standing foot pixels (idle y=200).
+# Uppercut uses its existing static-bake pivot; no per-frame recentering.
+STANCE_FEET={
+    'phase_2_attack_1':[128,200], 'phase_2_attack_2':[128,294],
+    'phase_2_dash':[192,264], 'phase_2_special_attack':[128,244],
+    'phase_2_uppercut':[101.5,345],
+}
 
 def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -26,8 +33,27 @@ def apply_metadata(body,effects,report):
         for ci,clip in enumerate(move['clips']):
             normalization=report['actions'][clip['animation']]
             clip.update(normalization)
+            stance=normalization.get('stance_feet',clip['feet'])
+            registration=[a-b for a,b in zip(clip['feet'],stance)]
+            clip['registration_offset']=registration
             for event in effects['moves'][name]['events']:
-                if event['node']==f'body_{ci+1}': event.update(normalization)
+                if event['node']==f'body_{ci+1}':
+                    event.update(normalization)
+                    event['registration_offset']=registration.copy()
+
+def repair_registration():
+    """Update only shared body/collision/effect registration, preserving saved tuning."""
+    manifest=BODY/'normalization.json'
+    report=json.loads(manifest.read_text(encoding='utf8'))
+    for action,feet in STANCE_FEET.items(): report['actions'][action]['stance_feet']=feet
+    body_path=BODY/'arrangements.json'
+    effects_path=ROOT/'homeing-star-game/assets/bosses/master/fx/phase2/arrangements.json'
+    body=json.loads(body_path.read_text(encoding='utf8'))
+    effects=json.loads(effects_path.read_text(encoding='utf8'))
+    apply_metadata(body,effects,report)
+    for path,data in [(manifest,report),(body_path,body),(effects_path,effects)]:
+        path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
+    print('Updated fixed phase-two standing registration; body PNGs and Studio unchanged.')
 
 def prepare(apply=False):
     OUT.mkdir(parents=True,exist_ok=True)
@@ -48,6 +74,8 @@ def prepare(apply=False):
         pivot=(101.5,345.0) if stem=='uppercut' else (128.0,228.0)
         offset=[(pivot[0]-65)*(1-scale),(pivot[1]-346)*(1-scale)] if stem=='uppercut' else [0,0]
         report['actions']['phase_2_'+stem]={'pixel_scale':scale,'geometry_offset':offset}
+        if 'phase_2_'+stem in STANCE_FEET:
+            report['actions']['phase_2_'+stem]['stance_feet']=STANCE_FEET['phase_2_'+stem].copy()
         for i in range(count):
             x,y=(i%columns)*w,(i//columns)*h
             frame=sheet.crop((x,y,x+w,y+h))
@@ -113,4 +141,7 @@ def prepare(apply=False):
 if __name__=='__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument('--apply',action='store_true')
-    prepare(parser.parse_args().apply)
+    parser.add_argument('--registration-only',action='store_true',help='Repair fixed standing anchors without resampling any body art.')
+    args=parser.parse_args()
+    if args.registration_only: repair_registration()
+    else: prepare(args.apply)

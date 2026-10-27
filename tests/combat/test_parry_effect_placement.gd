@@ -89,7 +89,8 @@ func run() -> void:
 	var master := load("res://scenes/bosses/master/master_boss.tscn").instantiate() as Node2D
 	check(master.get_node_or_null("RedParryEffect") == null, "Master scene no longer carries its own red parry effect")
 	master.position = Vector2(300, 555)
-	check(master.call(&"get_counter_slash_point") == Vector2(300, 555 - 128), "Master counter point keeps the original spot above its origin")
+	var master_point: Vector2=master.call(&"get_counter_slash_point")
+	check(master_point.distance_to(Vector2(300,555-128*master.scale.y))<.001,"Master counter point follows the authored chest anchor and production scene scale")
 	master.free()
 
 	assist.player_invincible = was_invincible

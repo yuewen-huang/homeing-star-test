@@ -52,17 +52,23 @@ func run() -> void:
 		action.advance(0.002)
 		var wave := action.mountain_wave
 		wave.set_process(false)
-		check(wave != null and wave.effect.spec.form == "crescent" and wave.effect.spec.trail == "flame" and is_equal_approx(wave.effect.spec.sink,0.15),"Screenshot selects crescent, flame trail and exact 0.15 sink")
-		check(wave.effect.spec.ramp == MasterPhase1Palette.ramp_stops() and not wave.effect._pixel.is_empty(),"Steel-blue sword qi uses the fine pixel renderer")
-		var visible_height := wave._height(0) * (1.0 - float(wave.effect.spec.sink))
-		check(is_equal_approx(visible_height,wave.body_reference_height * 1.12),"Exposed crescent is 1.12 times the full imported master body, after the 0.15 burial")
-		check(visible_height > 210.0 and visible_height < 220.0,"Production crescent is about 216 world pixels tall, rather than the rejected 66 pixels")
-		check(is_equal_approx(float(wave.effect.spec.width)+float(wave.effect.spec.length),420.0),"Increasing the blade and flame body preserves the 420-pixel flight distance")
+		var saved: Dictionary=wave.studio_profile("mountain")
+		var expected: Dictionary=wave.Ground.normalized(saved.event)
+		var sink := float(saved.event.get("sink",.2 if saved.event.get("trail")=="flame" else 0.0))
+		check(wave != null and wave.effect.spec.form=="crescent" and wave.effect.spec.trail==saved.event.trail and is_equal_approx(wave.effect.spec.sink,sink),"Production selects the saved editor form, trail and burial")
+		check(wave.effect.spec.ramp==MasterPhase1Palette.ramp_stops() and wave.effect.style==String(saved.style.get("quake_style","real")),"Game keeps its owner palette and the saved renderer style")
+		var visible_height := wave.Shapes.crescent_height(wave._height(0),float(wave.effect.spec.sink))
+		var saved_height := wave.Shapes.crescent_height(clampf(float(expected.width)*.8,70,230)*float(expected.unit_size)*1.3,sink)
+		check(is_equal_approx(visible_height,saved_height),"Production retains the editor's saved wave size")
+		var all_fields := true
+		for key in ["width","length","unit_size","body_growth","travel","ease","angle","debris_density","debris_height","crack_amount"]:
+			all_fields=all_fields and is_equal_approx(float(wave.effect.spec[key]),float(expected[key]))
+		check(all_fields,"Saved size, growth, speed, angle and ground settings all reach production")
+		check(is_equal_approx(float(wave.effect.spec.width)+float(wave.effect.spec.length),float(expected.width)+float(expected.length)),"Wave travel distance follows the saved editor profile")
 		check(is_equal_approx(wave._edge(0,1,false).y,-visible_height),"Current collision blade uses the same full-height crescent as the renderer")
-		var enlargement := wave._height(0) / (70.0 * 0.85 * 1.3)
-		check(enlargement > 3.2 and enlargement < 3.4,"Crescent and flame streamers grow together by about 3.3 times")
+		check(is_equal_approx(wave._height(1)/wave._height(0),float(expected.body_growth)),"The blade follows saved visual growth during flight")
 		check(wave.attack == action._attack and wave.attack.danger_type == CombatAttackData.DangerType.NORMAL,"Falling sword and qi share the same normal parryable attack")
-		var foot := wave.effect.position + Vector2(-wave.effect.extent(),0) + wave.Shapes.crescent_foot(Vector2.RIGHT,wave._height(0),0.15)
+		var foot: Vector2=wave.effect.position+wave.effect.ground(Vector2(-wave.effect.extent(),0))+wave.Shapes.crescent_foot(wave.effect.outward(Vector2.ZERO),wave._height(0),sink)
 		check(foot.length() < 0.001 and is_equal_approx(wave.global_position.y,555),"Measured impact anchors the buried crescent foot on the floor")
 		check(signf(wave.to_global(wave._edge(0.5,0,false)).x - wave.to_global(wave._edge(0.1,0,false)).x) == direction,"Sword qi travels forward in both facings")
 		meet(wave)
@@ -157,7 +163,7 @@ func run() -> void:
 			wave.advance(time-wave.effect.age)
 			await process_frame
 			await process_frame
-		check(true,"Real renderer draws the live crescent, flame streamers and fading scar")
+		check(true,"Real renderer draws the saved ground wave and complete ground effects")
 	room.free()
 	current_scene = null
 	expect_save_untouched()
