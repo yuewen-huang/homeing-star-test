@@ -15,11 +15,12 @@ ROOT=Path(__file__).resolve().parents[3]
 SCRIPT='scripts/bosses/master/studio_vfx/'
 ART='assets/bosses/master/fx/phase2/studio/'
 
-def install_renderers(claw_only=False):
+def install_renderers(claw_only=False, ground_only=False):
     source=ROOT/'combat-vfx-studio'
     game=ROOT/'homeing-star-game'
     pending=['authored_effect.gd','pixel_slash.gd','combo_style.gd']
-    if not claw_only: pending += ['quake_effect.gd','render_caps.gd']
+    if ground_only: pending=['quake_effect.gd','render_caps.gd','combo_style.gd']
+    elif not claw_only: pending += ['quake_effect.gd','render_caps.gd']
     seen=set()
     hashes={}
     pattern=re.compile(r'res://vfx/([\w./-]+\.(?:gdshaderinc|gdshader|gd|png))')
@@ -43,7 +44,20 @@ def install_renderers(claw_only=False):
             constants.append(f'const ComboStyle = preload("res://{SCRIPT}combo_style.gd")')
         if relative=='quake_effect.gd':
             constants.append(f'const RenderCaps = preload("res://{SCRIPT}render_caps.gd")')
+            text=text.replace('String(spec.ramp) == "" and not spec.ramp is Array', 'spec.ramp is String and String(spec.ramp).is_empty()')
+            # The editor's artificial impact stop never settles production combat.
+            marker='\n\t\t\tif Profile.is_greatblade(spec):\n\t\t\t\tvar holder := get_parent()'
+            if marker in text:
+                begin=text.index(marker,text.index('func advance'))
+                end=text.index('\n\tfor key:',begin)
+                text=text[:begin]+text[end:]
         if relative=='pixel_slash.gd': text=text.replace('-> PixelSlash:', '-> Node2D:')
+        if relative=='quake/shaders/greatblade.gdshader':
+            # Production phase one can colour the continuous metal face from its own
+            # palette, while the Studio default and phase two keep the original steel.
+            text=text.replace('uniform bool guillotine = false;', 'uniform bool guillotine = false;\nuniform bool palette_steel = false;')
+            text=text.replace('        float erosion =', '        if (palette_steel) rgb = texture(ramp, vec2(clamp(tone + glint * 0.18, 0.0, 1.0), 0.5)).rgb;\n        float erosion =')
+            text=text.replace('            c.rgb = mix(steel, c.rgb, 0.18);', '            c.rgb = palette_steel ? texture(ramp, vec2(value, 0.5)).rgb : mix(steel, c.rgb, 0.18);')
         if relative=='pixel_slash.gd':
             # Claws use only these exact helpers, not the standalone sword demo renderer.
             palettes=re.search(r'^const PALETTES := \{[\s\S]*?^\}',text,re.M).group()
@@ -70,7 +84,7 @@ def install_renderers(claw_only=False):
         dest.parent.mkdir(parents=True,exist_ok=True)
         dest.write_text(text.rstrip()+'\n',encoding='utf-8')
     sources=game/'assets/bosses/master/fx/phase2/studio_sources.json'
-    recorded=json.loads(sources.read_text(encoding='utf8')) if claw_only and sources.exists() else {}
+    recorded=json.loads(sources.read_text(encoding='utf8')) if (claw_only or ground_only) and sources.exists() else {}
     recorded.update(hashes)
     sources.write_text(json.dumps(recorded,indent=2)+'\n',encoding='utf-8')
     return len(seen)
@@ -97,8 +111,11 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument('snapshot',type=Path,nargs='?')
     parser.add_argument('--claw-renderer-only',action='store_true',help='Sync the current claw style without changing body, collision or saved effects.')
+    parser.add_argument('--ground-renderer-only',action='store_true',help='Sync sword-qi/ground renderer dependencies without changing saved combat arrangements.')
     args=parser.parse_args()
-    if args.claw_renderer_only:
+    if args.ground_renderer_only:
+        print(f'Imported {install_renderers(ground_only=True)} ground renderer dependencies; combat arrangements and Studio unchanged.')
+    elif args.claw_renderer_only:
         print(f'Imported {install_renderers(claw_only=True)} claw renderer dependencies; gameplay data and Studio unchanged.')
     elif args.snapshot: main(args.snapshot)
     else: parser.error('Provide a snapshot or --claw-renderer-only')

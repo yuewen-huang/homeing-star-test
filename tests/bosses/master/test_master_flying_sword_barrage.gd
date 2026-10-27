@@ -42,7 +42,7 @@ func run() -> void:
 				var pose := ribbon.blade_pose(ribbon.age)
 				check((ribbon.blade_pose(0).hilt as Vector2).distance_to(ribbon.blade_pose(ribbon.duration).hilt) > 100,"Cut %d moves the sword guard along its flight variant instead of pivoting in place" % barrage.slash_count)
 				check(barrage.sword.to_global(Vector2(-17,0)).distance_to(ribbon.to_global(pose.hilt)) < 0.01 and barrage.sword.to_global(Vector2(120,0)).distance_to(ribbon.to_global(pose.tip)) < 0.01, "Cut %d sword guard and tip stay attached to the rendered ribbon" % barrage.slash_count)
-				var expected := Color("ffffed") if barrage.slash_count == 9 else Color("f5ffff")
+				var expected := Color("ffffed") if barrage.slash_count == 9 else MasterPhase1Palette.inks()[0]
 				check(ribbon.palette[0] == expected and ribbon.shader_material.get_shader_parameter("ink_0") == expected, "Cut %d applies its palette to the actual shader" % barrage.slash_count)
 				check(float(barrage.sword.energy.get_shader_parameter("gold")) == (1.0 if barrage.slash_count == 9 else 0.0), "Weapon turns gold only for the ninth cut")
 				checked[barrage.slash_count] = true

@@ -45,6 +45,8 @@ func run() -> void:
 	assist.player_invincible = true
 	room = load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate()
 	root.add_child(room); current_scene = room
+	# The independently tested intro must release combat before this production fixture.
+	if room.story.comic != null: room.story.comic._request_finish(true)
 	await process_frame; await process_frame
 	boss = room.deer; vine = boss.vine_phase
 	room.set_process(false); room.player.set_physics_process(false)

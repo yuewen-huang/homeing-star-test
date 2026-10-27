@@ -42,7 +42,7 @@ func run() -> void:
 		master.spirit_aura.update_visual(0)
 		if i < master.CHARGED_POWER_MAX:
 			check(is_equal_approx(master.spirit_aura.strength, float(i)/float(master.CHARGED_POWER_MAX)), "Blue aura increases with layer %d" % i)
-			check(master.spirit_aura.spirit_material.get_shader_parameter("aura_colour") == Color("248cff"), "Phase-one aura is blue")
+			check(master.spirit_aura.spirit_material.get_shader_parameter("aura_colour") == MasterPhase1Palette.inks()[2], "Phase-one aura uses the steel-blue palette")
 			master.play_idle()
 			await capture("spirit_blue_%d" % i)
 	check(master.phase == 1 and master.charged_power == 4, "Four completed drinks cap spirit without ending phase one")

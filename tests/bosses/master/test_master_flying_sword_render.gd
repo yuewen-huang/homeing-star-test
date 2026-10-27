@@ -14,7 +14,12 @@ func changed_ink(before: Image, after: Image, gold: bool) -> int:
 			var a := before.get_pixel(x,y)
 			var b := after.get_pixel(x,y)
 			if absf(a.r-b.r)+absf(a.g-b.g)+absf(a.b-b.b) < 0.08: continue
-			if (b.r > b.b*1.2 and b.g > b.b*1.1) if gold else (b.b > b.r*1.15 and b.g > b.r*1.15): count += 1
+			if gold:
+				if b.r > b.b*1.2 and b.g > b.b*1.1: count += 1
+			else:
+				var steel := b.b > b.r*1.06 and b.g > b.r*1.04
+				var bone := absf(b.r-.945)+absf(b.g-.933)+absf(b.b-.894)<.09
+				if steel or bone: count += 1
 	return count
 
 func run() -> void:
@@ -58,6 +63,8 @@ func run() -> void:
 			barrage.z_index = barrage.sword.z_index
 		barrage.show()
 		var visible := await frame_image()
+		var output := OS.get_environment("HOMING_STAR_TEST_OUTPUT")
+		if not output.is_empty(): visible.save_png(output.path_join("flying_cut_%d.png" % seen))
 		var texture_image := ribbon.render_viewport.get_texture().get_image()
 		var clear_border := true
 		for x in texture_image.get_width():

@@ -1,4 +1,13 @@
 extends SceneTree
+
+class MemoryProgress extends SaveProgressService:
+	func _ready() -> void:
+		_config = ConfigFile.new()
+		_loaded = true
+	func save_progress() -> bool: return true
+	func show_toast(_message: String) -> void: pass
+	func is_ability_unlocked(_ability: StringName) -> bool: return true
+
 ## Full ultimate regression plus finale contact budgets, defence and visual captures.
 var room
 var deer: DeerBoss
@@ -30,6 +39,12 @@ func snapshot(label: String) -> void:
 	root.get_texture().get_image().save_png(output.path_join(label + ".png"))
 
 func run() -> void:
+	var original_progress := root.get_node("SaveProgress")
+	root.remove_child(original_progress)
+	original_progress.free()
+	var memory := MemoryProgress.new()
+	memory.name = "SaveProgress"
+	root.add_child(memory)
 	if not OS.get_cmdline_user_args().is_empty():
 		output = OS.get_cmdline_user_args()[0]
 		DirAccess.make_dir_recursive_absolute(output)

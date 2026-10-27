@@ -1,8 +1,9 @@
-extends SceneTree
+extends "../support/harness.gd"
 
 
-func _initialize() -> void:
-	call_deferred("run_test")
+func run() -> void:
+	use_memory_progress()
+	await run_test()
 
 
 func require(condition: bool, message: String) -> bool:
@@ -48,7 +49,7 @@ func run_test() -> void:
 	var parry_duration := 0.0
 	for frame_index in frames.get_frame_count(&"parry"):
 		parry_duration += frames.get_frame_duration(&"parry", frame_index) / frames.get_animation_speed(&"parry")
-	if not require(is_equal_approx(parry_duration, 0.36), "Parry must preserve three 40ms startup frames and two 120ms active frames"):
+	if not require(is_equal_approx(parry_duration, 0.36), "Parry must preserve three 40ms wind-up frames and two 120ms frames"):
 		return
 	if not require(frames.get_frame_count(&"parry_nothing") == 5, "Parry nothing phase must contain five 70ms frames"):
 		return
@@ -68,9 +69,25 @@ func run_test() -> void:
 	startup_player.start_parry()
 	var startup_health := startup_player.combat_stats.health
 	var startup_result := startup_player.receive_combat_hit(make_attack(source, &"startup"))
-	if not require(startup_result == CombatHitResult.Type.NORMAL_HIT, "Startup contact was not a normal hit"):
+	if not require(startup_result == CombatHitResult.Type.PARRY_SUCCESS, "Contact immediately after K must parry"):
 		return
-	if not require(startup_player.combat_stats.health == startup_health - 20 and startup_player.hit_reaction_active, "Startup contact did not deal full damage and launch"):
+	if not require(startup_player.combat_stats.health == startup_health and not startup_player.hit_reaction_active, "Immediate parry preserves health"):
+		return
+
+	# Every authored frame, including all three wind-up frames, has an active guard.
+	for frame_index in frames.get_frame_count(&"parry"):
+		var frame_player := spawn_player(room, "Frame%d" % frame_index)
+		await process_frame
+		frame_player.start_parry()
+		frame_player.animated_sprite.frame = frame_index
+		frame_player.on_player_animation_frame_changed()
+		if not require(frame_player.defense_state == frame_player.DefenseState.PARRY_ACTIVE and frame_player.receive_combat_hit(make_attack(source, StringName("frame_%d" % frame_index))) == CombatHitResult.Type.PARRY_SUCCESS, "Parry frame %d must protect on contact" % frame_index):
+			return
+	var whiff_player := spawn_player(room, "Whiff")
+	await process_frame
+	whiff_player.start_parry()
+	whiff_player.on_animation_finished()
+	if not require(whiff_player.defense_state == whiff_player.DefenseState.PARRY_NOTHING_EARLY, "Neutral parry enters whiff recovery only after the full clip"):
 		return
 
 	var active_player := spawn_player(room, "Active")
@@ -98,7 +115,7 @@ func run_test() -> void:
 	if not require(active_player.parry_input_buffer_remaining == 0.0 and active_player.animated_sprite.animation == &"parry_success", "The triggering parry input immediately overwrote the success animation"):
 		return
 	active_player.start_parry()
-	if not require(active_player.defense_state == active_player.DefenseState.PARRY_STARTUP, "Success animation could not restart parry"):
+	if not require(active_player.defense_state == active_player.DefenseState.PARRY_ACTIVE, "Success animation could not restart parry"):
 		return
 
 	var early_player := spawn_player(room, "EarlyNothing")
@@ -136,7 +153,7 @@ func run_test() -> void:
 		return
 	cancel_player.consume_buffered_parry()
 	cancel_player.interrupt_ground_action_with_parry()
-	if not require(cancel_player.attack_state == cancel_player.AttackState.NONE and cancel_player.defense_state == cancel_player.DefenseState.PARRY_STARTUP, "Parry did not take priority over a ground attack"):
+	if not require(cancel_player.attack_state == cancel_player.AttackState.NONE and cancel_player.defense_state == cancel_player.DefenseState.PARRY_ACTIVE, "Parry did not take priority over a ground attack"):
 		return
 	cancel_player.start_parry_nothing()
 	if not require(not cancel_player.can_interrupt_ground_action_with_parry(), "Nothing phase incorrectly allowed parry to cancel itself"):
@@ -170,7 +187,7 @@ func run_test() -> void:
 		return
 	knockback_player.parry_input_buffer_remaining = knockback_player.COMBAT_INPUT_BUFFER
 	knockback_player._physics_process(0.0)
-	if not require(not knockback_player.hit_reaction_active and knockback_player.defense_state == knockback_player.DefenseState.PARRY_STARTUP, "Parry could not cancel ground knockback"):
+	if not require(not knockback_player.hit_reaction_active and knockback_player.defense_state == knockback_player.DefenseState.PARRY_ACTIVE, "Parry could not cancel ground knockback"):
 		return
 
 	var launch_player := spawn_player(room, "Launch")
@@ -254,5 +271,5 @@ func run_test() -> void:
 	if not require(chain_player.defense_state == chain_player.DefenseState.PARRY_NOTHING_EARLY, "Chained parry grace did not end in the nothing phase"):
 		return
 
-	print("PASS: parry timing, reaction types, assisted roll recovery, chained grace, and cancels")
-	quit(0)
+	expect_save_untouched()
+	finish("PARRY FLOW")

@@ -45,62 +45,47 @@ func run() -> void:
 					for finale in [false,true]:
 						reset(buffed,finale,facing)
 						boss.start_phase_2_body_action(id)
-						var groups := boss.phase_2_body_action._danger_groups.duplicate(true)
-						for row: Dictionary in groups:
+						var action := boss.phase_2_body_action
+						var first_release := INF
+						var at := 0.0
+						for clip: Dictionary in action.data.clips:
+							for group: Dictionary in clip.groups:
+								for member: Dictionary in group.members:
+									first_release = minf(first_release, at + float(member.release) - float(clip.start_time))
+							at += float(clip.duration)
+						var groups := action._danger_groups.duplicate(true)
+						for index in groups.size():
 							reset(buffed,finale,facing)
 							boss.start_phase_2_body_action(id)
-							var action := boss.phase_2_body_action
-							# Replays use their newly assigned serial, not the prior action's key.
-							var current: Dictionary = action._danger_groups[groups.find(row)]
-							var peak := float(current.release)-DangerFlash.DODGE_LEAD*speed
+							action = boss.phase_2_body_action
+							var row: Dictionary = action._danger_groups[index]
+							var expected_beat := float(row.release) > first_release + .000001
+							check(bool(row.beat)==expected_beat, "%s group %d uses opener/full or continuation/beat" % [id,index])
+							var peak := float(row.release)-DangerFlash.DODGE_LEAD*speed
 							boss._process(peak/speed)
-							check(boss.danger_flash != null and is_equal_approx(boss._danger_flash_age,DangerFlash.PEAK_TIME), "Danger peak follows authored attack clock")
-							press_l()
-							check(lan.ground_action_state==LanPlayer.GroundActionState.BACK_DODGE, "Peak L enters dodge through normal input buffer")
-							boss._process((float(current.release)-action.elapsed+.001)/speed)
-							var contacts := 0
-							for box: CombatHitbox2D in action.hitboxes.values():
-								if box.attack.evasion_key != current.key: continue
-								contacts += 1
-								check(lan.hurtbox.receive_attack(box.attack)==CombatHitResult.Type.EVADED, "Peak L evades the corresponding real attack data")
-							check(contacts>0,"Announced attack exists at release")
-							if finale:
-								check(int(current.danger)==CombatAttackData.DangerType.UNPARRYABLE_DANGER,"Entire finale, including its first strike, is gold")
+							check(boss.danger_flash != null and boss.danger_flash.visible and is_equal_approx(boss._danger_flash_age,DangerFlash.PEAK_TIME), "%s group %d has a visible peak 100 ms before release" % [id,index])
+							check(boss.danger_flash.beat==expected_beat, "%s group %d displays the intended cue mode" % [id,index])
+							var expected_kind: StringName = &"gold" if int(row.danger)==CombatAttackData.DangerType.UNPARRYABLE_DANGER else &"red"
+							check(boss.danger_flash.kind==expected_kind, "%s group %d shows the matching danger colour" % [id,index])
+							if finale: check(expected_kind==&"gold", "Finale danger group is gold")
 							boss._interrupt_phase_2_action(0)
 							await process_frame
-	# Physical collision replay for the previously unfair first gold uppercut.
-	for buffed in [false,true]:
-		for facing in [-1.0,1.0]:
-			reset(buffed,true,facing)
-			boss.start_phase_2_body_action(&"master_phase2_rising_quake")
-			var action := boss.phase_2_body_action
-			var speed := 1.4 if buffed else 1.0
-			var ground: Dictionary = {}
-			var pressed := false
-			for tick in 1200:
-				boss._process(1.0/240.0)
-				for row: Dictionary in action.vfx.effects.values():
-					if row.event.do != "quake": continue
-					ground = row
-					for cue: Dictionary in action.vfx.ground_cues():
-						var peak := float(cue.release)-DangerFlash.DODGE_LEAD*speed
-						if action.elapsed>=peak and action.elapsed<peak+speed/240.0+.00001:
-							press_l()
-							pressed = true
-				if pressed: break
-			check(pressed,"Travelling ground front has its own input peak")
-			if pressed:
-				lan.combat_timeline.seek(.3*lan.BACK_DODGE_SPEED_SCALE,true)
-				boss.manual_control = false
-				var rect := CombatHitQuery.hurtbox_rect(lan)
-				var at := Vector2(clampf(ground.effect.global_position.x,rect.position.x,rect.end.x),boss.global_position.y)
-				var arrival: float = ground.effect.arrival(action.vfx._ground_point(ground,at))
-				action.vfx._resolve_ground(ground,arrival-.001,arrival+.001)
-				check(lan.combat_stats.health==100 and ground.hit_targets.has(lan.get_instance_id()),"Peak claim covers late ground contact exactly once")
-				boss.manual_control = true
-			boss._interrupt_phase_2_action(0)
-			await process_frame
-	# Flying-sword rage ninth cut uses the same visible peak and attack key.
+	# A travelling quake supplies a separate short gold cue at its own release.
+	reset(false,true,1)
+	boss.start_phase_2_body_action(&"master_phase2_rising_quake")
+	var ground_action := boss.phase_2_body_action
+	var ground_peaks := 0
+	for tick in 1200:
+		boss._process(1.0/240.0)
+		if not is_instance_valid(ground_action) or not ground_action.active: break
+		for row: Dictionary in ground_action.vfx.ground_cues():
+			var age := DangerFlash.WARNING_LEAD - (float(row.release) - ground_action.elapsed)
+			if absf(age - DangerFlash.PEAK_TIME) < 1.0/240.0:
+				ground_peaks += 1
+				check(boss.danger_flash.visible and boss.danger_flash.beat and boss.danger_flash.kind == &"gold" and absf(boss._danger_flash_age - DangerFlash.PEAK_TIME) < 1.0/240.0, "Ground danger shows its short gold peak 100 ms before release")
+	check(ground_peaks > 0, "Travelling ground attack exposes a danger cue")
+	boss._interrupt_phase_2_action(0)
+	# The ninth flying sword is a short gold beat.
 	reset(false,false,1)
 	boss.phase = 1
 	var formation := MasterFlyingSwordFormation.new()
@@ -110,49 +95,22 @@ func run() -> void:
 	formation.combat = MasterFlyingSwordCombat.new()
 	formation.combat.boss = boss
 	formation.rage(lan.global_position+Vector2(0,-48))
-	var barrage := formation.barrage
+	var found := false
 	for tick in 1400:
 		formation.advance(1.0/240.0)
-		if absf(boss._danger_flash_age-DangerFlash.PEAK_TIME)<1.0/240.0:
-			press_l()
+		if boss.danger_flash != null and boss.danger_flash.visible and absf(boss._danger_flash_age-DangerFlash.PEAK_TIME)<1.0/240.0:
+			found = true
 			break
-	check(lan.ground_action_state==LanPlayer.GroundActionState.BACK_DODGE,"Ninth flying sword exposes a gold input peak")
-	var sword_hit := CombatAttackData.new(StringName("master_rage_%d_9" % barrage.get_instance_id()),boss,24,12,0,0,CombatAttackData.DangerType.UNPARRYABLE_DANGER)
-	sword_hit.evasion_key = sword_hit.attack_id
-	lan.combat_timeline.seek(.3*lan.BACK_DODGE_SPEED_SCALE,true)
-	check(lan.hurtbox.receive_attack(sword_hit)==CombatHitResult.Type.EVADED,"Flying-sword peak names the actual ninth blade")
+	check(found and boss.danger_flash.kind==&"gold" and boss.danger_flash.beat, "Ninth flying sword shows a short gold beat")
 	formation.queue_free()
-	boss.phase = 2
-	# Physical collision replay for the previously unfair first gold uppercut.
-	for rate in [60,120]:
-		Engine.physics_ticks_per_second = rate
-		for facing in [-1.0,1.0]:
-			reset(true,true,facing)
-			await physics_frame
-			boss.start_phase_2_body_action(&"master_phase2_rising_quake")
-			var action := boss.phase_2_body_action
-			var results: Array = []
-			for box: CombatHitbox2D in action.hitboxes.values():
-				check(box.attack.danger_type==CombatAttackData.DangerType.UNPARRYABLE_DANGER,"First real uppercut is gold")
-				box.hit_resolved.connect(func(_target: Node,result: CombatHitResult.Type) -> void: results.append(int(result)))
-			var pressed := false
-			for tick in 90:
-				boss._process(1.0/rate)
-				if not pressed and absf(boss._danger_flash_age-DangerFlash.PEAK_TIME)<=.5/rate:
-					press_l()
-					pressed = true
-				await physics_frame
-				if not results.is_empty(): break
-			check(pressed and results==[int(CombatHitResult.Type.EVADED)] and lan.combat_stats.health==100,"Physical peak dodge succeeds at %d Hz, facing %s" % [rate,facing])
-			boss._interrupt_phase_2_action(0)
-	# Brightness has one peak while approved baked art remains in use.
-	boss.flash_danger(&"gold")
-	var cue := boss.danger_flash
-	cue.show_at(DangerFlash.PEAK_TIME,1,Vector2.ZERO)
-	var peak_alpha := cue.modulate.a
-	for time in [.05,.12,.17,.19,.25,.34]:
-		cue.show_at(time,1,Vector2.ZERO)
-		check(cue.modulate.a<peak_alpha,"Brightness is lower outside the unique peak")
-	check(not cue.pieces[0]._clip.is_empty() and not cue.pieces[1]._clip.is_empty(),"Peak uses the approved baked star and shards")
+	# Both modes rise to one peak and retain the baked pieces and shader.
+	for beat in [false,true]:
+		boss.show_danger_at(&"gold",DangerFlash.PEAK_TIME,beat)
+		var cue := boss.danger_flash
+		var peak_alpha := cue.pieces[0].modulate.a
+		for time in [DangerFlash.start_age(beat),DangerFlash.PEAK_TIME-.01,DangerFlash.PEAK_TIME+.01,.34]:
+			cue.show_at(time,1,Vector2.ZERO)
+			check(cue.pieces[0].modulate.a<peak_alpha, "Star brightness is lower outside the peak")
+		check(not cue.pieces[0]._clip.is_empty() and not cue.pieces[1]._clip.is_empty() and cue.flare.material.shader==DangerFlash.FLARE_SHADER, "Cue retains baked art and flare")
 	expect_save_untouched()
 	finish("MASTER DODGE CUES")

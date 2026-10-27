@@ -1,5 +1,14 @@
 extends SceneTree
 
+class MemoryProgress extends SaveProgressService:
+	func _ready() -> void:
+		_config = ConfigFile.new()
+		_loaded = true
+	func save_progress() -> bool: return true
+	func show_toast(_message: String) -> void: pass
+	func is_ability_unlocked(_ability: StringName) -> bool: return true
+
+
 var room
 var checks := 0
 var failures := 0
@@ -28,6 +37,12 @@ func capture(name: String) -> void:
 	root.get_texture().get_image().save_png(output.path_join(name + ".png"))
 
 func run() -> void:
+	var original_progress := root.get_node("SaveProgress")
+	root.remove_child(original_progress)
+	original_progress.free()
+	var memory := MemoryProgress.new()
+	memory.name = "SaveProgress"
+	root.add_child(memory)
 	var args := OS.get_cmdline_user_args()
 	if args.size() > 0: output = args[0]; DirAccess.make_dir_recursive_absolute(output)
 	room = load("res://scenes/dev/boss_development_room.tscn").instantiate()
@@ -42,7 +57,7 @@ func run() -> void:
 	deer.vfx.set_process(false)
 	room.play_action(1)
 	advance(44)
-	check(not deer.vfx.red_warning.visible, "Crouch does not display a persistent red sticker")
+	check(deer.red_warning_age() < 0.0 and deer.red_warning_age() >= DangerFlash.start_age() and deer.vfx.red_warning.visible and not deer.vfx.red_warning.beat, "Full warning is visible during negative-age crouch prewarn")
 	await capture("windup")
 	advance(8)
 	check(deer.vfx.red_warning.visible, "Heavy opens the new baked warning")

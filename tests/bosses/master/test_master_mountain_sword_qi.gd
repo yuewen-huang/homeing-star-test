@@ -53,7 +53,7 @@ func run() -> void:
 		var wave := action.mountain_wave
 		wave.set_process(false)
 		check(wave != null and wave.effect.spec.form == "crescent" and wave.effect.spec.trail == "flame" and is_equal_approx(wave.effect.spec.sink,0.15),"Screenshot selects crescent, flame trail and exact 0.15 sink")
-		check(wave.effect.spec.ramp == "azure" and not wave.effect._pixel.is_empty(),"Blue-white sword qi uses the fine pixel renderer")
+		check(wave.effect.spec.ramp == MasterPhase1Palette.ramp_stops() and not wave.effect._pixel.is_empty(),"Steel-blue sword qi uses the fine pixel renderer")
 		var visible_height := wave._height(0) * (1.0 - float(wave.effect.spec.sink))
 		check(is_equal_approx(visible_height,wave.body_reference_height * 1.12),"Exposed crescent is 1.12 times the full imported master body, after the 0.15 burial")
 		check(visible_height > 210.0 and visible_height < 220.0,"Production crescent is about 216 world pixels tall, rather than the rejected 66 pixels")

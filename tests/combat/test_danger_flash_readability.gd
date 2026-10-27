@@ -10,7 +10,7 @@ func run() -> void:
 	host.add_child(red)
 	gold.show_at(.06,1,Vector2(320,240))
 	red.show_at(.06,1,Vector2(640,240))
-	check(gold.modulate.a>red.modulate.a*1.9,"Gold is readable early without moving its peak")
+	check(is_equal_approx(gold.pieces[0].modulate.a,red.pieces[0].modulate.a),"Gold and red share the same brightness curve")
 	check(gold.scale==Vector2.ONE and red.scale==Vector2.ONE,"Gold and red retain the original star dimensions")
 	check(gold.z_index==DangerFlash.GOLD_Z and not gold.z_as_relative,"Gold renders above busy combat effects")
 	check(gold.pieces.all(func(piece: PixelSlash) -> bool: return piece._display.material==null),"Gold uses the original baked art without the rejected outline")

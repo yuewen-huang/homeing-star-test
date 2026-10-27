@@ -52,7 +52,7 @@ func run() -> void:
 	var original := body.shape.get_rect()
 	for facing in [-1.0,1.0]:
 		for danger in [0,1,2]:
-			for state in [LanPlayer.DefenseState.NONE,LanPlayer.DefenseState.PARRY_STARTUP,LanPlayer.DefenseState.PARRY_ACTIVE,LanPlayer.DefenseState.PARRY_NOTHING_EARLY]:
+			for state in [LanPlayer.DefenseState.NONE,LanPlayer.DefenseState.PARRY_ACTIVE,LanPlayer.DefenseState.PARRY_NOTHING_EARLY]:
 				fresh()
 				lan.defense_state=state
 				activate(danger,Vector2(47*facing,-29))

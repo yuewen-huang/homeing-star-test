@@ -1,5 +1,14 @@
 extends SceneTree
 
+class MemoryProgress extends SaveProgressService:
+	func _ready() -> void:
+		_config = ConfigFile.new()
+		_loaded = true
+	func save_progress() -> bool: return true
+	func show_toast(_message: String) -> void: pass
+	func is_ability_unlocked(_ability: StringName) -> bool: return true
+
+
 ## Wind-phase 拼刀 rhythms (DeerClashRhythm) on the real deer in the development room.
 ## Optional user args: snapshot directory, then "frames" to save every frame of each
 ## rhythm (subfolders r1..r4).
@@ -40,6 +49,12 @@ func play_rhythm(index: int) -> void:
 	room.play_action(4)
 
 func run() -> void:
+	var original_progress := root.get_node("SaveProgress")
+	root.remove_child(original_progress)
+	original_progress.free()
+	var memory := MemoryProgress.new()
+	memory.name = "SaveProgress"
+	root.add_child(memory)
 	var args := OS.get_cmdline_user_args()
 	if not args.is_empty(): output = args[0]; DirAccess.make_dir_recursive_absolute(output)
 	capture_frames = args.size() > 1 and args[1] == "frames"
@@ -114,9 +129,12 @@ func run() -> void:
 	var red_t: float = red.strikes[-1].t
 	check(deer.warning_kind == &"red" and deer.clash_phase.is_red_move(), "Red finale raises the red warning")
 	while deer.clash_phase.step_time + 0.000001 < red_t - DeerClashPhase.RED_LEAD: tick(1)
-	check(absf(deer.clash_phase.red_warning_age()) <= 1.0 / 60.0 + 0.0001, "Red flash starts 5/12 s before the red beat")
+	check(absf(deer.clash_phase.red_warning_age()) <= 1.0 / 60.0 + 0.0001, "Red warning age zero remains 5/12 s before the red beat")
 	var next := deer.clash_phase.next_parry_contact_in()
 	check(absf(next - (red_t - deer.clash_phase.step_time)) < 0.001, "Parry cue counts down to the red beat")
+	check(deer.warning_is_beat() and not deer.vfx.red_warning.visible, "Later red strike is a short beat and is hidden before its start")
+	while deer.clash_phase.red_warning_age() < DangerFlash.PEAK_TIME: tick(1)
+	check(deer.vfx.red_warning.visible and deer.vfx.red_warning.beat and not deer.vfx.red_warning.pieces[1].visible, "Later red strike displays its short chest beat without gathering shards")
 	tick(240)
 
 	# Slow motion keeps the beats.
