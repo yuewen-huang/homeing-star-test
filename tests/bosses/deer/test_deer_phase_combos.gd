@@ -62,7 +62,7 @@ func run() -> void:
 	room.dummy.begin_action()
 	room.play_action(2)
 	tick(500)
-	check(deer.clash_phase.action_id == &"three_cuts" and room.dummy.contacts.size() == 3 and deer.attack_hitbox.attack == null, "Phase 3 uses three independent near-range contacts and closes damage")
+	check(deer.clash_phase.action_id == &"deer_phase3_mountain_six" and room.dummy.contacts.size() == 6 and deer.attack_hitbox.attack == null, "Phase 3 uses six annotated contacts and closes damage")
 	check(deer.start_phase_combo() and deer.state == DeerBoss.State.CLASH, "Production action entry shares the real phase 3 combo")
 	deer.phase = 1
 	check(deer.start_phase_combo() and deer.combo_id == &"fast_slow", "Production entry maps the current phase to its prepared combo")

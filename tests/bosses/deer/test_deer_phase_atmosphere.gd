@@ -44,7 +44,7 @@ func run() -> void:
 		deer.red_parry_hold = false
 		deer._dodge_remaining = 1.0
 		deer.vfx._process(0.1)
-		check(is_equal_approx(field.clock-clock,0.018), "Dodge slow motion advances atmosphere on action time")
+		check(is_equal_approx(field.clock-clock,0.1 * ActionClock.DODGE_SLOW), "Dodge slow motion advances atmosphere on shared action time")
 		deer._dodge_remaining = 0.0
 	check(deer.animated_sprite.scale == source_scale and deer.animated_sprite.position == source_position, "Body scale and pivot remain unchanged")
 	check(field.z_index < SideviewLayers.NPC and field._front.z_index < SideviewLayers.PLAYER, "Atmosphere stays below actor/player and chest cue layers")

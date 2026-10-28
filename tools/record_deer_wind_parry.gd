@@ -16,11 +16,10 @@ class MemoryProgress extends SaveProgressService:
 	func save_progress() -> bool: return true
 	func is_ability_unlocked(_ability: StringName) -> bool: return true
 
-## Press parry this long (boss action seconds) before a normal/red hit opens; startup is
-## 0.12 s and the active window 0.24 s, so the hit lands in the middle of it.
+## Press parry this long (boss action seconds) before a normal/red hit opens.
+## K judges immediately; the source-frame windup stays within the shared guard window.
 const PARRY_LEAD := 0.20
 const DODGE_LEAD := 0.12
-const GAP_AFTER_COMBO := 1.0
 const START_DISTANCE := 170.0
 const DURATION := 60.0
 
@@ -29,10 +28,7 @@ var boss: DeerBoss
 var player: LanPlayer
 var clash: DeerClashPhase
 var output := ""
-var queue: Array[StringName] = []
 var current: StringName = &""
-var combo_start := 0.0
-var idle_since := -1.0
 var clock := 0.0
 var pressed_keys: Dictionary = {}
 var events: Array[Dictionary] = []
@@ -111,32 +107,16 @@ func _log_beat() -> void:
 	_last_step = clash.step_index
 	events.append({"t": clock, "f": Engine.get_frames_drawn(), "event": "beat", "move": String(clash.steps[clash.step_index].move), "distance": absf(player.position.x - boss.position.x)})
 
-func _next_combo() -> void:
-	var resting := boss.state in [DeerBoss.State.IDLE, DeerBoss.State.WALK]
-	if not resting:
-		idle_since = -1.0
-		return
-	if idle_since < 0.0: idle_since = clock
-	if clock - idle_since < GAP_AFTER_COMBO and not current.is_empty(): return
-	if queue.is_empty():
-		_finish()
-		return
-	current = queue.pop_front()
-	_place_player()
-	pressed_keys.clear()
-	combo_start = clock
-	boss.start_clash(current, player.position.x)
-	events.append({"t": clock, "f": Engine.get_frames_drawn(), "event": "combo", "combo": String(current), "branch": clash.branch})
-	idle_since = -1.0
-
 ## Upcoming hit openings in the current step: [time from now (action s), danger, key].
 func _upcoming() -> Array:
 	var result := []
 	if clash.step_index < 0 or clash.step_index >= clash.steps.size(): return result
-	var step: Dictionary = clash.steps[clash.step_index]
-	if step.move == &"three_cuts":
-		for i in DeerClashPhase.PRESSURE_BEATS.size():
-			result.append([float(DeerClashPhase.PRESSURE_BEATS[i]) - clash.step_time, &"normal", "%d_p%d" % [clash.step_index, i]])
+	if is_instance_valid(clash.authored):
+		var next := clash.authored.next_contact_in()
+		var serial := 0
+		for row: Dictionary in clash.authored.rows:
+			if row.started: serial += 1
+		if next >= 0: result.append([next, &"normal", "%d_%d" % [clash.step_index, serial]])
 		return result
 	for index in clash._hits.size():
 		var hit: Dictionary = clash._hits[index]

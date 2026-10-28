@@ -67,7 +67,7 @@ func advance_handoff(label: String, next_phase: int) -> void:
 	var support_count := player.sloped_ground_surfaces.size()
 	kill_phase()
 	check(boss.state == DeerBoss.State.PHASE_END and boss.invulnerable and boss.phase_transition.stage == &"fall", label+": depletion starts protected fall")
-	check(boss.attack_hitbox.attack == null and not boss.clash_phase.pressure_fx.visible, label+": outstanding contact/wind is cleared")
+	check(boss.attack_hitbox.attack == null and not is_instance_valid(boss.clash_phase.authored), label+": outstanding contact/wind is cleared")
 	check(boss.root_phase.volleys.is_empty() and boss.root_phase.nodules.size() == terrain_count and player.sloped_ground_surfaces.size() == support_count, label+": temporary root attacks cancel while permanent terrain/supports survive")
 	tick(0.5)
 	check(String(boss.animated_sprite.animation).begins_with("death_") and boss.phase == old_phase, label+": physical falling clips keep old phase colour")

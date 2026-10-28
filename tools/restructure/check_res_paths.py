@@ -29,6 +29,15 @@ LEGACY_TEST_FILES = {"tests/autoload/test_save_path_migration.gd"}
 STUDIO_REFERENCES = {
     "tools/art/import_master_phase2_arrangements.py": {"combos/", "vfx/combo_player.gd"},
     "tools/art/import_master_phase2_studio.py": {"tools/export_master_runtime.gd", "vfx/"},
+    "tools/art/import_parry_wave.py": {"vfx/"},
+}
+DEMO_REFERENCES = {
+    "tools/art/import_deer_phase3_arrangements.py": {"vfx/", "vfx/vendor_studio/magic/shaders/"},
+}
+# This historical generator describes its own output, retired from the runtime.
+# Keep reporting it as a warning rather than treating it as a production dependency.
+RETIRED_OUTPUTS = {
+    "tools/art/integrate_master_painted_vfx.py": {"assets/generated/combat_vfx/master/heavy_skills/{page}"},
 }
 
 # Paths that are missing on purpose: path → why.
@@ -61,6 +70,13 @@ def check(ws: rp.Workspace):
                 if repo_name == rp.TEST and rel in STUDIO_REFERENCES.get(path.relative_to(repo).as_posix(), set()):
                     if not exists(ws.root / "combat-vfx-studio", rel):
                         errors[where].append(f"Studio source missing: {rel}")
+                    continue
+                if repo_name == rp.TEST and rel in DEMO_REFERENCES.get(path.relative_to(repo).as_posix(), set()):
+                    if not exists(ws.root / "smear-combo-demo", rel):
+                        errors[where].append(f"Smear demo source missing: {rel}")
+                    continue
+                if repo_name == rp.TEST and rel in RETIRED_OUTPUTS.get(path.relative_to(repo).as_posix(), set()):
+                    warnings[where].append(f"retired generator output: res://{rel}")
                     continue
                 if rp.is_dynamic(rel):
                     prefix = rp.static_prefix(rel)

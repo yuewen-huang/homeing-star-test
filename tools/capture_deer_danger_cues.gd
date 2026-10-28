@@ -35,7 +35,7 @@ func shot(name: String) -> void:
 	region.save_png(output.path_join(name + ".png"))
 
 ## Steps until `flash` shows, then captures each of its frames.
-func capture(label: String, flash: Sprite2D, limit := 600) -> void:
+func capture(label: String, flash: DangerFlash, limit := 600) -> void:
 	for i in limit:
 		if flash.visible: break
 		tick()
@@ -57,7 +57,7 @@ func run() -> void:
 	root.add_child(room); current_scene = room
 	await process_frame; await process_frame
 	room.set_physics_process(false); room.player.set_physics_process(false)
-	for phase_index in [0, 2, 4]:
+	for phase_index in [0, 2, 3]:
 		room.select_combo(phase_index)
 		deer = room.adapter.deer
 		deer.set_physics_process(false); deer.vfx.set_process(false)
@@ -67,11 +67,11 @@ func run() -> void:
 				deer._recover(0.0); tick(30)
 				room.play_action(3); await capture("mist_gold_charge", deer.vfx.gold_warning)
 			2:
-				deer.start_clash(&"rear_gore", room.dummy.position.x); await capture("wind_red_gore", deer.vfx.red_warning)
+				deer.start_clash(&"deer_phase3_forest_five", room.dummy.position.x); await capture("wind_red_gore", deer.vfx.red_warning)
 				deer.clash_phase.cancel(); deer._recover(0.0); tick(30)
 				deer.position.x = 1200.0
 				deer.start_clash(&"charge", room.dummy.position.x); await capture("wind_gold_charge", deer.vfx.gold_warning)
-			4:
+			3:
 				room.play_action(0)
 				for i in 600:
 					if deer.vine_phase.step == DeerVinePhase.Step.HOVER: break

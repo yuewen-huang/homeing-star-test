@@ -7,6 +7,10 @@ var feedback: CombatFeedbackService
 var checks := 0
 var failures := 0
 
+class KeyedReceiver extends DamageReceiver2D:
+	var combo: StringName = &"held_combo_1"
+	func get_parry_chain_key() -> StringName: return combo
+
 
 func _initialize() -> void:
 	call_deferred("run")
@@ -267,6 +271,28 @@ func run() -> void:
 	check(not is_instance_valid(timed), "The impact frees itself once its pieces finish")
 	clear_feedback()
 	check(FileAccess.file_exists(SaveProgressService.SAVE_PATH) == saved_existed and (not saved_existed or FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) == saved), "Saved progress and inventory unchanged")
+	var keyed := KeyedReceiver.new()
+	room.add_child(keyed)
+	feedback.emit_parry_success(keyed, attack(keyed), Vector2.ZERO)
+	clear_feedback()
+	feedback._real_clock += 1.4
+	feedback.emit_parry_success(keyed, attack(keyed), Vector2.ZERO)
+	check(feedback.parry_chain == 1, "Held beats in one authored combo retain sound and impact escalation")
+	clear_feedback()
+	keyed.combo = &"held_combo_2"
+	feedback._real_clock += 0.2
+	feedback.emit_parry_success(keyed, attack(keyed), Vector2.ZERO)
+	check(feedback.parry_chain == 0, "A new combo starts its own feedback chain")
+	clear_feedback()
+	feedback._real_clock += 3.1
+	feedback.emit_parry_success(keyed, attack(keyed), Vector2.ZERO)
+	check(feedback.parry_chain == 0, "Authored feedback still expires across a long interruption")
+	clear_feedback()
+	keyed.combo = &""
+	feedback._real_clock += 1.1
+	feedback.emit_parry_success(keyed, attack(keyed), Vector2.ZERO)
+	check(feedback.parry_chain == 0, "Unkeyed attacks preserve the original short chain window")
+	clear_feedback()
 	current_scene = null
 	room.free()
 	# Let cancelled owner-bound tweens and queued native animations retire.

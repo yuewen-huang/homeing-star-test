@@ -3,6 +3,7 @@
 Usage:
   python move_res_paths.py MAPPING [--root <workspace>] [--apply]
   python move_res_paths.py --pair OLD NEW [--pair OLD NEW ...] [--apply]
+  python move_res_paths.py --archive-name NAME --archive-unused GAME_PATH [--apply]
 
 MAPPING is a text file with one `old -> new` per line (game-relative, no `res://`; folders
 or files; `#` starts a comment). Without --apply nothing changes: the plan is printed.
@@ -21,6 +22,7 @@ textures follow the move, then `check_res_paths.py`, then the stage's key tests.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import re
 import shutil
 import subprocess
@@ -190,13 +192,65 @@ def main(argv=None) -> int:
     parser.add_argument("--pair", nargs=2, action="append", metavar=("OLD", "NEW"), default=[])
     parser.add_argument("--root", type=Path, default=rp.default_root(), help="folder holding the four repos")
     parser.add_argument("--apply", action="store_true", help="really move and rewrite")
+    parser.add_argument("--archive-unused", action="append", default=[], metavar="GAME_PATH",
+                        help="archive an unused file and sidecars, retaining its game-relative path")
+    parser.add_argument("--archive-name", help="subfolder of temp-assert Archive/game-unused-20261019")
     args = parser.parse_args(argv)
+    if args.archive_unused:
+        if args.mapping or args.pair or not args.archive_name:
+            parser.error("archive mode requires --archive-name and cannot rewrite live references")
+        return archive_unused(rp.Workspace(args.root), args.archive_unused, args.archive_name, args.apply)
     pairs = [(normal(a), normal(b)) for a, b in args.pair]
     if args.mapping:
         pairs += parse_mapping(args.mapping.read_text(encoding="utf-8"))
     if not pairs:
         parser.error("give a mapping file or --pair OLD NEW")
     return plan_or_apply(rp.Workspace(args.root), pairs, args.apply)
+
+
+def archive_unused(ws, paths: list[str], name: str, apply: bool) -> int:
+    """Move retired files outside runtime without rewriting references into the archive."""
+    game = ws.game.resolve()
+    archive_root = (ws.root / "homeing-star-temp-assert/Archive/game-unused-20261019").resolve()
+    target_root = (archive_root / name).resolve()
+    if not target_root.is_relative_to(archive_root) or target_root == archive_root:
+        raise ValueError("archive name must stay inside the unused-assets archive")
+    if len(paths) != len(set(paths)):
+        raise ValueError("an archive source appears twice")
+    if (target_root / "game-files.sha256").exists():
+        raise ValueError("archive already contains a manifest; use a new archive name")
+    items = []
+    for rel in paths:
+        source = (game / rel).resolve()
+        if not source.is_relative_to(game) or not source.is_file():
+            raise ValueError(f"not a game file: {rel}")
+        for item in [source] + [Path(str(source) + s) for s in SIDECARS]:
+            if not item.exists():
+                continue
+            target = target_root / item.relative_to(game)
+            if target.exists():
+                raise ValueError(f"archive target exists: {target}")
+            items.append((item, target))
+    retired = {item for item, _ in items}
+    for path in rp.text_files(game, {".gd", ".tscn", ".tres", ".json", ".godot"}):
+        if path.resolve() in retired:
+            continue
+        source = rp.read_text(path) or ""
+        for item, _ in items:
+            if "res://" + item.relative_to(game).as_posix() in source:
+                raise ValueError(f"live reference in {path}: {item.name}")
+    manifest = []
+    for source, target in items:
+        digest = hashlib.sha256(source.read_bytes()).hexdigest()
+        manifest.append(f"{digest}  {source.relative_to(game).as_posix()}")
+        print(f"{'ARCHIVE' if apply else 'DRY RUN'} {source} -> {target}")
+        if apply:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(source), str(target))
+            assert hashlib.sha256(target.read_bytes()).hexdigest() == digest
+    if apply:
+        (target_root / "game-files.sha256").write_text("\n".join(manifest) + "\n", encoding="utf-8")
+    return 0
 
 
 if __name__ == "__main__":

@@ -44,7 +44,7 @@ func run() -> void:
 	deer.set_physics_process(false); deer.vfx.set_process(false)
 	lan.global_position.x = room.dummy.position.x
 	deer.position.x = room.dummy.position.x + 175.0
-	deer.start_clash(&"thrust", room.dummy.position.x)
+	deer.start_clash(&"deer_phase3_forest_five", room.dummy.position.x)
 	var targets := [[0.60, "cue_1_appear"], [0.40, "cue_2_closing"], [0.25, "cue_3_closed"], [0.12, "cue_4_flash"]]
 	for target in targets:
 		for i in 120:
@@ -55,7 +55,7 @@ func run() -> void:
 	deer.clash_phase.cancel(); deer._recover(0.0)
 	for i in 30: tick()
 	deer.position.x = room.dummy.position.x + 175.0
-	deer.start_clash(&"thrust", room.dummy.position.x)
+	deer.start_clash(&"deer_phase3_forest_five", room.dummy.position.x)
 	for i in 120:
 		var t := deer.clash_phase.next_parry_contact_in()
 		if t >= 0.0 and t <= 0.3: break

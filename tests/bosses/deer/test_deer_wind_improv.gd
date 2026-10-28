@@ -38,11 +38,7 @@ func run() -> void:
 	deer = room.adapter.deer; clash = deer.clash_phase; player = room.player
 	deer.set_physics_process(false); deer.vfx.set_process(false)
 
-	# The leap is gone everywhere.
-	var leaps := 0
-	for id: StringName in DeerClashRhythm.RHYTHMS:
-		for slice: Array in DeerClashRhythm.RHYTHMS[id].slices: if String(slice[0]).begins_with("leap"): leaps += 1
-	check(not DeerClashPhase.MOVES.has(&"leap") and leaps == 0, "No rhythm or move uses the leap any more")
+	check(not DeerClashPhase.MOVES.has(&"leap"), "No retired leap is selectable")
 	check(DeerClashPhase.LIBRARY[0] == &"improv" and room.library_picker.item_count == DeerClashPhase.LIBRARY.size(), "Development library starts with the AI rhythm picker")
 
 	# Gale dash: from far away to DASH_SPACING in front of the target, then a parryable thrust.
@@ -88,8 +84,8 @@ func run() -> void:
 	# Too close: the deer steps back to make room before striking.
 	deer.position.x = 820.0
 	deer.direction = -1.0
-	clash.start(&"thrust", 820.0 - 100.0)
-	tick(int(DeerActionLibrary.duration(&"thrust_START", 12.0) * 60.0))
+	clash.start(&"deer_phase3_forest_five", 820.0 - 100.0)
+	tick(18)
 	check(deer.position.x > 820.0 + 40.0, "Pressed too close, the deer steps back before the thrust (now %.0f px away)" % (deer.position.x - 720.0))
 	idle()
 
@@ -110,9 +106,9 @@ func run() -> void:
 		clash.start(&"improv", 820.0 - (520.0 if far else 170.0))
 		var moves: Array = clash.steps.map(func(step: Dictionary) -> StringName: return step.move)
 		if far: far_openers[moves[0]] = true
-		one_rhythm = one_rhythm and moves.count(&"rhythm") == 1
+		one_rhythm = one_rhythm and moves.count(&"authored") == 1
 		if moves.has(&"charge"): charge_last = charge_last and moves.back() == &"charge"
-		for step: Dictionary in clash.steps: if step.move == &"rhythm": played[step.rhythm] = true
+		for step: Dictionary in clash.steps: if step.move == &"authored": played[step.combo] = true
 		var history := clash.rhythm_history
 		if history.size() >= 3 and history[-1] == history[-2] and history[-2] == history[-3]: triples += 1
 		var guard := 0
@@ -146,10 +142,13 @@ func run() -> void:
 	# The production AI improvises.
 	deer.manual_control = false
 	deer.phase_ai.choose(150.0)
-	check(deer.state == DeerBoss.State.CLASH and clash.improv and clash.steps.any(func(step: Dictionary) -> bool: return step.move == &"rhythm"), "Production AI starts a rhythm combo in the wind phase")
+	check(deer.state == DeerBoss.State.CLASH and clash.improv and clash.steps.any(func(step: Dictionary) -> bool: return step.move == &"authored"), "Production AI starts an approved annotated combo in the wind phase")
 	clash.cancel(); deer._recover(0.0)
 
 	var after := FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) if FileAccess.file_exists(SaveProgressService.SAVE_PATH) else PackedByteArray()
 	check(after == saved, "Improv checks leave saved progress unchanged")
+	current_scene = null
+	room.free()
+	await process_frame
 	print("WIND IMPROV: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures else 0)

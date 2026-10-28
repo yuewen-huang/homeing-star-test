@@ -204,7 +204,7 @@ func test_wind_cue() -> void:
 	deer.position.x = 820.0
 	lan.global_position.x = 820.0 - 165.0
 	var serial := deer.clash_phase.combo_serial
-	deer.start_clash(&"three_ding", 820.0 - 165.0)
+	deer.start_clash(&"deer_phase3_forest_five", 820.0 - 165.0)
 	check(deer.clash_phase.combo_serial == serial + 1 and deer.get_parry_chain_key() == StringName("deer_clash_%d" % (serial + 1)), "each wind combo gets its own parry-chain key")
 	var first := -1.0
 	for i in 120:
@@ -231,7 +231,7 @@ func test_wind_cue() -> void:
 	# Out of reach: the same thrust aimed far away is not cued.
 	deer.clash_phase.cancel(); deer._recover(0.0); tick.call(30)
 	deer.position.x = 1400.0
-	deer.start_clash(&"thrust", 1400.0 - 165.0)
+	deer.start_clash(&"deer_phase3_forest_five", 1400.0 - 165.0)
 	deer.clash_phase.aim_x = 400.0
 	lan.global_position.x = 400.0
 	var far := -1.0

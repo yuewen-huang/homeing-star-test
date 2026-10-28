@@ -92,10 +92,10 @@ func run() -> void:
 			await _take("快刀接重斩", &"fast_fast_slow", false, 8.0)
 			await _take("闪避 · 子弹时间追击", &"light", true, 5.5)
 		elif phase_index == 3:
-			await _take("三连叮", &"three_ding", false, 5.0)
-			await _take("加速五连", &"accel_five", false, 6.0)
-			await _take("红刀收尾 · 一闪", &"red_finale", false, 7.0)
-			await _take("闪避 · 子弹时间追击", &"three_ding", true, 6.0)
+			await _take("穿林五叠", &"deer_phase3_forest_five", false, 7.0)
+			await _take("回角逐风", &"deer_phase3_return_four", false, 7.0)
+			await _take("踏岳六震", &"deer_phase3_mountain_six", false, 8.0)
+			await _take("闪避 · 子弹时间追击", &"deer_phase3_forest_five", true, 7.0)
 		else:
 			_reset()
 			caption.text = "朽角巡林者 · 藤 · 化形"
@@ -230,11 +230,12 @@ func _drive_deer() -> void:
 		elif deer.state == DeerBoss.State.HEAVY:
 			_input_at((1.4+deer._heavy_hold)/deer._action_speed-deer._time, "heavy_%d" % deer.combo_step, bullet)
 	elif phase_index == 3 and deer.state == DeerBoss.State.CLASH:
-		var rhythm := deer.clash_phase.rhythm
-		if rhythm != null:
-			for i in rhythm.strikes.size():
-				var strike: Dictionary = rhythm.strikes[i]
-				if not strike.done: _input_at(float(strike.t)-deer.clash_phase.step_time, i, bullet)
+		var contact := deer.clash_phase.next_parry_contact_in()
+		var resolved := 0
+		if is_instance_valid(deer.clash_phase.authored):
+			for row: Dictionary in deer.clash_phase.authored.rows:
+				if row.started: resolved += 1
+		if contact >= 0: _input_at(contact, "%d_%d_%d" % [deer.clash_phase.combo_serial, deer.clash_phase.step_index, resolved], bullet)
 		var gap := deer.position.x-lan.position.x
 		if not bullet and absf(gap) > 160:
 			Input.action_press(&"ui_right" if gap > 0 else &"ui_left")
