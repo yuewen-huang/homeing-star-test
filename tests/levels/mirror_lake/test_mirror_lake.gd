@@ -250,6 +250,7 @@ func _check_switch_state() -> void:
 	check(has_f, "mirror_switch 默认键 = F")
 	check(scene.side == MirrorLake.Side.YANG and not scene.is_switching() and scene.can_switch(), "初始：阳面、没在过渡、可切换")
 	check(not scene.controls_inverted() and scene.controls_inverted_enabled, "初始：不颠倒（总开关默认开）")
+	check(MirrorLake.zone_at(scene.player.position.x) == MirrorLake.Zone.ENTRY, "初始：出生在入口区")
 	scene._process(0.016)
 	var before := geometry(scene)
 	check(is_equal_approx(before["player_y"], MirrorLake.STAND_Y) and is_equal_approx(before["camera_y"], MirrorLake.CAMERA_Y_REST), "切换前：主角在站立线 619、镜头 y=195")
@@ -258,7 +259,14 @@ func _check_switch_state() -> void:
 	check(scene.request_switch(), "切换：成功")
 	check(scene.side == MirrorLake.Side.YIN and scene.is_switching(), "切换：状态翻成阴、开始过渡")
 	check(scene.switch_cooldown_left == MirrorLake.SWITCH_COOLDOWN, "切换：冷却从按下起算")
-	check(scene.controls_inverted() and scene.control_inverter.inverted, "阴面：操作颠倒")
+	check(not scene.controls_inverted() and not scene.control_inverter.inverted, "入口区阴面：强制不颠倒")
+	# 离开入口进入解谜一后，总开关开 + 阴面 → 恢复颠倒
+	scene.player.position.x = MirrorLake.ZONE_PUZZLE_ONE_START + 80.0
+	scene._process(0.0)
+	check(scene.controls_inverted() and scene.control_inverter.inverted, "离开入口到解谜一：阴面恢复操作颠倒")
+	scene.player.position.x = MirrorLake.SPAWN_X
+	scene._process(0.0)
+	check(not scene.controls_inverted() and not scene.control_inverter.inverted, "回到入口：再次关闭颠倒")
 	check(not scene.request_switch() and scene.side == MirrorLake.Side.YIN, "过渡/冷却期间再按：无效，仍是阴")
 	scene.advance_switch(MirrorLake.SWITCH_DURATION * 0.25)
 	check(is_equal_approx(scene.transition_progress(), 0.25), "过渡 25%")
@@ -304,11 +312,13 @@ func _check_switch_state() -> void:
 	scene.request_switch()
 	scene.advance_switch(MirrorLake.SWITCH_DURATION * 0.6)
 	check(is_equal_approx(scene.player.position.y, MirrorLake.STAND_Y - 100.0), "空中切换：主角 y 不变（离地高度保持 100px）")
-	# 总开关
+	# 总开关（在解谜一测，避开入口区强制不颠倒）
+	scene.player.position.x = MirrorLake.ZONE_PUZZLE_ONE_START + 80.0
+	scene._process(0.0)
 	scene.controls_inverted_enabled = false
 	check(scene.side == MirrorLake.Side.YIN and not scene.controls_inverted() and not scene.control_inverter.inverted, "总开关关：阴面也不颠倒")
 	scene.controls_inverted_enabled = true
-	check(scene.controls_inverted() and scene.control_inverter.inverted, "总开关开：阴面颠倒")
+	check(scene.controls_inverted() and scene.control_inverter.inverted, "总开关开：阴面颠倒（解谜一）")
 	scene.queue_free()
 	await process_frame
 
@@ -378,7 +388,12 @@ func _check_switch_input() -> void:
 	release_f.pressed = false
 	Input.parse_input_event(release_f)
 	await process_frame
-	check(scene.control_inverter.inverted, "阴面：输入层颠倒已开启")
+	check(not scene.control_inverter.inverted, "入口区阴面：输入层不颠倒")
+	# 移到解谜一再测真实颠倒输入
+	scene.player.position.x = MirrorLake.ZONE_PUZZLE_ONE_START + 120.0
+	scene._process(0.0)
+	await process_frame
+	check(scene.control_inverter.inverted, "解谜一阴面：输入层颠倒已开启")
 	# 颠倒中真实按 A → 主角读到 D
 	await _key(KEY_A, true)
 	check(Input.is_physical_key_pressed(KEY_D) and not Input.is_physical_key_pressed(KEY_A), "颠倒：真实按 A → 物理键读成 D")
