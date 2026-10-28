@@ -71,7 +71,7 @@ func run() -> void:
 	await process_frame
 	room.player.set_physics_process(false)
 	freeze_specimen()
-	check(room.boss_picker.item_count == 9 and room.selected_boss == 0, "Nine bosses populate selector; deer is default")
+	check(room.boss_picker.item_count == 10 and room.selected_boss == 0, "Ten bosses populate selector; deer is default")
 	check(not root.get_node("SaveProgress").is_processing_unhandled_input(), "Clear-save shortcut disabled inside development room")
 	check(not root.get_node("InventoryScreen").is_processing_unhandled_input(), "Inventory cannot change real loadout in development room")
 	check(room.player.is_ability_locked(SaveProgressService.ABILITY_JUMP) == false, "Preview player has local ability permissions")
