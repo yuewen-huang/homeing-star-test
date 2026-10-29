@@ -188,6 +188,7 @@ func _vine_take(action: StringName, label: String, seconds: float) -> void:
 
 func _physics_process(_delta: float) -> bool:
 	if not running: return false
+	if not is_instance_valid(lan) or not is_instance_valid(boss): return false
 	tick += 1
 	for action in release_actions: Input.action_release(action)
 	release_actions.clear()

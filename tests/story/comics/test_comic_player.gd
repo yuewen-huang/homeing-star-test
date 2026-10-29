@@ -85,6 +85,9 @@ func run() -> void:
 	press()
 	press()
 	check(probe._finished and probe.attempts == 2 and finished == [false], "Retry succeeds once; repeated final input cannot reenter")
+	probe.allow_skip = true
+	press(KEY_ESCAPE)
+	check(not (root.get_node("AudioSettings") as AudioSettingsService).settings_panel.visible, "Finished comic keeps Esc from opening settings under the outgoing fade")
 	probe.free()
 
 	probe = Probe.new()

@@ -245,6 +245,12 @@ func run() -> void:
 	await capture("salt_departure_gate_ready")
 	check(encounter.interact(),"A fresh E interaction starts the real common scene transition")
 	check(not encounter.interact() and not save.has_completed(&"mirror_lake_entered"),"Transition locks duplicate entry and does not prewrite arrival")
+	check(encounter.session_active and encounter.comic is WindSightingComic and paused,"First cave entry opens the configured common scroll comic")
+	check(encounter.comic.cinematic_id==encounter.SCROLL_ENTRY_ID and encounter.comic._frames.size()==6,"Scroll entry has six panels and an independent viewing record")
+	check((root.get_node("SceneTransition") as SceneTransitionService).current_music_path==Chapter2Music.SALT_FIELD.resource_path,"Cave comic keeps the salt-field music before the map boundary")
+	encounter.comic._show_panel(5,false)
+	encounter.comic._request_finish(false)
+	check(save.get_cinematic_status(encounter.SCROLL_ENTRY_ID)==SaveProgressService.CinematicStatus.WATCHED and not save.has_completed(&"mirror_lake_entered"),"Scroll viewing settles before the actual arrival")
 	var transition := root.get_node("SceneTransition") as SceneTransitionService
 	await wait_for_map_fade()
 	check(is_instance_valid(current_scene) and current_scene is MirrorLake,"Real scene transition loads the existing Mirror Lake map")

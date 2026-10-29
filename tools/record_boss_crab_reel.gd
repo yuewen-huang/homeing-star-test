@@ -1,4 +1,4 @@
-extends "record_crystal_crab_parry.gd"
+﻿extends "record_crystal_crab_parry.gd"
 var native_center := Vector2.ZERO
 var native_side := -1.0
 var extra_started := false
@@ -132,7 +132,7 @@ func _next() -> void:
 	crab.red_parry_hold = false
 	crab._parry_pause = 0
 	crab.combat_stats.restore_health()
-	crab.combat_stats.restore_poise_to(120)
+	crab.combat_stats.restore_poise()
 	crab.position = native_center
 	lan.reset_after_map_fall(native_center + Vector2(native_side * 80, 0))
 	lan.velocity = Vector2.ZERO

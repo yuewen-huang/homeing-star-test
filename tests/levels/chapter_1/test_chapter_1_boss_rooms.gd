@@ -128,6 +128,16 @@ func run() -> void:
 			check(boss.core_invulnerable and boss.gold_shield_active and not boss.blue_shield_active,"Puzzle completion removes only light blue; uncleared combat still protects core")
 			save.set_stele_state(data[4],2)
 			check(not boss.core_invulnerable and not boss.gold_shield_active and not boss.blue_shield_active,"Completing both regional challenges removes protection immediately")
+		if boss is Chapter1DeerBossRoom:
+			if boss.story.comic != null:
+				boss.story.comic._request_finish(true)
+				await frames(2)
+			check(not boss.get_node("ReturnGate").visible and not boss._return_prompt.available,"Deer battle closes the return portal")
+			# Resume a completed encounter for this travel fixture; actual combat
+			# defeat/phase gating is covered by test_deer_battle_portal.
+			save.try_complete_fact(SaveProgressService.STORY_C1_DEER_DEFEATED)
+			save.try_complete_fact(DeerStory.REWARD_PRESENTED_ID)
+			boss.story._restore_victory()
 		if not await travel(boss.get_node("ReturnGate")):
 			continue
 		check(current_scene.scene_file_path==region_path,"Boss return reaches original region")

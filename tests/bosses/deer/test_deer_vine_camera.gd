@@ -138,12 +138,16 @@ func run() -> void:
 	boss.combat_stats.apply_health_damage(boss.combat_stats.health)
 	check(until(func() -> bool: return boss.state == DeerBoss.State.COMPLETE), "fourth-phase defeat completes")
 	check(camera.zoom.is_equal_approx(reference_zoom), "completed encounter retains the wide framing")
+	if room.story.reward_reveal != null:
+		room.story.reward_reveal._finish_reveal()
+		await process_frame
 	# A settled story victory deliberately rejects revive. Start a fresh in-memory
-	# attempt before exercising the death/retry camera contract.
+	# attempt before exercising the explicit preview reset. Production defeat
+	# now returns outside, covered by test_deer_battle_portal.
 	room.story._settled = false
 	room.story.victory_pending = false
 	memory._config.set_value("progress", String(SaveProgressService.STORY_C1_DEER_DEFEATED), false)
-	room._revive()
+	room.restart_mist_phase()
 	await process_frame; await process_frame
 	boss.set_physics_process(false)
 	room._process(0)

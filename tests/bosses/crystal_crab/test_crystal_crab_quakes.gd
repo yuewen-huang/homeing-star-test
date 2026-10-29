@@ -110,11 +110,17 @@ func run() -> void:
 			if rate>0: rates_ok = rates_ok and rate>=4 and rate<=40
 		check(rates_ok,"VFX-first fitted frames stay within 4–40 fps: "+String(id))
 		for beat in score.beats:
-			var effect := PixelSlash.new().configure(score.effect_spec(beat.radius,beat.danger))
-			room.add_child(effect)
-			check(not effect._clip.is_empty(),"Production quake atlas is available: "+String(id))
-			check(effect._clip.times.any(func(time): return is_equal_approx(float(time),CrystalCrabQuakeRhythm.OPEN)),"Baked quake contains the exact compression image held at contact: "+String(id))
-			effect.free()
+			crab.quake_vfx.spawn_quake(beat, Vector2(820,555), 0.0)
+			var effect: Node2D = crab.quake_vfx.pieces[-1]
+			check(effect.spec.unit=="ice" and effect.spec.form=="cluster" and effect.layers.has("solids"),"Saved Studio ice clusters build their actual GPU crystal mesh: "+String(id))
+			check(is_equal_approx(float(effect.spec.width),float(beat.radius)*2.0) and is_equal_approx(float(effect.spec.perspective),0.19) and is_equal_approx(float(effect.spec.travel),CrystalCrabQuakeRhythm.OPEN),"Ice footprint and full expansion retain the actual contact radius/time: "+String(id))
+			crab.quake_vfx.advance(CrystalCrabQuakeRhythm.OPEN)
+			var frozen_age: float = effect.age
+			crab.quake_vfx.advance(0.0)
+			check(is_equal_approx(effect.age,frozen_age) and effect.spec.shake==0.0,"Studio VFX freeze with the boss clock and do not duplicate shared camera shake: "+String(id))
+			check(effect.layers.values().all(func(layer): return layer.z_index<=0) and effect.z_index<SideviewLayers.PLAYER,"Crystal bodies, fragments and glow all stay below Lan's guard: "+String(id))
+			crab.quake_vfx.advance(effect.life)
+			check(crab.quake_vfx.pieces.is_empty(),"Ice, fragments and cracks expire without leaving persistent spikes: "+String(id))
 	place()
 	crab.start_quake(&"left",lan.position)
 	tick(0.70)
@@ -137,7 +143,7 @@ func run() -> void:
 	tick(1.80,true)
 	check(results.size()==3 and results.all(func(r): return r==CombatHitResult.Type.PARRY_SUCCESS),"Hard difficulty parries three ground pulses through real Lan settlement")
 	check(crab.combat_stats.poise==crab.combat_stats.max_poise-3*CombatTuning.BOSS_NORMAL_PARRY_POISE,"Each ground parry removes the shared normal poise amount; the combo does not refill it")
-	check(crab.quake_vfx.pieces.all(func(e): return e.shape==&"quake"),"Crab attacks contain only ground art, no slash crescents")
+	check(crab.quake_vfx.pieces.all(func(e): return e.spec.unit=="ice" and e.spec.form=="cluster"),"Crab attacks contain only Studio ice-cluster ground art")
 	place()
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.NORMAL)
 	crab.start_quake(&"red",lan.position)

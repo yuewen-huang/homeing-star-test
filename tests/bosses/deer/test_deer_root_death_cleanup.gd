@@ -32,6 +32,7 @@ func run() -> void:
 	current_scene = room
 	await process_frame
 	await process_frame
+	if room.story.comic != null: room.story.comic._request_finish(true)
 	room.set_physics_process(false)
 	room.player.set_physics_process(false)
 	var boss := room.deer
@@ -39,7 +40,12 @@ func run() -> void:
 	boss.manual_control = true
 	var roots := boss.root_phase
 	var deaths := [0]
-	room.player.combat_stats.health_depleted.connect(func() -> void: deaths[0] += 1)
+	var transition := root.get_node("SceneTransition") as SceneTransitionService
+	# Hold travel after lethal contact so cleanup can be inspected before teardown.
+	# The real exterior transition is covered by test_deer_battle_portal.
+	room.player.combat_stats.health_depleted.connect(func() -> void:
+		deaths[0] += 1
+		transition.is_transitioning = true)
 	for profile in ["tracking", "heavy", "final"]:
 		room.player.reset_after_map_fall(Vector2(600, 555))
 		room.player.combat_stats.health = 1
@@ -66,8 +72,14 @@ func run() -> void:
 		await process_frame
 		boss.set_physics_process(false)
 		check(not is_instance_valid(volley) and not is_instance_valid(pending), profile + ": cancelled volleys are actually freed")
-		check(boss.phase == 1 and room.player.combat_stats.health == room.player.combat_stats.max_health, profile + ": deferred restart restores mist phase and player health")
-		check(roots.volleys.is_empty() and roots.nodules.is_empty(), profile + ": restart leaves no old roots")
+		check(room._returning_after_defeat and room.player.combat_stats.health == 0 and not boss.is_physics_processing(), profile + ": defeat remains stopped while returning outside")
+		check(transition.take_scene_entry_anchor() == room.return_anchor, profile + ": defeat targets the exterior portal marker")
+		check(roots.volleys.is_empty() and roots.nodules.is_empty(), profile + ": defeat leaves no old roots")
+		transition.is_transitioning = false
+		room._returning_after_defeat = false
+		room.player.set_input_frozen(false)
+		room.restart_mist_phase()
+		boss.set_physics_process(false)
 	check(deaths[0] == 3, "exactly one death signal per lethal root hit")
 	var terrain := roots.add_nodule(Vector2(1100, 555))
 	terrain._register_support()

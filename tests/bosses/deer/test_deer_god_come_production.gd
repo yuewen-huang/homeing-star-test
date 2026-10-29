@@ -93,12 +93,21 @@ func run() -> void:
 	until(func() -> bool: return is_instance_valid(vine.god_statue))
 	var fatal := vine.god_statue
 	room.player.combat_stats.health = 1
+	room.player.combat_stats.refill_health_on_depletion = false
 	room.player.defense_state = LanPlayer.DefenseState.NONE
+	var transition := root.get_node("SceneTransition") as SceneTransitionService
+	# Hold the fade to inspect reentrant cancellation before the room is freed.
+	room.player.combat_stats.health_depleted.connect(func(): transition.is_transitioning = true, CONNECT_ONE_SHOT)
 	assist.player_invincible = false
 	until(func() -> bool: return fatal.finished)
 	check(fatal.finished and fatal.hitbox.attack == null and not (root.get_node("CombatFeedback") as CombatFeedbackService).screen_fx.pulse_active() and vine.god_statue == null, "lethal pulse immediately cancels statue and screen pulse inside death callback")
 	await process_frame; await process_frame
 	boss.set_physics_process(false)
-	check(boss.phase == 1 and not vine.ultimate_active and vine.god_statue == null, "retry restarts mist with no finale state")
+	check(room._returning_after_defeat and room.player.input_frozen and not vine.ultimate_active and vine.god_statue == null, "defeat stops the encounter with no finale state while returning outside")
+	check(transition.take_scene_entry_anchor() == room.return_anchor, "lethal finale returns to the exterior portal marker")
+	transition.is_transitioning = false
+	room.queue_free()
+	await process_frame
+	await process_frame
 	print("GOD COME PRODUCTION: %d checks, %d failures" % [checks,failures])
 	quit(1 if failures else 0)

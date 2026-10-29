@@ -49,7 +49,7 @@ function Invoke-Engine([string[]]$Arguments, [string]$Label) {
     return $false
   }
   $proc.WaitForExit()
-  $badLog = Select-String -LiteralPath $stderr -Pattern 'SCRIPT ERROR:|SHADER ERROR:|Parse Error:|Shader compilation failed' -Quiet
+  $badLog = Select-String -LiteralPath $stderr -Pattern 'SCRIPT ERROR:|SHADER ERROR:|Parse Error:|Shader compilation failed|Infinite loop detected|started with no Tweeners' -Quiet
   $ok = $proc.ExitCode -eq 0 -and -not $badLog
   Write-Host ($(if ($ok) {'PASS'} else {'FAIL'})+' '+$Label)
   if (-not $ok) { Get-Content -LiteralPath $stderr -Tail 15 | ForEach-Object { Write-Host $_ }; Get-Content -LiteralPath $stdout -Tail 8 | ForEach-Object { Write-Host $_ } }

@@ -1,4 +1,4 @@
-extends SceneTree
+﻿extends SceneTree
 ## Scripted button presses, hard difficulty, invincibility off. No forged hit results.
 ## Same production actor and Lan in the existing production room; no demo scene/resources.
 class MemoryProgress extends SaveProgressService:
@@ -87,7 +87,7 @@ func _next() -> void:
 	crab.red_parry_hold = false
 	crab._parry_pause = 0
 	crab.combat_stats.restore_health()
-	crab.combat_stats.restore_poise_to(120)
+	crab.combat_stats.restore_poise()
 	crab.position = Vector2(920,555)
 	lan.reset_after_map_fall(Vector2(840,555))
 	lan.velocity = Vector2.ZERO
