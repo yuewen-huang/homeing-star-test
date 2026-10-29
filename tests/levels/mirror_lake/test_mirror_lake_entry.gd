@@ -1,6 +1,6 @@
 extends SceneTree
 
-## 镜湖入口区玩法：区内颠倒关闭、拱桥断桥对准印、阳态印水下隐影、阴态清晰可踩、
+## 镜湖入口区玩法：区内与全图一致阴面颠倒、拱桥断桥对准印、阳态印水下隐影、阴态清晰可踩、
 ## 多丛芦苇门封路（桥面二段跳越不过）、无文字提示。
 ## 用法：homeing-star-test/run-tests.ps1 -Test test_mirror_lake_entry
 
@@ -49,15 +49,12 @@ func _check_entry_inversion() -> void:
 	check(scene.controls_inverted_enabled, "总开关默认仍为 true（全局默认不变）")
 	check(not scene.controls_inverted(), "入口阳面：不颠倒")
 	check(scene.request_switch() and scene.side == MirrorLake.Side.YIN, "入口内切到阴面")
-	check(not scene.controls_inverted() and not scene.control_inverter.inverted, "入口阴面：强制不颠倒")
+	check(scene.controls_inverted() and scene.control_inverter.inverted, "入口阴面：颠倒（与全图一致）")
 	scene.player.position.x = MirrorLake.ZONE_PUZZLE_ONE_START + 40.0
-	scene._update_zone_controls()
-	check(scene.controls_inverted() and scene.control_inverter.inverted, "进入解谜一：阴面恢复颠倒")
+	check(scene.controls_inverted() and scene.control_inverter.inverted, "进入解谜一：阴面仍颠倒")
 	scene.player.position.x = MirrorLake.SPAWN_X
-	scene._update_zone_controls()
-	check(not scene.controls_inverted() and not scene.control_inverter.inverted, "回到入口：颠倒再次关闭")
+	check(scene.controls_inverted() and scene.control_inverter.inverted, "回到入口：仍颠倒")
 	scene.player.position.x = MirrorLake.ZONE_PUZZLE_ONE_START + 40.0
-	scene._update_zone_controls()
 	scene.controls_inverted_enabled = false
 	check(not scene.controls_inverted(), "总开关关：解谜一阴面也不颠倒")
 	scene.queue_free()

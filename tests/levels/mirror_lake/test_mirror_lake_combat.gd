@@ -73,7 +73,7 @@ func run() -> void:
 	switch_side()
 	check(player.attack_state == LanPlayer.AttackState.NONE and not player.attack_queued, "Switch to yang immediately cancels the running combo")
 	check(not player.has_buffered_attack() and not player.has_buffered_special_attack(), "Switch discards both attack buffers")
-	check(not scene.controls_inverted(), "Entry still exempts only direction inversion")
+	check(not scene.controls_inverted(), "Yang: no direction inversion")
 	for ability in [SaveProgressService.ABILITY_ATTACK, SaveProgressService.ABILITY_AIR_ATTACK,
 		SaveProgressService.ABILITY_SPECIAL, SaveProgressService.ABILITY_DASH, SaveProgressService.ABILITY_ULTIMATE]:
 		check(player.is_ability_locked(ability), "Yang blocks ability: " + String(ability))
@@ -147,7 +147,7 @@ func run() -> void:
 	check(player.ground_action_state == LanPlayer.GroundActionState.BACK_DODGE and player.combat_timeline.is_playing(), "Switching keeps the non-attacking L dodge timeline intact")
 	for x in [5000.0, 10000.0, 14080.0]:
 		player.position.x = x
-		scene._update_zone_controls()
+		scene.refresh_controls()
 		check(not player.are_attacks_allowed() and player.are_parries_allowed(), "Yang permissions cover map x=" + str(x))
 	var outside := load("res://scenes/player/lan/lan_player.tscn").instantiate() as LanPlayer
 	outside.position = Vector2(0.0, 555.0)

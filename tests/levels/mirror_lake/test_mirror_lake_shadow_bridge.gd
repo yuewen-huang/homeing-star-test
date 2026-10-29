@@ -71,8 +71,8 @@ func run() -> void:
 		side(MirrorLake.Side.YIN)
 	check(actor.sloped_ground_surfaces.size() == yin_slopes,"Repeated switches do not leak or duplicate walk surfaces")
 	# Walk under the inverted controls through the complete first arch.
-	place(Vector2(3080,MirrorLake.STAND_Y))
-	scene._update_zone_controls()
+	place(Vector2(3420,MirrorLake.STAND_Y))
+	scene.refresh_controls()
 	check(scene.controls_inverted(),"Real traversal retains the existing yin direction inversion")
 	key(KEY_A,true) # Actual A maps to right in yin.
 	key(KEY_S,true) # Actual S maps to jump in yin.
@@ -83,7 +83,7 @@ func run() -> void:
 		min_y = minf(min_y,actor.position.y)
 	key(KEY_A,false)
 	key(KEY_S,false)
-	check(actor.position.x > 5200.0 and min_y < 345 and absf(actor.position.y-MirrorLake.STAND_Y)<1,
+	check(actor.position.x > 5540.0 and min_y < 345 and absf(actor.position.y-MirrorLake.STAND_Y)<1,
 		"Real jump and walking cross the entire ink arch, then return to the lake floor")
 	check(actor.combat_stats.health == actor.combat_stats.max_health,"Bridge traversal causes no damage")
 	# The fake lower branch's middle never gets a walk surface.

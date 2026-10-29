@@ -50,7 +50,7 @@ func run() -> void:
 	root.add_child(scene)
 	await process_frame
 	scene.set_process(false)
-	place(5100.0)
+	place(5700.0)
 	await settle()
 	await shoot("switch_00_before")
 	# 阳面其它镜头位置（日、月随远景层，屏幕位置固定；起点 / boss 区 / 跳起抬高镜头）
@@ -60,11 +60,11 @@ func run() -> void:
 	place(MirrorLake.BOSS_ARENA_CENTER_X)
 	await settle()
 	await shoot("yang_boss")
-	place(5100.0, 170.0)
+	place(5700.0, 170.0)
 	for i in 6:
 		step(0.05)
 	await shoot("yang_jump")
-	place(5100.0)
+	place(5700.0)
 	await settle()
 	scene.request_switch()
 	var d := MirrorLake.SWITCH_DURATION
@@ -94,7 +94,7 @@ func run() -> void:
 	place(MirrorLake.BOSS_ARENA_CENTER_X)
 	await settle()
 	await shoot("yin_boss")
-	place(5100.0, 170.0)
+	place(5700.0, 170.0)
 	scene.player.velocity = Vector2.ZERO
 	for i in 6:
 		step(0.05)

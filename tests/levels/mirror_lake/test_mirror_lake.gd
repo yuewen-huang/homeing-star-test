@@ -7,6 +7,15 @@ extends SceneTree
 
 const SCENE_PATH := "res://scenes/levels/mirror_lake/mirror_lake.tscn"
 
+## 基础阴面测试应从未装备凝心镜的状态开始，不读取玩家当前装备/解谜进度。
+class MemorySave extends SaveProgressService:
+	func _ready() -> void:
+		_config = ConfigFile.new()
+		_loaded = true
+	func save_progress() -> bool: return true
+	func show_toast(_text: String) -> void: pass
+	func is_ability_unlocked(_ability: StringName) -> bool: return true
+
 var _failures := 0
 var _checks := 0
 
@@ -30,6 +39,11 @@ func expected_layer_width(ratio: float) -> int:
 
 
 func run() -> void:
+	var original := root.get_node("SaveProgress")
+	root.remove_child(original)
+	var save := MemorySave.new()
+	save.name = "SaveProgress"
+	root.add_child(save)
 	_check_constants()
 	_check_zones()
 	_check_boss_camera()
@@ -40,12 +54,15 @@ func run() -> void:
 	await _check_switch_input()
 	print("")
 	print("结果：%d 项检查，%d 项失败" % [_checks, _failures])
+	root.remove_child(save)
+	save.free()
+	root.add_child(original)
 	quit(1 if _failures > 0 else 0)
 
 
 func _check_constants() -> void:
-	check(MirrorLake.WORLD_LENGTH == 15360.0, "世界宽 15360")
-	check(is_equal_approx(MirrorLake.WORLD_LENGTH / MirrorLake.VIEW_WIDTH, 12.0), "世界宽 = 12 屏")
+	check(MirrorLake.WORLD_LENGTH == 14080.0, "世界宽 14080")
+	check(is_equal_approx(MirrorLake.WORLD_LENGTH / MirrorLake.VIEW_WIDTH, 11.0), "世界宽 = 11 屏")
 	check(MirrorLake.WATERLINE_Y == SideviewMapLayout.GROUND_BASELINE_Y, "水线 = 归航镇同一条站立基线 555")
 	check(MirrorLake.MAP_HEIGHT == 1110.0, "地图高 1110（约 1.54 屏）")
 	check(MirrorLake.CAMERA_Y_REST == 195.0, "站地时水线在屏幕正中（camera_y=195）")
@@ -56,9 +73,9 @@ func _check_constants() -> void:
 	check(MirrorLake.CAMERA_Y_REST + MirrorLake.VIEW_HEIGHT <= MirrorLake.MAP_HEIGHT, "镜头底边不超出贴图")
 	check(MirrorLake.camera_y_for(-5000.0) == MirrorLake.CAMERA_Y_MIN, "镜头纵向上限被夹住")
 	check(MirrorLake.camera_y_for(5000.0) == MirrorLake.CAMERA_Y_MAX, "镜头纵向下限被夹住")
-	check(MirrorLake.CAMERA_X_MIN == 640.0 and MirrorLake.CAMERA_X_MAX == 14720.0, "镜头横向范围 [640, 14720]")
+	check(MirrorLake.CAMERA_X_MIN == 640.0 and MirrorLake.CAMERA_X_MAX == 13440.0, "镜头横向范围 [640, 13440]")
 	check(MirrorLake.camera_x_for(0.0) == 640.0, "最左端镜头夹在 640")
-	check(MirrorLake.camera_x_for(99999.0) <= MirrorLake.CAMERA_X_MAX, "最右端镜头不超过 14720")
+	check(MirrorLake.camera_x_for(99999.0) <= MirrorLake.CAMERA_X_MAX, "最右端镜头不超过 13440")
 	check(MirrorLake.layer_offset_x(640.0, 0.5) == 0.0, "镜头在最左端时每层都从 x=0 开始")
 	check(is_equal_approx(MirrorLake.layer_offset_x(MirrorLake.CAMERA_X_MAX, 0.5), -(MirrorLake.CAMERA_X_MAX - 640.0) * 0.5),
 		"中景 ratio 0.5：镜头走到头偏移 = 一半行程")
@@ -69,17 +86,17 @@ func _check_constants() -> void:
 
 func _check_zones() -> void:
 	var starts: Array = MirrorLake.ZONE_STARTS
-	check(starts == [0.0, 2560.0, 7680.0, 12800.0], "四区起点 0 / 2560 / 7680 / 12800")
+	check(starts == [0.0, 2560.0, 8500.0, 11900.0], "四区起点 0 / 2560 / 8500 / 11900")
 	check(MirrorLake.ZONE_NAMES.size() == 4 and starts.size() == 4, "四个分区：入湖 / 解谜一 / 解谜二 / BOSS")
 	var widths: Array[float] = []
 	for i in starts.size():
 		widths.append(MirrorLake.zone_end(i) - starts[i])
-	check(widths == [2560.0, 5120.0, 5120.0, 2560.0], "分区宽：入湖 2 屏 / 解谜一 4 屏 / 解谜二 4 屏 / BOSS 2 屏")
+	check(widths == [2560.0, 5940.0, 3400.0, 2180.0], "分区宽：入湖 2560 / 解谜一 5940 / 解谜二 3400 / BOSS 2180")
 	check(MirrorLake.zone_end(MirrorLake.Zone.BOSS) == MirrorLake.WORLD_LENGTH, "BOSS 区在最右，一直到世界尽头")
 	check(MirrorLake.zone_at(0.0) == MirrorLake.Zone.ENTRY and MirrorLake.zone_at(2559.0) == MirrorLake.Zone.ENTRY, "zone_at：入湖")
-	check(MirrorLake.zone_at(2560.0) == MirrorLake.Zone.PUZZLE_ONE and MirrorLake.zone_at(7679.0) == MirrorLake.Zone.PUZZLE_ONE, "zone_at：解谜一")
-	check(MirrorLake.zone_at(7680.0) == MirrorLake.Zone.PUZZLE_TWO and MirrorLake.zone_at(12799.0) == MirrorLake.Zone.PUZZLE_TWO, "zone_at：解谜二")
-	check(MirrorLake.zone_at(12800.0) == MirrorLake.Zone.BOSS and MirrorLake.zone_at(MirrorLake.WORLD_LENGTH) == MirrorLake.Zone.BOSS, "zone_at：BOSS")
+	check(MirrorLake.zone_at(2560.0) == MirrorLake.Zone.PUZZLE_ONE and MirrorLake.zone_at(8499.0) == MirrorLake.Zone.PUZZLE_ONE, "zone_at：解谜一")
+	check(MirrorLake.zone_at(8500.0) == MirrorLake.Zone.PUZZLE_TWO and MirrorLake.zone_at(11899.0) == MirrorLake.Zone.PUZZLE_TWO, "zone_at：解谜二")
+	check(MirrorLake.zone_at(11900.0) == MirrorLake.Zone.BOSS and MirrorLake.zone_at(MirrorLake.WORLD_LENGTH) == MirrorLake.Zone.BOSS, "zone_at：BOSS")
 	check(MirrorLake.zone_at(MirrorLake.SPAWN_X) == MirrorLake.Zone.ENTRY, "出生点在入湖区")
 	check(MirrorLake.BOSS_ARENA_CENTER_X > MirrorLake.ZONE_BOSS_START and MirrorLake.BOSS_ARENA_CENTER_X < MirrorLake.WORLD_LENGTH,
 		"BOSS 战场中心落在 BOSS 区里")
@@ -122,7 +139,7 @@ func _check_scene() -> void:
 	root.add_child(scene)
 	await process_frame
 	check(scene.layer_sprites.size() == 4, "四层美术：宣纸 / 远景 / 中景 / 地面")
-	var expected_widths := [1280, 2976, 8320, 15360]
+	var expected_widths := [1280, 2816, 7680, 14080]
 	for i in scene.layer_sprites.size():
 		var sprite := scene.layer_sprites[i]
 		var ratio := scene.layer_ratios[i]
@@ -259,14 +276,14 @@ func _check_switch_state() -> void:
 	check(scene.request_switch(), "切换：成功")
 	check(scene.side == MirrorLake.Side.YIN and scene.is_switching(), "切换：状态翻成阴、开始过渡")
 	check(scene.switch_cooldown_left == MirrorLake.SWITCH_COOLDOWN, "切换：冷却从按下起算")
-	check(not scene.controls_inverted() and not scene.control_inverter.inverted, "入口区阴面：强制不颠倒")
-	# 离开入口进入解谜一后，总开关开 + 阴面 → 恢复颠倒
+	check(scene.controls_inverted() and scene.control_inverter.inverted, "入口区阴面：同样颠倒（不再有入口例外）")
+	# 进入解谜一、再回入口：阴面始终颠倒
 	scene.player.position.x = MirrorLake.ZONE_PUZZLE_ONE_START + 80.0
 	scene._process(0.0)
-	check(scene.controls_inverted() and scene.control_inverter.inverted, "离开入口到解谜一：阴面恢复操作颠倒")
+	check(scene.controls_inverted() and scene.control_inverter.inverted, "解谜一阴面：颠倒")
 	scene.player.position.x = MirrorLake.SPAWN_X
 	scene._process(0.0)
-	check(not scene.controls_inverted() and not scene.control_inverter.inverted, "回到入口：再次关闭颠倒")
+	check(scene.controls_inverted() and scene.control_inverter.inverted, "回到入口：仍颠倒")
 	check(not scene.request_switch() and scene.side == MirrorLake.Side.YIN, "过渡/冷却期间再按：无效，仍是阴")
 	scene.advance_switch(MirrorLake.SWITCH_DURATION * 0.25)
 	check(is_equal_approx(scene.transition_progress(), 0.25), "过渡 25%")
@@ -312,7 +329,7 @@ func _check_switch_state() -> void:
 	scene.request_switch()
 	scene.advance_switch(MirrorLake.SWITCH_DURATION * 0.6)
 	check(is_equal_approx(scene.player.position.y, MirrorLake.STAND_Y - 100.0), "空中切换：主角 y 不变（离地高度保持 100px）")
-	# 总开关（在解谜一测，避开入口区强制不颠倒）
+	# 总开关
 	scene.player.position.x = MirrorLake.ZONE_PUZZLE_ONE_START + 80.0
 	scene._process(0.0)
 	scene.controls_inverted_enabled = false
@@ -374,6 +391,8 @@ func celestial_visible(mat: ShaderMaterial) -> float:
 ## 真实输入：F 键切换；颠倒开/关时 A/D 对主角的实际效果。
 func _check_switch_input() -> void:
 	var scene := new_scene()
+	# 这里只测方向输入，空白存档的芦苇门不能阻挡位移断言。
+	scene.entry.open_gate()
 	await process_frame
 	await process_frame
 	var press_f := InputEventKey.new()
@@ -388,7 +407,7 @@ func _check_switch_input() -> void:
 	release_f.pressed = false
 	Input.parse_input_event(release_f)
 	await process_frame
-	check(not scene.control_inverter.inverted, "入口区阴面：输入层不颠倒")
+	check(scene.control_inverter.inverted, "入口区阴面：输入层颠倒")
 	# 移到解谜一再测真实颠倒输入
 	scene.player.position.x = MirrorLake.ZONE_PUZZLE_ONE_START + 120.0
 	scene._process(0.0)

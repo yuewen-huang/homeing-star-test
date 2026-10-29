@@ -89,7 +89,7 @@ func run() -> void:
 	check(lotus.step_count==0,"Walking along the water beneath the leaves does not opt into the puzzle")
 	# Real physical keys climb onto the first pad under inverted controls.
 	place(lotus.position+Vector2(-120,0))
-	scene._update_zone_controls()
+	scene.refresh_controls()
 	key(KEY_A,true)
 	key(KEY_S,true)
 	for i in 50:
