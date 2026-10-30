@@ -44,6 +44,6 @@ call(['-f','concat','-safe','0','-i',BASE/'concat.txt','-c','copy','-movflags','
 mix(BASE/'stems/boss_collection.mp4',BASE/'boss_collection.mp4',BASE/'collection_mix.log')
 lines=['# BOSS 震刀与闪避追击录制','', '720p / 60 FPS。正式地图实机录屏，脚本输入、真实碰撞判定，无敌关闭。原 BGM 在录制进程中静音，后期统一配师傅一阶段音乐；震刀相对其它音效突出 6 dB，配乐低音量铺底并在打击时自动避让。未修改游戏代码、参数或已保存的音频设置。','', '覆盖师傅一、二阶段；朽角巡林者雾、根、风、藤四阶段；晶蟹，以及风、藤、雾、根四个区域核心。','', '蛤蟆按要求排除；双鱼尚无战斗招式，未收录。','', '| 视频 | 时长 |','|---|---|']
 for r in results: lines.append(f"| [{r['title']}]({(BASE/r['file']).as_posix()}) | {r['duration']:.1f} 秒 |")
-lines += ['', '真实地图：师傅为教程战斗场；朽角四阶段为第一章最终 BOSS 房；晶蟹为第二章盐田的原生遭遇；四核心分别为风、藤、雾、根的正式核心房。', '', f'[完整合集]({(BASE/"boss_collection.mp4").as_posix()})', f'[精华剪辑]({(BASE/"boss_highlights.mp4").as_posix()})', '', '区域核心展示正式战斗的光圈接刀；没有额外阶段。各片段开始时重置位置及状态，交锋过程由游戏判定。普通难度沿用正式连续震刀辅助；晶蟹沿用困难难度逐刀输入。','', '闪避追击段由真实闪避触发游戏子弹时间，之后通过 J 输入连击。录像脚本使用内存进度，不更改玩家存档。','', '每段目录保留原始 AVI、判定 events.json、日志和关键帧。']
+lines += ['', '真实地图：师傅为教程战斗场；朽角四阶段为第一章鹿 BOSS 房；晶蟹为第二章盐田的原生遭遇；四核心分别为风、藤、雾、根的正式核心房。', '', f'[完整合集]({(BASE/"boss_collection.mp4").as_posix()})', f'[精华剪辑]({(BASE/"boss_highlights.mp4").as_posix()})', '', '区域核心展示正式战斗的光圈接刀；没有额外阶段。各片段开始时重置位置及状态，交锋过程由游戏判定。普通难度沿用正式连续震刀辅助；晶蟹沿用困难难度逐刀输入。','', '闪避追击段由真实闪避触发游戏子弹时间，之后通过 J 输入连击。录像脚本使用内存进度，不更改玩家存档。','', '每段目录保留原始 AVI、判定 events.json、日志和关键帧。']
 (BASE/'观看说明.md').write_text('\n'.join(lines),encoding='utf8')
 print('PACKAGE COMPLETE',flush=True)

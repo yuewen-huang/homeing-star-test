@@ -113,7 +113,7 @@ func run() -> void:
 			continue
 		boss.player.set_physics_process(false)
 		check(absf(boss.player.position.y-Chapter1BossRoom.FLOOR_Y)<3,"Boss arrival is on safe floor")
-		check(boss.core_invulnerable==(data[3]!=&""),"Core immunity reflects incomplete corresponding puzzle; final boss has no regional gate")
+		check(boss.core_invulnerable==(data[3]!=&""),"Core immunity reflects incomplete corresponding puzzle; deer BOSS has no regional gate")
 		check(transition.current_music_path==Chapter1Music.boss_music_for_scene(boss.scene_file_path).resource_path and transition.music_player.playing,"Boss entry selects designated boss BGM")
 		await capture(data[2])
 		if data[3]!=&"":

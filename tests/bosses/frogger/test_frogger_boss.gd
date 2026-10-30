@@ -11,6 +11,13 @@ class LocalProgress extends SaveProgressService:
 class LocalEncounter extends "res://scripts/levels/back_alley/back_alley_encounter.gd":
 	func _ready() -> void: pass
 
+class BeginnerProgress extends SaveProgressService:
+	func _ready() -> void:
+		_config = ConfigFile.new()
+		_loaded = true
+	func save_progress() -> bool: return true
+	func show_toast(_message: String) -> void: pass
+
 class NativeAlley extends "res://scripts/levels/back_alley/back_alley.gd":
 	func _add_slime_encounter() -> void: pass
 
@@ -272,7 +279,7 @@ func test_encounter() -> void:
 	await process_frame
 
 func test_native_alley() -> void:
-	var progress := LocalProgress.new()
+	var progress := BeginnerProgress.new()
 	root.add_child(progress)
 	progress.mark_completed(SaveProgressService.STORY_BACK_ALLEY_WAVE_4_CLEARED)
 	var alley := NativeAlley.new()
@@ -293,8 +300,20 @@ func test_native_alley() -> void:
 	encounter.set_process(false)
 	frog = encounter.frog_boss
 	frog.set_physics_process(false)
+	check(not progress.is_ability_unlocked(SaveProgressService.ABILITY_PARRY) and not progress.is_ability_unlocked(SaveProgressService.ABILITY_ULTIMATE) and progress.is_ability_unlocked(SaveProgressService.ABILITY_SPECIAL), "real fifth-wave permissions allow I but keep K and ultimate locked")
 	check(frog.global_position.distance_to(alley.player.global_position) < 200 and frog.position.y == alley.FLOOR_Y, "native scrolling alley shares correct player/boss foot coordinates")
 	check(frog.get_node("BossStatusHUD").portrait.texture != null, "production HUD uses frog artwork")
+	alley.player.set_input_frozen(false)
+	for frame in 174: frog._physics_process(1.0 / 60)
+	check(frog.action == &"idle", "opening leaves nearly three seconds to find the attack keys")
+	for frame in 8: frog._physics_process(1.0 / 60)
+	check(frog.action == &"tongue", "autonomous frog still attacks after the opening pause")
+	for frame in 48: frog._physics_process(1.0 / 60)
+	check(frog.action == &"idle" and frog.attack_hitbox.attack == null, "first tongue finishes and closes its contact")
+	for frame in 150: frog._physics_process(1.0 / 60)
+	check(frog.action == &"idle", "recovery leaves a full 2.5-second attack-practice opening")
+	for frame in 8: frog._physics_process(1.0 / 60)
+	check(frog.action == &"spit", "frog resumes its alternating attacks after the longer opening")
 	if not output.is_empty():
 		await process_frame
 		await RenderingServer.frame_post_draw
@@ -306,6 +325,26 @@ func test_native_alley() -> void:
 		await process_frame
 		await RenderingServer.frame_post_draw
 		check(root.get_texture().get_image().save_png(output.path_join("frogger_alley_tongue.png")) == OK, "Godot capture actual alley tongue")
+	# A beginner can reach the lesson's finish using I, spaced J hits and the E
+	# finisher, with the actual damage contexts and no parry/ultimate permissions.
+	frog.manual_control = true
+	frog._idle()
+	frog.combat_stats.restore_health()
+	frog.combat_stats.restore_poise()
+	frog.receive_skill_hit(SkillHitContext.new(&"lan_special_attack", CombatTuning.LAN_SPECIAL_DAMAGE), alley.player.global_position)
+	check(progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_NORMAL_USED), "available I attack advances the beginner lesson")
+	var light := LanAttackEffectCatalog.attack_1x().attack_hit_context
+	var hits := 0
+	while not frog.poise_broken and hits < 10:
+		frog.receive_attack_hit(light, alley.player.global_position)
+		hits += 1
+		if not frog.poise_broken:
+			for frame in 45: frog._physics_process(1.0 / 60)
+	check(frog.poise_broken and hits <= 10 and frog.combat_stats.health > 0, "ten paced J hits can break poise after I without advanced abilities")
+	check(frog.stagger_remaining >= 6.0, "beginner still gets six action seconds to find the contextual E finisher")
+	frog.receive_skill_hit(SkillHitContext.new(&"lan_special_attack", CombatTuning.LAN_SPECIAL_MAX_DAMAGE, false, false, false, true), alley.player.global_position)
+	for frame in 60: frog._physics_process(1.0 / 60)
+	check(progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_TUTORIAL_COMPLETE) and progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SLIMES_DEFEATED), "one novice I/J/finisher sequence completes the lesson and clears the alley")
 	current_scene = null
 	alley.free()
 	progress.free()

@@ -25,7 +25,7 @@ func run() -> void:
 	var count := SavePathMigration.migrate(config)
 	check(not config.has_section_key("checkpoints", OLD_MIST) and config.has_section_key("checkpoints", NEW_MIST), "A checkpoint keyed by an old scene path moves to the new key")
 	check(config.get_value("checkpoints", NEW_MIST, {}).get("position") == Vector2(10, 20), "The checkpoint's data comes along unchanged")
-	check(config.get_value("checkpoints", "last_scene") == NEW_FINAL, "last_scene follows the renamed final boss room")
+	check(config.get_value("checkpoints", "last_scene") == NEW_FINAL, "last_scene follows the renamed deer BOSS room")
 	var record: Dictionary = config.get_value("records", "mist_puzzle_entry")
 	check(record.scene_path == NEW_MIST and record.title == "雾碑", "Paths inside record dictionaries are rewritten, other fields kept")
 	check(record.history == [NEW_WIND, "kept"], "Paths inside arrays are rewritten")
