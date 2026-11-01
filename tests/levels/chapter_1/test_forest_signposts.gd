@@ -35,8 +35,8 @@ const ROOMS := {
 		"Signs/LowerWestFork": {"ToCore": [180.0, E.VINE], "ToRoot": [0.0, E.ROOT]},
 	},
 }
-## Interaction/UI text that stays text: stele inscriptions, winch and E-key prompts, HUD.
-const KEPT_LABELS := ["StateInscription", "ProgressHint", "WinchHint", "InteractKeycap"]
+## Remaining interaction text: winches and non-stele E-key prompts, HUD.
+const KEPT_LABELS := ["WinchHint", "InteractKeycap"]
 
 var failures := 0
 var output := ""

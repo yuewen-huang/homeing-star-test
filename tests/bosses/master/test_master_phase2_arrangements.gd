@@ -61,7 +61,7 @@ func run() -> void:
 			check(not action.active,"Finishing disables all gameplay collision immediately")
 			await process_frame
 	master.phase_2_buff_remaining=0
-	master.phase_2_body_choice=0
+	master.phase_2_body_choice=2  # skip the two short sheet slots in the mixed P2 rotation
 	for id: StringName in MasterPhase2BodyAction.IDS:
 		master._start_phase_2_regular_attack(100)
 		check(master.phase_2_body_action.id==id,"Formal AI chooses the three new combos")
@@ -124,5 +124,7 @@ func run() -> void:
 	master.phase_2_buff_remaining=master.PHASE_2_BUFF_DURATION
 	master._start_phase_2_finale(100)
 	check(master.phase_2_body_action.id==MasterPhase2BodyAction.IDS[2],"Buff finale uses the new body sequence")
-	check(master.use_sobering_item() and master.phase_2_body_action==null and not master.phase_2_finale_active,"Sobering cancels the new finale")
+	master.charged_power=4
+	var finale_id:=master.phase_2_body_action.id
+	check(master.use_sobering_item() and master.charged_power==1 and master.phase_2_body_action!=null and master.phase_2_body_action.id==finale_id and master.phase_2_finale_active,"Sobering cuts three drunk stacks without cancelling the finale")
 	finish("MASTER PHASE TWO ARRANGEMENTS")

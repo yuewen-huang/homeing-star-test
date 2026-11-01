@@ -1,0 +1,13 @@
+# Selected legacy underwater props reused by the tower; move files and sidecars.
+assets/levels/chapter_2_underwater/r01/r01_prop_stone_lion.png -> assets/levels/chapter_2_underwater/tower/environment/dressing/stone_guardian_682x860.png
+assets/levels/chapter_2_underwater/r10/r10_prop_jar.png -> assets/levels/chapter_2_underwater/tower/environment/dressing/storage_jar_322x416.png
+assets/levels/chapter_2_underwater/r10/r10_prop_crates.png -> assets/levels/chapter_2_underwater/tower/environment/dressing/archive_crates_378x446.png
+assets/levels/chapter_2_underwater/r11/r11_prop_ding.png -> assets/levels/chapter_2_underwater/tower/environment/dressing/bronze_vessel_632x642.png
+assets/levels/chapter_2_underwater/r11/r11_prop_pedestal.png -> assets/levels/chapter_2_underwater/tower/environment/dressing/stone_plinth_388x338.png
+assets/levels/chapter_2_underwater/r11/r11_prop_railing.png -> assets/levels/chapter_2_underwater/tower/environment/dressing/gallery_railing_834x482.png
+assets/levels/chapter_2_underwater/r12/r12_prop_pipe.png -> assets/levels/chapter_2_underwater/tower/environment/dressing/broken_drain_666x504.png
+assets/levels/chapter_2_underwater/r13/r13_prop_debris.png -> assets/levels/chapter_2_underwater/tower/environment/dressing/roof_debris_832x444.png
+assets/levels/chapter_2_underwater/r17/r17_prop_railing.png -> assets/levels/chapter_2_underwater/tower/environment/dressing/broken_balustrade_830x710.png
+assets/levels/chapter_2_underwater/r18/r18_prop_winch.png -> assets/levels/chapter_2_underwater/tower/environment/dressing/maintenance_winch_648x628.png
+assets/levels/chapter_2_underwater/r08/r08_fg_weed_a.png -> assets/levels/chapter_2_underwater/tower/environment/dressing/water_grass_380x590.png
+assets/levels/chapter_2_underwater/r12/r12_prop_algae.png -> assets/levels/chapter_2_underwater/tower/environment/dressing/hanging_algae_694x680.png

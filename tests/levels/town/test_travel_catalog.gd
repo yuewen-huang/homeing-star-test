@@ -14,6 +14,7 @@ const MAP_SCENES := [
 	"res://scenes/levels/chapter_1/chapter_1_root_room.tscn",
 	"res://scenes/levels/chapter_1/chapter_1_vine_room.tscn",
 	"res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn",
+	"res://scenes/levels/mirror_lake/mirror_lake.tscn",
 ]
 const MIST := "res://scenes/levels/chapter_1/chapter_1_mist_room.tscn"
 
@@ -46,6 +47,10 @@ func check_catalog_matches_maps() -> void:
 			if node is MinigameStele:
 				placed[node.stele_id] = node.stele_kind
 		room.free()
+	# The ink trial instantiates its combat stele at runtime, not in mirror_lake.tscn.
+	var ink_stele := (load("res://scenes/levels/mirror_lake/mirror_lake_combat_stele.tscn") as PackedScene).instantiate() as MinigameStele
+	placed[ink_stele.stele_id] = ink_stele.stele_kind
+	ink_stele.free()
 	var listed := {}
 	check(TravelCatalog.CHAPTERS[0] == Chapter1Travel.CHAPTER, "chapter 1 comes from its own file")
 	for chapter: Dictionary in TravelCatalog.CHAPTERS:

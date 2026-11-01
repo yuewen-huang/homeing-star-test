@@ -30,11 +30,13 @@ func run() -> void:
 		boss.charged_power = layer
 		boss._finish_phase_2_howl()
 		check(is_equal_approx(boss.phase_2_buff_remaining, 8.0), "Phase two buff fixed at layer %d" % layer)
+		var expected := boss.get_phase_2_attack_speed()
+		check(is_equal_approx(expected, 1.0 + maxf(0.0, float(layer - 1)) * boss.PHASE_2_DRUNK_STACK_SPEED + (boss.PHASE_2_BUFF_ATTACK_MULTIPLIER - 1.0)), "Drunk+circle speed formula at layer %d" % layer)
 		for id: StringName in MasterPhase2BodyAction.IDS:
 			boss.start_phase_2_body_action(id)
 			var action := boss.phase_2_body_action
 			boss._process(0.05)
-			check(is_equal_approx(action.elapsed, 0.07), "Phase two 1.4x at layer %d / %s" % [layer,id])
+			check(is_equal_approx(action.elapsed, 0.05 * expected), "Phase two drunk-scaled advance at layer %d / %s" % [layer,id])
 			if layer == 0:
 				var at := 0.0
 				var groups: Array = []
@@ -97,9 +99,10 @@ func run() -> void:
 		check(lan.combat_stats.health == before-1,"Committed flick loses 1 HP through %s" % defending)
 		flick.free()
 	boss._enter_phase_2()
+	boss.charged_power = 4
 	boss.phase_2_buff_remaining = 8
 	boss.start_phase_2_body_action(MasterPhase2BodyAction.IDS[0])
-	check(boss.use_sobering_item() and boss.phase_2_body_action == null, "Successful sobering removes current combo")
+	check(boss.use_sobering_item() and boss.charged_power == 1 and boss.phase_2_body_action != null, "Successful sobering keeps the current combo and strips three stacks")
 	# Physics replay: stand 115 world pixels away, press K at the exact action start.
 	# Keep Lan's animation running; no force-active/chained parry and no aid.
 	boss.manual_control = true

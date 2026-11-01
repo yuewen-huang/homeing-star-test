@@ -58,6 +58,7 @@ func run() -> void:
 	teaching._process(0)
 	check(teaching.key_hint.pending_labels == ["W", "W"], "An approaching ground wave prompts a double jump")
 	wave.free()
+	master.charged_power = 4
 	master._start_phase_2_howl()
 	check(teaching.lesson_player.show_lesson(&"sobering", true, true), "Howl lesson can be reviewed without an item")
 	check(teaching.lesson_player.dialogue._label.text.contains("没带"), "Missing item has an evasive fallback")
@@ -78,7 +79,8 @@ func run() -> void:
 	check(teaching.key_hint.pending_labels == ["Q"], "Howl prompts Q when the pill is ready")
 	room._on_special_item_use_requested(ItemCatalog.HANGOVER_PILL)
 	teaching._process(0)
-	check(teaching.key_hint.pending_labels == ["J", "I"], "Successful sobering immediately prompts a real punish")
+	check(master.charged_power == 1 and master.state == MasterBoss.State.PHASE_2_HOWL, "Sobering removes three stacks and leaves the howl running")
+	check(teaching.key_hint.pending_labels == ["Q"], "After a partial sober the howl still offers another pill use")
 	master.combat_stats.apply_poise_damage(master.combat_stats.max_poise)
 	teaching._pending.clear()
 	teaching._process(0)

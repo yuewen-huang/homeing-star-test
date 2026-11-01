@@ -160,7 +160,7 @@ func run() -> void:
 	room._enemies[0].receive_hit(10, player.global_position)
 	check(not room.combat_active and stele.state == MinigameStele.SteleState.COMPLETED and save.get_stele_state(Chapter1RootRoom.COMBAT_ID) == 2, "third kill completes and saves the combat stele")
 	check(room._enemies.is_empty() and room._winches.all(func(winch: RootWaterWinch) -> bool: return not winch.locked), "victory clears encounter and releases winches")
-	check(not stele.challenge_available and stele._info_label.text.contains("E 存档"), "completed stele offers saving instead of an unavailable challenge")
+	check(not stele.challenge_available and stele.can_interact() and not stele.has_node("StateInscription") and not stele.has_node("ProgressHint"), "completed stele stays interactable without text or an unavailable challenge")
 	await process_frame
 	await capture("root_combat_complete")
 	stele.interact()

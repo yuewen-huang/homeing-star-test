@@ -1,0 +1,132 @@
+<div id="sunken-cavern-outline">
+  <h2>沉没古城 · 可通行轮廓</h2>
+  <div id="outline-scale" class="text-small text-muted"></div>
+  <div id="outline-map"></div>
+  <div class="viz-row text-small" aria-label="轮廓图图例">
+    <span>填色：通行空腔</span><span>空白：实岩与楼基</span><span>▧ W：局部水域</span><span>S：初始封门</span>
+  </div>
+  <div class="viz-controls">
+    <label class="form-label">查看空间
+      <select id="outline-select" class="form-select"></select>
+    </label>
+  </div>
+  <div id="outline-detail" aria-live="polite"></div>
+</div>
+<style>
+  #sunken-cavern-outline { display: grid; gap: calc(var(--font-size-base) * .65); }
+  #sunken-cavern-outline #outline-map { width: 100%; min-width: 0; }
+  #sunken-cavern-outline .cavern-svg { display: block; width: 100%; }
+  #sunken-cavern-outline .cavern-svg text { font-size: 12px; font-weight: 400; fill: var(--foreground); }
+  #sunken-cavern-outline .passage { fill: color-mix(in srgb,var(--viz-series-1) 10%,var(--background)); stroke: var(--foreground); stroke-opacity: .65; stroke-width: 1.25; }
+  #sunken-cavern-outline .selection { fill: color-mix(in srgb,var(--viz-series-1) 23%,transparent); stroke: var(--foreground); stroke-width: 1.5; }
+  #sunken-cavern-outline .water-fill { fill: var(--viz-series-1); fill-opacity: .25; }
+  #sunken-cavern-outline .surface { fill: none; stroke: var(--viz-series-1); stroke-width: 1.5; }
+  #sunken-cavern-outline .shortcut { fill: none; stroke: var(--viz-series-2); stroke-width: 2; stroke-dasharray: 3 2; }
+  #sunken-cavern-outline .map-label { paint-order: stroke; stroke: var(--background); stroke-width: 3.5; stroke-linejoin: round; }
+  #sunken-cavern-outline #outline-detail { display: grid; gap: calc(var(--font-size-base) * .3); }
+  #sunken-cavern-outline strong { font-weight: 500; }
+  #sunken-cavern-outline .landmark-hit { fill: transparent; }
+</style>
+<script>
+(() => {
+  const root = document.getElementById('sunken-cavern-outline');
+  const data = __OUTLINE_JSON__;
+  const geometry = __GEOMETRY_JSON__;
+  const report = __REPORT_JSON__;
+  const map = root.querySelector('#outline-map');
+  const detail = root.querySelector('#outline-detail');
+  const picker = root.querySelector('#outline-select');
+  const ns = 'http://www.w3.org/2000/svg';
+  const focusById = Object.fromEntries(data.focus.map(f=>[f.id,f]));
+  const spaceById = Object.fromEntries(data.spaces.map(s=>[s.id,s]));
+  const shortNames = {west_well:'西井',central_well:'主井',east_well:'东井',gate:'城门',bell:'钟楼',bridge:'断桥',archive:'藏阁',street_c:'商街',vault:'库室',deep_pool:'沉井',crypt_e:'地宫',boss_room:'双鱼'};
+  let selected = 'central_well';
+  const saved = window.openai?.widgetState?.modelContent?.outline_focus;
+  if (focusById[saved]) selected=saved;
+  for(const focus of data.focus) {
+    const option=document.createElement('option');option.value=focus.id;option.textContent=focus.label;picker.append(option);
+  }
+  root.querySelector('#outline-scale').textContent=`约 ${report.bounds_screens[0]}×${report.bounds_screens[1]} 屏 · 1280×720 / 屏 · 全图轮廓提案，未实跑`;
+
+  function node(tag,attrs={},text) {
+    const element=document.createElementNS(ns,tag);
+    for(const [key,value] of Object.entries(attrs)) element.setAttribute(key,String(value));
+    if(text!==undefined) element.textContent=text;
+    return element;
+  }
+
+  let makePath = () => '';
+  function choose(id,persist=false) {
+    if(!focusById[id]) return;
+    selected=id;picker.value=id;
+    const focus=focusById[id],space=spaceById[id];
+    detail.replaceChildren();
+    const title=document.createElement('strong');title.textContent=focus.label;
+    const summary=document.createElement('p');summary.textContent=focus.text;
+    const role=document.createElement('p');role.className='text-small';role.textContent=space.role;
+    detail.append(title,summary,role);
+    if(id==='vault') {
+      const gate=document.createElement('p');gate.className='text-small';gate.textContent='W1 潜入 → 库室换气 → 内侧开 S1 → 主井干路返回';detail.append(gate);
+    }
+    if(id==='deep_pool') {
+      const water=document.createElement('p');water.className='text-small';water.textContent='W2 下潜往返预算约 12 秒；侧穴没有空气。';detail.append(water);
+    }
+    const highlight=map.querySelector('#outline-highlight');
+    if(highlight) highlight.setAttribute('d',makePath(geometry.space_outlines[id]));
+    for(const link of map.querySelectorAll('a[data-focus]')) {
+      if(link.dataset.focus===id) link.setAttribute('aria-current','true');else link.removeAttribute('aria-current');
+    }
+    if(persist&&window.openai?.setWidgetState) window.openai.setWidgetState({modelContent:{outline_focus:id},privateContent:null}).catch(()=>{});
+  }
+  picker.addEventListener('change',()=>choose(picker.value,true));
+
+  function draw() {
+    const width=Math.max(280,Math.floor(map.getBoundingClientRect().width));
+    const compact=width<540;
+    const [left,top,right,bottom]=geometry.bounds;
+    const inset=compact?12:16;
+    const scale=(width-inset*2)/(right-left);
+    const X=x=>inset+(x-left)*scale,Y=y=>inset+(y-top)*scale;
+    const height=Math.ceil((bottom-top)*scale+inset*2);
+    makePath=loops=>loops.map(loop=>'M'+loop.map(p=>`${X(p[0]).toFixed(2)},${Y(p[1]).toFixed(2)}`).join('L')+'Z').join('');
+    const svg=node('svg',{class:'cavern-svg',viewBox:`0 0 ${width} ${height}`,height,role:'img','aria-labelledby':'outline-title outline-desc'});
+    svg.append(node('title',{id:'outline-title'},'沉没古城连续空腔、横廊与街井全图'));
+    svg.append(node('desc',{id:'outline-desc'},'西侧入口接商街，西街井在多个高度连接钟楼、断桥、商街、下层旧坊和地宫。中央主井再连接藏阁、东回廊、东井与地宫。初探已有多处回路；W1 从楼基下潜入库室，S1 从内侧开；S2 从东井侧开通中拱。W2 是右侧局部深水井。双鱼场地在东南地宫旁。'));
+    const defs=node('defs'),pattern=node('pattern',{id:'outline-water-hatch',width:6,height:6,patternUnits:'userSpaceOnUse'});
+    pattern.append(node('path',{d:'M0 6L6 0',stroke:'var(--viz-series-1)','stroke-opacity':'.35','stroke-width':1}));defs.append(pattern);svg.append(defs);
+    svg.append(node('path',{d:makePath(geometry.outline),class:'passage','fill-rule':'evenodd','data-outline-shape':'whole'}));
+    svg.append(node('path',{id:'outline-highlight',class:'selection','fill-rule':'evenodd'}));
+    for(const water of data.water) {
+      const path=makePath(geometry.water_outlines[water.id]);
+      svg.append(node('path',{d:path,class:'water-fill','fill-rule':'evenodd','data-water':water.id}));
+      svg.append(node('path',{d:path,fill:'url(#outline-water-hatch)','fill-rule':'evenodd'}));
+      for(const [x1,y1,x2,y2] of water.surface_segments) svg.append(node('line',{x1:X(x1),y1:Y(y1),x2:X(x2),y2:Y(y2),class:'surface'}));
+    }
+    for(const door of data.doors) {
+      const [x,y,w,h]=door.rect;
+      svg.append(node('line',{x1:X(x+w/2),y1:Y(y),x2:X(x+w/2),y2:Y(y+h),class:'shortcut','data-door':door.id}));
+      if(!compact) svg.append(node('text',{x:X(x+w/2),y:Y(y+h/2)+4,'text-anchor':'middle',class:'map-label'},door.id));
+    }
+    const shown=compact?new Set(['west_well','central_well','east_well','gate','boss_room']):new Set(data.focus.map(f=>f.id));
+    for(const focus of data.focus) {
+      if(!shown.has(focus.id)) continue;
+      const x=X(focus.p[0]),y=Y(focus.p[1]);
+      const target=compact?node('g'):node('a',{href:'#outline-detail','data-focus':focus.id,class:'cursor-interaction','aria-label':focus.label});
+      if(!compact) target.append(node('rect',{x:x-19,y:y-16,width:38,height:30,class:'landmark-hit'}));
+      target.append(node('text',{x,y:y+4,'text-anchor':'middle',class:'map-label'},shortNames[focus.id]));
+      if(!compact) target.addEventListener('click',event=>{event.preventDefault();choose(focus.id,true);});
+      svg.append(target);
+    }
+    if(!compact) {
+      svg.append(node('text',{x:X(66),y:Y(66.5)+3,'text-anchor':'middle',class:'map-label'},'W1'));
+      svg.append(node('text',{x:X(148),y:Y(54)+3,'text-anchor':'middle',class:'map-label'},'W2'));
+    }
+    map.replaceChildren(svg);choose(selected);
+  }
+  window.addEventListener('openai:set_globals',event=>{
+    const state=event.detail?.globals?.widgetState?.modelContent;
+    if(focusById[state?.outline_focus]) choose(state.outline_focus);
+  });
+  new ResizeObserver(draw).observe(map);draw();
+})();
+</script>

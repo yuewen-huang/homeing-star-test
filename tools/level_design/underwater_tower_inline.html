@@ -1,0 +1,150 @@
+<div id="sunken-tower-review">
+  <style>
+    #sunken-tower-review { display:grid; gap:calc(var(--font-size-base) * .75); }
+    #sunken-tower-review .tower-map { width:100%; display:block; }
+    #sunken-tower-review .tower-key { display:flex; flex-wrap:wrap; gap:calc(var(--font-size-base) * .8); }
+    #sunken-tower-review .tower-key span { display:inline-flex; align-items:center; gap:calc(var(--font-size-base) * .3); }
+    #sunken-tower-review .tower-swatch { display:inline-block; width:calc(var(--font-size-base) * .9); height:calc(var(--font-size-base) * .65); }
+    #sunken-tower-review .tower-detail { overflow-wrap:anywhere; }
+    #sunken-tower-review .tower-map text { fill:var(--foreground); font-size:12px; }
+  </style>
+  <h3>沉塔 · 回环与干湿分区</h3>
+  <div class="viz-controls">
+    <label class="form-label">查看路线
+      <select class="form-select" data-tower-loop>
+        <option value="all">整塔</option>
+        <option value="lower">塔基回环</option>
+        <option value="middle">断廊回环</option>
+        <option value="upper">书阁回环</option>
+      </select>
+    </label>
+    <label class="form-check">
+      <input class="form-check-input" type="checkbox" data-tower-open>
+      <span class="form-check-label">捷径已开栓</span>
+    </label>
+  </div>
+  <div class="tower-map-container">
+    <svg class="tower-map" role="img" aria-label="沉塔探索结构，十二个空间、两处初探分岔、三条远端开栓近路"></svg>
+  </div>
+  <div class="tower-key text-small">
+    <span><i class="tower-swatch" style="background:color-mix(in srgb,var(--viz-series-2) 24%,transparent)"></i>淹水</span>
+    <span><i class="tower-swatch" style="background:color-mix(in srgb,var(--viz-series-4) 20%,transparent)"></i>空气／干地</span>
+    <span>虚线：远端开栓近路</span>
+    <span>◇：调查位置</span>
+  </div>
+  <div class="tower-detail text-small" data-tower-summary aria-live="polite"></div>
+  <label class="form-label">查看空间
+    <select class="form-select" data-tower-room></select>
+  </label>
+  <div class="tower-detail" data-tower-detail aria-live="polite"></div>
+  <script type="application/json" data-tower-plan>__TOWER_PLAN_JSON__</script>
+  <script>
+  (() => {
+    const root = document.getElementById('sunken-tower-review');
+    const plan = JSON.parse(root.querySelector('[data-tower-plan]').textContent);
+    const svg = root.querySelector('.tower-map');
+    const container = root.querySelector('.tower-map-container');
+    const loopSelect = root.querySelector('[data-tower-loop]');
+    const openedInput = root.querySelector('[data-tower-open]');
+    const roomSelect = root.querySelector('[data-tower-room]');
+    const detail = root.querySelector('[data-tower-detail]');
+    const summary = root.querySelector('[data-tower-summary]');
+    const rooms = new Map(plan.rooms.map(r => [r.id,r]));
+    const loops = new Map(plan.loops.map(l => [l.id,l]));
+    const ns = 'http://www.w3.org/2000/svg';
+    for (const room of plan.rooms) {
+      const option = document.createElement('option');
+      option.value = room.id;
+      option.textContent = `${room.id} ${room.name}`;
+      roomSelect.append(option);
+    }
+    let state = { loop:'all', opened:false, room:'T04' };
+    function applyState(value) {
+      if (!value || typeof value !== 'object') return;
+      if (value.loop === 'all' || loops.has(value.loop)) state.loop = value.loop;
+      if (typeof value.opened === 'boolean') state.opened = value.opened;
+      if (rooms.has(value.room)) state.room = value.room;
+    }
+    applyState(window.openai?.widgetState?.privateContent);
+    function saveState() {
+      if (window.openai?.setWidgetState) window.openai.setWidgetState({
+        modelContent:{tower_loop:state.loop,tower_room:state.room,shortcuts_open:state.opened},
+        privateContent:{...state}
+      }).catch(() => {});
+    }
+    function element(name, attrs, parent=svg) {
+      const node = document.createElementNS(ns,name);
+      for (const [key,value] of Object.entries(attrs)) node.setAttribute(key,String(value));
+      parent.append(node);
+      return node;
+    }
+    function draw() {
+      loopSelect.value=state.loop;
+      openedInput.checked=state.opened;
+      roomSelect.value=state.room;
+      const width=Math.max(280,container.getBoundingClientRect().width);
+      const scale=width/plan.world_size[0];
+      const height=plan.world_size[1]*scale;
+      svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
+      svg.setAttribute('height',String(height));
+      svg.replaceChildren();
+      element('title',{}).textContent='沉塔探索结构草案';
+      element('desc',{}).textContent='连线表示通路，投影交叉不表示互通。气龛和高台为换气落点。图中并未验证物理碰撞。';
+      const coords=q=>q.map(n=>n*scale);
+      const selected=loops.get(state.loop);
+      const loopEdges=new Set(selected?.edges ?? []);
+      const outline=[[420,4360],[420,3000],[460,3000],[460,1780],[780,1780],[780,1140],[1080,1140],[1080,460],[2240,460],[2240,1140],[2800,1140],[2800,1780],[2840,1780],[2840,4360],[420,4360]];
+      element('polyline',{points:outline.map(p=>coords(p).join(',')).join(' '),fill:'none',stroke:'var(--border)','stroke-width':1.5});
+      for (const room of plan.rooms) {
+        const [x,y,w,h]=room.rect.map(n=>n*scale);
+        const region=element('g',{'data-room-id':room.id});
+        element('rect',{x,y,width:w,height:h,fill:`color-mix(in srgb,var(--viz-series-${room.water==='air'?4:2}) ${room.id===state.room?28:14}%,transparent)`,stroke:'var(--border)','stroke-width':1},region);
+        element('line',{x1:x,y1:y+h,x2:x+w,y2:y+h,stroke:'var(--muted-foreground)','stroke-width':2},region);
+        const text=element('text',{x:x+5,y:y+16},region);
+        text.textContent=width>=610?`${room.id} ${room.name.replace('上层浸水廊','浸水廊').replace('塔顶观星室','观星室')}`:room.id;
+        const title=element('title',{},region);
+        title.textContent=`${room.id} ${room.name}：${room.purpose}`;
+        region.addEventListener('click',()=>{state.room=room.id;draw();saveState();});
+      }
+      const ordered=[...plan.edges].sort((a,b)=>Number(loopEdges.has(a.id))-Number(loopEdges.has(b.id)));
+      for (const edge of ordered) {
+        const shortcut=edge.kind==='shortcut';
+        const active=loopEdges.has(edge.id);
+        const points=edge.route.map(p=>coords(p).join(',')).join(' ');
+        const stroke=active?'var(--viz-series-1)':shortcut?'var(--viz-series-3)':edge.kind==='swim'?'var(--viz-series-2)':'var(--muted-foreground)';
+        const attrs={points,fill:'none',stroke,'stroke-width':active?3:1.6,'stroke-linejoin':'round','stroke-linecap':'round',opacity:(selected && !active) ? 0.3 : 1,'data-edge-id':edge.id};
+        if (shortcut&&!state.opened) attrs['stroke-dasharray']='5 5';
+        element('polyline',attrs);
+        if(shortcut) {
+          const at=coords(edge.route[1]);
+          element('text',{x:at[0]+4,y:at[1]-6}).textContent=edge.id;
+        }
+      }
+      for(const room of plan.rooms) {
+        const [x,y]=coords(room.point);
+        const shape=room.investigation?'polygon':'circle';
+        const attrs=room.investigation?{points:`${x},${y-5} ${x+5},${y} ${x},${y+5} ${x-5},${y}`}:{cx:x,cy:y,r:3};
+        element(shape,{...attrs,fill:'var(--foreground)'});
+        if(room.air_refill&&room.water!=='air') element('text',{x:x-12,y:y+20}).textContent='换气';
+      }
+      const entry=coords(plan.entry.point);
+      element('text',{x:Math.max(1,entry[0]-12),y:entry[1]-10}).textContent='入口';
+      summary.textContent=selected?`${selected.name} · ${selected.summary}`:`初探已有两处回环；三条捷径${state.opened?'已开栓，整塔形成五个独立回环':'分别从 T04、T08、T12 内侧开栓'}。`;
+      const room=rooms.get(state.room);
+      const wet=room.water==='air'?'干燥地面':room.water==='mixed'?'干湿交错':'淹水';
+      detail.textContent=`${room.name} · ${wet}${room.air_refill?' · 可换气':''}。${room.purpose}`;
+      root.dataset.rendered='true';
+      root.dataset.selectedLoop=state.loop;
+      root.dataset.opened=String(state.opened);
+    }
+    loopSelect.addEventListener('change',()=>{state.loop=loopSelect.value;draw();saveState();});
+    openedInput.addEventListener('change',()=>{state.opened=openedInput.checked;draw();saveState();});
+    roomSelect.addEventListener('change',()=>{state.room=roomSelect.value;draw();saveState();});
+    window.addEventListener('openai:set_globals',event=>{
+      applyState(event.detail?.globals?.widgetState?.privateContent);draw();
+    });
+    new ResizeObserver(draw).observe(container);
+    draw();
+  })();
+  </script>
+</div>

@@ -139,11 +139,21 @@ func run() -> void:
 	deer._recover(0.0)
 	tick(2)
 
-	# The production AI improvises.
+	# The production AI improvises, and occasionally inserts short dash pressure.
 	deer.manual_control = false
-	deer.phase_ai.choose(150.0)
-	check(deer.state == DeerBoss.State.CLASH and clash.improv and clash.steps.any(func(step: Dictionary) -> bool: return step.move == &"authored"), "Production AI starts an approved annotated combo in the wind phase")
-	clash.cancel(); deer._recover(0.0)
+	var saw_improv := false
+	var saw_short := false
+	for _trial in 48:
+		deer.phase_ai.choose(150.0)
+		if deer.state == DeerBoss.State.CLASH:
+			if clash.improv and clash.steps.any(func(step: Dictionary) -> bool: return step.move == &"authored"):
+				saw_improv = true
+			elif (not clash.improv) and clash.steps.any(func(step: Dictionary) -> bool: return step.move == &"dash"):
+				saw_short = true
+		clash.cancel(); deer._recover(0.0)
+		if saw_improv and saw_short: break
+	check(saw_improv, "Production AI starts an approved annotated combo in the wind phase")
+	check(saw_short, "Production AI also inserts occasional short dash pressure in the wind phase")
 
 	var after := FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) if FileAccess.file_exists(SaveProgressService.SAVE_PATH) else PackedByteArray()
 	check(after == saved, "Improv checks leave saved progress unchanged")

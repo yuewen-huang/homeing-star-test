@@ -1,0 +1,33 @@
+extends "../../support/harness.gd"
+## Test spatial cutaway boundaries independently of player motion/physics.
+const ROOM := preload("res://scripts/levels/chapter_2_underwater/city/city_gate_room.gd")
+
+func run() -> void:
+	var room := ROOM.new()
+	root.add_child(room)
+	var solids: Array[Rect2] = []
+	room.setup(solids)
+	room.track(Vector2(1080, 470), 1.0)
+	check(not room.occupied and room.facade_alpha == 1.0, "Swimming above the roof does not reveal the room")
+	room.track(Vector2(650, 900), 0.15)
+	check(room.occupied and room.facade_alpha > 0.1 and room.facade_alpha < 0.9, "Low doorway entry fades progressively rather than popping")
+	room.track(Vector2(760, 900), 0.15)
+	check(room.facade_alpha < 0.07, "Room becomes readable within 0.3 seconds")
+	room.track(Vector2(630, 900), 0.1)
+	check(room.occupied and room.facade_alpha < 0.07, "Doorway buffer prevents flicker while moving back across entry edge")
+	room.track(Vector2(590, 900), 0.15)
+	check(not room.occupied and room.facade_alpha > 0.1 and room.facade_alpha < 0.9, "Leaving restores the facade progressively")
+	room.track(Vector2(590, 900), 0.15)
+	check(room.facade_alpha == 1.0, "Exterior is opaque after leaving")
+	room.track(Vector2(1460, 900), 0.3)
+	check(room.occupied and room.facade_alpha < 0.07, "Right doorway also reveals the room")
+	room.track(Vector2(1520, 900), 0.3)
+	check(not room.occupied and room.facade_alpha == 1.0, "Right exit also restores the facade")
+	room.track(Vector2(1080, 700), 0.3)
+	room.track(Vector2(160, 820), 0.0, true)
+	check(not room.occupied and room.facade_alpha == 1.0, "Respawning outside immediately clears the interior state")
+	check(room.near_frame.modulate.a == 1.0 and room.near_frame.visible, "Jambs and eaves stay visible independently of the facade")
+	check(room.find_children("*", "CollisionObject2D", true, false).is_empty(), "Cutaway does not create or change physics bodies")
+	room.queue_free()
+	await wait_frames(2)
+	finish("CITY GATE CUTAWAY")

@@ -24,8 +24,9 @@ func run() -> void:
 	await test_kick()
 	await test_floor_walk_and_push_off()
 	await test_surface_exit()
+	await test_surface_air_actions()
 	await test_animations()
-	await test_dive_entry()
+	await test_normal_bank_jump_entry()
 	await test_idle_stays_steady()
 	await test_shallow_water_unchanged()
 	await test_unregister()
@@ -522,7 +523,7 @@ func test_surface_exit() -> void:
 	await step(60)
 	check(not player.swim.is_surfacing() and not player.swim.is_floating(), "Drifting under the surface does not re-surface by itself")
 
-	# 4. W at the surface next to a bank: the land-jump height, water-to-land to the bank.
+	# Surface take-off uses the complete ordinary jump/landing pipeline.
 	var bank := PIECE.instantiate() as TerrainPiece
 	bank.position = Vector2(100, 500)
 	bank.length = 300.0
@@ -543,25 +544,40 @@ func test_surface_exit() -> void:
 	player.facing_direction = -1.0
 	await step(2)
 	var takeoff_y := player.position.y
-	var takeoff_off := sprite.offset
 	Input.action_press(&"ui_left")
 	Input.action_press(&"ui_up")
 	await step(1)
-	check(player.swim.is_exiting() and anim() == LanSwimMotor.ANIM_WATER_TO_LAND and sprite.frame == 0 and sprite.offset.is_equal_approx(takeoff_off), "W at the surface jumps out: water-to-land frame 0 at the float's canvas place")
+	check(player.air_state == LanPlayer.AirState.RISING and anim() == &"jump_start", "Surface take-off plays the existing ordinary jump_start")
+	check(sprite.offset == LanPlayer.JUMP_SPRITE_OFFSET and not sprite.flip_h and is_zero_approx(sprite.rotation), "Surface take-off restores the ordinary offset, rotation and left-facing art")
 	var peak := player.position.y
-	var seen: Array[int] = []
+	var saw_roll := false
 	for i in 180:
-		if anim() == LanSwimMotor.ANIM_WATER_TO_LAND and (seen.is_empty() or seen[-1] != sprite.frame):
-			seen.append(sprite.frame)
 		peak = minf(peak, player.position.y)
-		if not player.swim.is_exiting(): break
+		if player.air_state == LanPlayer.AirState.ROLL_LANDING:
+			saw_roll = true
+			break
 		await step(1)
 	Input.action_release(&"ui_up")
 	check(absf((takeoff_y - peak) - land_rise) < 2.0, "Exit jump rises like a land jump (%.1f vs %.1f px)" % [takeoff_y - peak, land_rise])
-	check(seen.slice(0, 9) == [0, 1, 2, 3, 4, 5, 6, 7, 8], "Flight frames 0–8 in order: %s" % [seen])
-	check(seen.slice(9, 10) == [9], "Touchdown frames 8–9 show before held input walks on: %s" % [seen])
+	check(saw_roll, "Moving onto the bank uses the existing roll landing")
 	check(not swimming() and absf(player.position.y - 500.0) < 0.5 and player.position.x < 400.0, "She lands on the bank (%s)" % player.position)
 	Input.action_release(&"ui_left")
+	await surface_from(Vector2(470, 800))
+	release_all()
+	await step(3)
+	Input.action_press(&"jump")
+	Input.action_press(&"ui_left")
+	for i in 40:
+		await step(1)
+		if player.position.x < 390.0: break
+	release_all()
+	var saw_land := false
+	for i in 100:
+		await step(1)
+		if player.air_state == LanPlayer.AirState.LANDING:
+			saw_land = anim() == &"land"
+			break
+	check(saw_land and absf(player.position.y - 500.0) < 0.5, "Releasing movement above the bank uses the existing stationary land clip")
 	bank._unregister_surface()
 	bank.queue_free()
 	await step(2)
@@ -573,15 +589,80 @@ func test_surface_exit() -> void:
 	Input.action_press(&"ui_up")
 	await step(2)
 	Input.action_release(&"ui_up")
-	check(player.swim.is_exiting(), "W jumps out in open water too")
+	check(player.air_state == LanPlayer.AirState.RISING and anim() == &"jump_start", "W uses the ordinary jump in open water too")
 	for i in 120:
 		await step(1)
 		if swimming(): break
 	check(swimming() and anim() == LanSwimMotor.ANIM_ENTER, "Falling back in plays the entry splash (%s)" % anim())
+	check(not player.swim.surface_takeoff, "Water re-entry clears the surface handoff")
 	await place(Vector2(300, 700))
 	var vy0 := player.velocity.y
 	await step(10)
 	check(player.air_state == LanPlayer.AirState.FALLING and player.velocity.y > vy0 + LanPlayer.GRAVITY * DT * 8.0, "Outside the volume normal gravity applies: %.1f" % player.velocity.y)
+
+
+func launch_from_surface() -> void:
+	await surface_from(Vector2(1500, 900))
+	release_all()
+	await step(3)
+	Input.action_press(&"jump")
+	await step(1)
+	Input.action_release(&"jump")
+
+
+func test_surface_air_actions() -> void:
+	await launch_from_surface()
+	player.update_combat_input_buffers(DT, true, false, false)
+	await step(1)
+	check(player.attack_state == LanPlayer.AttackState.JUMP_ATTACK_1X and anim() == &"jump_attack_1x", "Surface jump accepts the existing first airborne attack through the input buffer")
+	player.update_combat_input_buffers(DT, true, false, false)
+	var saw_second := false
+	for i in 100:
+		await step(1)
+		if player.attack_state == LanPlayer.AttackState.JUMP_ATTACK_2X:
+			saw_second = true
+		if swimming(): break
+	check(saw_second, "Surface jump chains into the existing second airborne attack")
+	check(swimming() and player.attack_state == LanPlayer.AttackState.NONE, "Falling back into water ends the airborne attack and restores swimming")
+	check(not player.swim.surface_takeoff, "Attack re-entry releases the take-off boundary guard")
+	await launch_from_surface()
+	for i in 20:
+		if player.can_start_double_jump(): break
+		await step(1)
+	var stamina_before := player.combat_stats.stamina
+	Input.action_press(&"jump")
+	await step(1)
+	Input.action_release(&"jump")
+	check(player.air_state == LanPlayer.AirState.DOUBLE_JUMPING and anim() == &"double_jump_vertical" and player.double_jump_used, "Surface jump accepts the existing vertical double jump")
+	check(player.combat_stats.stamina < stamina_before, "Surface double jump consumes the normal stamina cost")
+	await step(3)
+	Input.action_press(&"jump")
+	await step(1)
+	Input.action_release(&"jump")
+	check(not player.can_start_double_jump(), "Surface jump does not grant a third jump")
+	await launch_from_surface()
+	for i in 20:
+		if player.can_start_double_jump(): break
+		await step(1)
+	Input.action_press(&"ui_right")
+	Input.action_press(&"jump")
+	await step(1)
+	release_all()
+	check(player.air_state == LanPlayer.AirState.DOUBLE_JUMPING and anim() == &"double_jump_forward", "Directional input selects the existing forward double jump")
+	await launch_from_surface()
+	for i in 80:
+		await step(1)
+		if player.velocity.y > 0.0 and player.position.y > 490.0: break
+	player.update_combat_input_buffers(DT, true, false, false)
+	await step(1)
+	check(player.attack_state == LanPlayer.AttackState.JUMP_ATTACK_1X, "A descending surface jump can still begin the existing airborne attack")
+	for i in 30:
+		await step(1)
+		if swimming(): break
+	check(swimming() and player.attack_state == LanPlayer.AttackState.NONE and player.active_attack_effects.is_empty(), "Actual water contact cancels the in-progress airborne body attack and owned effects")
+	await place(Vector2(1500, 800))
+	await step(2)
+	check(swimming() and not player.swim.surface_takeoff, "Map reset clears the handoff and permits underwater entry")
 
 
 func test_shallow_water_unchanged() -> void:
@@ -617,11 +698,17 @@ func anim() -> StringName:
 
 func test_animations() -> void:
 	var frames := player.animated_sprite.sprite_frames
-	var expected := {LanSwimMotor.ANIM_DIVE: 10, LanSwimMotor.ANIM_ENTER: 15, LanSwimMotor.ANIM_IDLE: 16, LanSwimMotor.ANIM_UP: 32,
-		LanSwimMotor.ANIM_DOWN: 32, LanSwimMotor.ANIM_SURFACE: 15, LanSwimMotor.ANIM_WATER_TO_LAND: 17}
+	var expected := {LanSwimMotor.ANIM_ENTER: 15, LanSwimMotor.ANIM_IDLE: 16, LanSwimMotor.ANIM_UP: 32,
+		LanSwimMotor.ANIM_DOWN: 32, LanSwimMotor.ANIM_SURFACE: 15}
 	for name: StringName in expected:
 		check(frames.has_animation(name) and frames.get_frame_count(name) == expected[name],
 			"%s registered with %d frames" % [name, expected[name]])
+	check(not frames.has_animation(&"swim_dive"), "Retired bank-dive animation is not registered")
+	check(not frames.has_animation(&"swim_water_to_land") and not player.swim.has_method(&"is_exiting"), "Retired surface jump clip and executor are removed")
+	check(not player.swim.has_method(&"try_start_dive"), "Retired bank-dive execution entry is removed")
+	var entry_frame := frames.get_frame_texture(LanSwimMotor.ANIM_ENTER, 0) as AtlasTexture
+	check(entry_frame.atlas.get_size() == Vector2(2400, 160) and entry_frame.region.position == Vector2.ZERO,
+		"Entry sheet contains only the 15 live frames, starting at index zero")
 	check(not frames.get_animation_loop(LanSwimMotor.ANIM_ENTER) and frames.get_animation_loop(LanSwimMotor.ANIM_IDLE), "Enter plays once, idle loops")
 	# Enter → idle.
 	await place(Vector2(1800, 800))
@@ -693,8 +780,6 @@ func test_animations() -> void:
 	release_all()
 
 
-## Jumping off a bank into the pool plays the whole dive (0–9) then the splash, with the
-## splash's waterline (canvas row CANVAS_SURFACE_Y) on the real surface.
 ## World position of the aseprite canvas' top-left, from the frame on screen now.
 func canvas_origin() -> Vector2:
 	var sprite := player.animated_sprite
@@ -703,7 +788,7 @@ func canvas_origin() -> Vector2:
 	var c := LanSwimMotor.IDLE_CANVAS_CENTRE
 	if anim() == LanSwimMotor.ANIM_ENTER:
 		c = LanSwimMotor.CANVAS_SHIFT_ENTER[sprite.frame] + Vector2(80.0, 80.0)
-	elif anim() in [LanSwimMotor.ANIM_SURFACE, LanSwimMotor.ANIM_WATER_TO_LAND]:
+	elif anim() == LanSwimMotor.ANIM_SURFACE:
 		c = LanSwimMotor.EXIT_CANVAS_CENTRE
 	var f := -1.0 if sprite.flip_h else 1.0
 	var k := sprite.scale.y
@@ -746,44 +831,55 @@ func test_idle_stays_steady() -> void:
 	check(player.swim.choose_animation(player, 0.0) == LanSwimMotor.ANIM_IDLE, "Idle holds just past the up threshold")
 
 
-func test_dive_entry() -> void:
+func test_normal_bank_jump_entry() -> void:
 	var bank := PIECE.instantiate() as TerrainPiece
 	bank.position = Vector2(100, 500)
 	bank.length = 300.0
 	world.add_child(bank)
 	bank.register_to(player)
 	var sprite := player.animated_sprite
-	# Facing away from the pool: an ordinary jump.
-	await place(Vector2(250, 500), LanPlayer.AirState.GROUNDED)
-	player.facing_direction = -1.0
-	await step(3)
-	Input.action_press(&"jump")
-	await step(2)
-	Input.action_release(&"jump")
-	check(not player.swim.is_diving() and player.air_state == LanPlayer.AirState.RISING, "Jumping away from the pool is a normal jump")
-	# Facing the pool from the edge: the dive.
+	# A nearby pool does not add crouch anticipation or a forced horizontal leap.
+	var ordinary_velocity := 0.0
+	for facing in [-1.0, 1.0]:
+		await place(Vector2(330, 500), LanPlayer.AirState.GROUNDED)
+		player.facing_direction = facing
+		await step(3)
+		var start := player.position
+		Input.action_press(&"jump")
+		await step(2)
+		Input.action_release(&"jump")
+		check(player.air_state == LanPlayer.AirState.RISING and anim() == &"jump_start",
+			"Bank jump facing %.0f uses normal jump_start immediately" % facing)
+		check(player.position.y < start.y and player.velocity.y < 0.0, "Bank jump rises without dive anticipation")
+		if facing < 0.0:
+			ordinary_velocity = player.velocity.y
+		else:
+			check(is_equal_approx(player.velocity.y, ordinary_velocity), "Facing the pool preserves ordinary take-off velocity")
+		await step(15)
+		check(absf(player.position.x - start.x) < 0.1, "Stationary bank jump adds no horizontal launch")
+		check(not swimming(), "Being near water does not itself enter swimming")
+	# Normal airborne movement continues until the body actually contacts water.
 	await place(Vector2(330, 500), LanPlayer.AirState.GROUNDED)
 	player.facing_direction = 1.0
 	await step(3)
-	var start_x := player.position.x
+	Input.action_press(&"ui_right")
 	Input.action_press(&"jump")
-	await step(1)
+	await step(2)
 	Input.action_release(&"jump")
-	check(player.swim.is_diving() and anim() == LanSwimMotor.ANIM_DIVE and sprite.frame == 0, "Jump on the bank starts the dive at frame 0 (%s %d)" % [anim(), sprite.frame])
-	await step(15)
-	check(is_equal_approx(player.position.x, start_x) and sprite.frame == 2, "Crouch frames 0–2 hold her on the bank (frame %d)" % sprite.frame)
-	var seen: Array[int] = []
-	var last_dive_frame := -1
+	var normal_airborne := true
+	var entered := false
 	for i in 180:
 		await step(1)
-		if anim() == LanSwimMotor.ANIM_DIVE:
-			if seen.is_empty() or seen[-1] != sprite.frame:
-				seen.append(sprite.frame)
-			last_dive_frame = sprite.frame
-		else:
+		if swimming():
+			entered = true
 			break
-	check(seen == [2, 3, 4, 5, 6, 7, 8, 9], "Every leap frame is shown in order: %s" % [seen])
-	check(swimming() and anim() == LanSwimMotor.ANIM_ENTER and sprite.frame == 0 and last_dive_frame == 9, "Frame 9 hands over to the splash as she enters (%s %d)" % [anim(), sprite.frame])
+		# Stop steering above water; a held swim direction intentionally cancels splash.
+		if player.position.x >= 470.0:
+			Input.action_release(&"ui_right")
+		normal_airborne = normal_airborne and anim() not in LanSwimMotor.SWIM_ANIMATIONS
+	release_all()
+	check(normal_airborne, "Moving bank jump keeps normal air control until water contact")
+	check(entered and anim() == LanSwimMotor.ANIM_ENTER, "Actual water contact starts existing entry splash")
 	var row_y := canvas_origin().y + LanSwimMotor.CANVAS_SURFACE_Y * sprite.scale.y
 	check(absf(row_y - volume.position.y) < 1.0, "Splash waterline (canvas row %d) on the surface (%.1f vs %.1f)" % [LanSwimMotor.CANVAS_SURFACE_Y, row_y, volume.position.y])
 	# Splash → idle, frame by frame: the clip changes once, and the art never jumps —

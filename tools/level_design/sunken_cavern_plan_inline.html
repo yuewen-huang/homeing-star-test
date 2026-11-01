@@ -1,0 +1,154 @@
+<div id="sunken-cavern-plan">
+  <h2>沉没古城 · 全图空间提案</h2>
+  <div class="text-small text-muted" id="cavern-scale"></div>
+  <div id="cavern-map"></div>
+  <div class="viz-row text-small" aria-label="图例">
+    <span>实线：初始通路</span><span>虚线 S：远端开门后的近路</span><span>▧ W：局部水域</span>
+  </div>
+  <div id="cavern-detail" aria-live="polite"></div>
+</div>
+<style>
+  #sunken-cavern-plan { display: grid; gap: calc(var(--font-size-base) * .65); }
+  #sunken-cavern-plan #cavern-map { width: 100%; min-width: 0; }
+  #sunken-cavern-plan .cavern-svg { display: block; width: 100%; overflow: visible; }
+  #sunken-cavern-plan .cavern-svg text { fill: var(--foreground); font-size: 12px; font-weight: 400; }
+  #sunken-cavern-plan .room-shape { fill: var(--muted); stroke: var(--border); stroke-width: 1; }
+  #sunken-cavern-plan .room-selected { stroke: var(--foreground); stroke-width: 2; }
+  #sunken-cavern-plan .inside-route { fill: none; stroke: var(--muted-foreground); stroke-width: 1; opacity: .65; }
+  #sunken-cavern-plan .connector { fill: none; stroke: var(--foreground); stroke-width: 1.5; }
+  #sunken-cavern-plan .shortcut { stroke: var(--viz-series-2); stroke-dasharray: 4 3; }
+  #sunken-cavern-plan .water-fill { fill: var(--viz-series-1); fill-opacity: .18; }
+  #sunken-cavern-plan .water-line { fill: none; stroke: var(--viz-series-1); stroke-width: 1.5; }
+  #sunken-cavern-plan .cavern-rock { fill: var(--muted-foreground); fill-opacity: .3; }
+  #sunken-cavern-plan .gate-label { paint-order: stroke; stroke: var(--background); stroke-width: 4px; }
+  #sunken-cavern-plan #cavern-detail { display: grid; gap: calc(var(--font-size-base) * .35); }
+  #sunken-cavern-plan #cavern-detail strong { font-weight: 500; }
+  #sunken-cavern-plan .room-hit { fill: transparent; }
+</style>
+<script>
+(() => {
+  const root = document.getElementById('sunken-cavern-plan');
+  const plan = __PLAN_JSON__;
+  const report = __REPORT_JSON__;
+  const map = root.querySelector('#cavern-map');
+  const detail = root.querySelector('#cavern-detail');
+  const ns = 'http://www.w3.org/2000/svg';
+  let selected = 'C';
+  const saved = window.openai?.widgetState?.modelContent;
+  if (plan.regions.some(r => r.id === saved?.cavern_region)) selected = saved.cavern_region;
+  const regionById = Object.fromEntries(plan.regions.map(r => [r.id,r]));
+  const interiors = [
+    [[.3,3.6],[1.45,3.6]],
+    [[1.75,3.6],[3.25,3.6]], [[2.75,3.6],[2.75,3]],
+    [[3.55,3.6],[5.3,3.6]], [[4.1,3.6],[4.1,4.5]],
+    [[4.425,2.5],[4.425,3],[4.1,3],[4.1,3.6]],
+    [[5.65,3.6],[7.15,3.6]], [[6.6,4],[6.6,3.6]],
+    [[7.45,3.6],[9.1,3.6]],
+    [[2.75,2.5],[2.75,1.5],[3.25,1.5]], [[2.75,1.5],[2.75,.6]],
+    [[3.55,1.5],[4.425,1.5],[4.425,2]],
+    [[4.1,4.85],[4.1,5.1],[3.65,5.1],[3.65,5.35],[3.85,5.35],[3.85,5.45]],
+    [[4.9,5.45],[4.9,5.1],[5.3,5.1]],
+    [[5.65,5.1],[6.6,5.1],[6.6,4.85]],
+    [[5.95,5.1],[5.95,5.45]], [[6.8,5.45],[6.8,5.1],[6.6,5.1]]
+  ];
+  root.querySelector('#cavern-scale').textContent = `九个区域 · 外框 ${plan.world_screens[0]}×${plan.world_screens[1]} 屏 · 1280×720 / 屏 · 尚未实跑`;
+
+  function node(tag, attrs = {}, text) {
+    const element = document.createElementNS(ns,tag);
+    for (const [key,value] of Object.entries(attrs)) element.setAttribute(key,String(value));
+    if (text !== undefined) element.textContent = text;
+    return element;
+  }
+
+  function choose(id, persist = false) {
+    selected = id;
+    const room = regionById[id];
+    detail.replaceChildren();
+    const title = document.createElement('strong');
+    title.textContent = `${id} · ${room.name}　${room.rect[2]}×${room.rect[3]} 屏`;
+    const role = document.createElement('p'); role.textContent = room.role;
+    const traversal = document.createElement('p'); traversal.textContent = room.traversal;
+    const ports = document.createElement('p'); ports.className = 'text-small';
+    ports.textContent = plan.connections.filter(e => e.a === id || e.b === id).map(e => {
+      const other = e.a === id ? e.b : e.a;
+      return `${e.id} ↔ ${other} ${regionById[other].name}${e.kind === 'shortcut' ? `（${e.unlock_from} 侧开栓）` : ''}`;
+    }).join('；');
+    const note = document.createElement('p'); note.className = 'text-small'; note.textContent = room.note;
+    detail.append(title,role,traversal,ports,note);
+    for (const shape of map.querySelectorAll('.room-shape')) shape.classList.toggle('room-selected',shape.dataset.room === selected);
+    for (const link of map.querySelectorAll('a[data-room]')) {
+      if (link.dataset.room === selected) link.setAttribute('aria-current','true');
+      else link.removeAttribute('aria-current');
+    }
+    if (persist && window.openai?.setWidgetState) {
+      window.openai.setWidgetState({modelContent:{cavern_region:selected},privateContent:null}).catch(() => {});
+    }
+  }
+
+  function draw() {
+    const width = Math.max(280,Math.floor(map.getBoundingClientRect().width));
+    const compact = width < 540;
+    const inset = compact ? 10 : 12;
+    const scale = (width-2*inset)/(plan.world_screens[0]*plan.screen_px[0]);
+    const sx = scale*plan.screen_px[0], sy = scale*plan.screen_px[1];
+    const X = x => inset+x*sx, Y = y => inset+y*sy;
+    const height = Math.ceil(plan.world_screens[1]*sy+2*inset);
+    const svg = node('svg',{class:'cavern-svg',viewBox:`0 0 ${width} ${height}`,height,role:'img','aria-labelledby':'cavern-title cavern-desc'});
+    svg.append(node('title',{id:'cavern-title'},'沉没古城全图剖面与接口规划'));
+    svg.append(node('desc',{id:'cavern-desc'},'从左侧 A 城门经 B 到 C 城庭，下行 H、I 后回升至 D 神庙，右行至 E 双鱼场地。B 上行 F 钟楼、G 藏阁后开 S1 回 C；D 开 S2 回 C。只有 H、I 有局部水池。选择区域可查看用途与接口。'));
+    const defs = node('defs');
+    const pattern = node('pattern',{id:'cavern-water-hatch',width:7,height:7,patternUnits:'userSpaceOnUse'});
+    pattern.append(node('path',{d:'M0 7L7 0',stroke:'var(--viz-series-1)','stroke-opacity':'.3','stroke-width':1}));
+    defs.append(pattern);svg.append(defs);
+
+    // Region rectangles are spatial budgets, not finished room silhouettes.
+    for (const room of plan.regions) {
+      const [x,y,w,h] = room.rect;
+      svg.append(node('rect',{x:X(x),y:Y(y),width:w*sx,height:h*sy,class:'room-shape','data-room':room.id}));
+    }
+    for (const path of interiors) svg.append(node('polyline',{points:path.map(p=>`${X(p[0])},${Y(p[1])}`).join(' '),class:'inside-route'}));
+    for (const water of plan.water_routes) {
+      const [x,y,w,h] = water.rect;
+      svg.append(node('rect',{x:X(x),y:Y(y),width:w*sx,height:h*sy,class:'water-fill'}));
+      svg.append(node('rect',{x:X(x),y:Y(y),width:w*sx,height:h*sy,fill:'url(#cavern-water-hatch)'}));
+      svg.append(node('line',{x1:X(x),y1:Y(y),x2:X(x+w),y2:Y(y),class:'water-line'}));
+      svg.append(node('polyline',{points:water.points.map(p=>`${X(p[0])},${Y(p[1])}`).join(' '),class:'water-line'}));
+      if (!compact) svg.append(node('text',{x:X(x+w/2),y:Y(y+h/2)+4,'text-anchor':'middle',class:'gate-label'},`${water.id}${water.required?' 必经':' 可选'}`));
+    }
+    // Broad obstruction in H forces a dive; the dry shore in I remains open.
+    svg.append(node('rect',{x:X(4.35),y:Y(4.85),width:.35*sx,height:.75*sy,class:'cavern-rock'}));
+    svg.append(node('rect',{x:X(6.15),y:Y(5.45),width:.35*sx,height:.15*sy,class:'cavern-rock'}));
+
+    for (const edge of plan.connections) {
+      svg.append(node('polyline',{points:edge.points.map(p=>`${X(p[0])},${Y(p[1])}`).join(' '),class:`connector ${edge.kind === 'shortcut' ? 'shortcut':''}`}));
+      if (edge.kind === 'shortcut') {
+        const a = edge.points[0], b = edge.points.at(-1);
+        const cx = X((a[0]+b[0])/2), cy = Y((a[1]+b[1])/2);
+        svg.append(node('text',{x:cx+(a[0]===b[0]?11:0),y:cy+(a[0]===b[0]?4:-9),'text-anchor':a[0]===b[0]?'start':'middle',class:'gate-label'},edge.id));
+      }
+    }
+    for (const room of plan.regions) {
+      const [x,y,w,h] = room.rect;
+      const link = node('a',{href:'#cavern-detail','data-room':room.id,class:'cursor-interaction','aria-label':`${room.id} ${room.name}，${w}×${h} 屏`});
+      link.append(node('rect',{x:X(x),y:Y(y),width:w*sx,height:h*sy,class:'room-hit'}));
+      const cx = X(x+w/2), top = Y(y);
+      if (compact) {
+        link.append(node('text',{x:cx,y:top+Math.min(h*sy/2+4,22),'text-anchor':'middle',class:'gate-label'},room.id));
+      } else {
+        link.append(node('text',{x:cx,y:top+16,'text-anchor':'middle',class:'gate-label'},`${room.id} ${room.name}`));
+        if (h*sy > 58) link.append(node('text',{x:cx,y:top+32,'text-anchor':'middle',class:'gate-label'},`${w}×${h} 屏`));
+      }
+      link.addEventListener('click',event => {event.preventDefault();choose(room.id,true);});
+      svg.append(link);
+    }
+    map.replaceChildren(svg);
+    choose(selected);
+  }
+  window.addEventListener('openai:set_globals',event => {
+    const state = event.detail?.globals?.widgetState?.modelContent;
+    if (regionById[state?.cavern_region]) choose(state.cavern_region);
+  });
+  new ResizeObserver(draw).observe(map);
+  draw();
+})();
+</script>

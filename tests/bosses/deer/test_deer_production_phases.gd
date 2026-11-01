@@ -135,7 +135,7 @@ func run() -> void:
 		await capture("colour_%d"%(phase+1))
 	boss.phase=1;boss.reset_phase();boss.position=Vector2(1000,555);player.position=Vector2(840,555)
 	await advance_handoff("mist_to_root",2)
-	check(player.contextual_special_item == &"mist_veil" and player.get_node("SkillBar")._context_label.text == "Q 分身", "Root stage exposes its existing decoy Q instead of the snare")
+	check(player.contextual_special_item == &"mist_veil" and player.get_node("SkillBar").special_item_icon.texture != null and player.get_node("SkillBar")._context_label == null, "Root stage exposes the existing decoy Q icon without helper text")
 	check(not room.mist_field.is_processing() and is_zero_approx(room.mist_field.modulate.a), "Root battle has no lingering mist")
 	player.position=Vector2(840,120)
 	boss._choose_attack(180)

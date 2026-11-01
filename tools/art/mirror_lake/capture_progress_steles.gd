@@ -44,7 +44,6 @@ func run() -> void:
 			assert(memory.set_stele_state(stele.stele_id, state))
 		await process_frame
 		for stele in specimens:
-			stele._info_label.visible = true
 			stele.set_process(false)
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png(output.path_join("steles_%d.png" % state))

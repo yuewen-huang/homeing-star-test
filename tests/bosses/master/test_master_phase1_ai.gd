@@ -32,7 +32,16 @@ func run() -> void:
 	brain.advance(0.02, 1.0, 0, false)
 	check(brain.drink_due(1) and not brain.drink_due(4), "Queued next drink becomes eligible, four layers remain capped")
 	brain.advance(4.1, 1.0, 800, true)
-	check(brain.pursuing() and brain.choose(0) == &"combo_three", "Sustained evasion selects the existing three-cut pursuit")
+	check(brain.pursuing(), "Sustained evasion arms pursuit pressure")
+	# Pursuit is 50/50 combo_three vs weighted table; seed forces one of each across trials.
+	var pursuit_picks: Dictionary = {}
+	for trial in 40:
+		var probe := MasterPhase1AI.new()
+		probe.rng.seed = 9000 + trial
+		probe.opening_index = probe.OPENING.size()
+		probe.chase_time = MasterPhase1AI.PURSUIT_DELAY
+		pursuit_picks[probe.choose(0)] = true
+	check(pursuit_picks.has(&"combo_three") and pursuit_picks.size() >= 2, "Pursuit mixes combo_three with normal table picks %s" % [pursuit_picks.keys()])
 	brain.started(&"combo_three")
 	check(not brain.pursuing(), "Catching the player resets pursuit pressure")
 	brain.advance(3, 1.0, 800, true)
@@ -97,12 +106,42 @@ func run() -> void:
 	master._process(0.01)
 	check(master.phase_1_action == null, "Broken poise prevents autonomous attacks")
 	master.poise_broken = false
+	master.short_stun_remaining = 0.0
 	master.position.x = 0
 	player.position.x = 800
 	master.phase_1_ai.chase_time = 4.1
 	master.play_walk()
 	master._process(0.25)
 	check(master.position.x > 90 and master.position.x < 200, "Anti-evasion pursuit walks quickly without teleporting")
+	# Near-melee engage band (200..280): must not burn walk_start; close fast and attack.
+	master.poise_broken = false
+	master.short_stun_remaining = 0.0
+	master.phase_1_ai.chase_time = 0.0
+	master.phase_1_ai.opening_index = master.phase_1_ai.OPENING.size()
+	master.phase_1_ai.clock = 2.0
+	master._cancel_phase_1_action()
+	master.state = MasterBoss.State.CHASE
+	master.position.x = 0
+	player.position.x = 250
+	master.play_idle()
+	var saw_walk_start := false
+	var engaged_attack := false
+	for i in 36:
+		master._process(1.0 / 60.0)
+		if master.animated_sprite.animation == &"walk_start": saw_walk_start = true
+		if master.phase_1_action != null:
+			engaged_attack = true
+			break
+	check(not saw_walk_start, "Engage-band approach skips walk_start when already beside Lan")
+	check(engaged_attack, "Engage-band approach converts to an attack instead of a long walk")
+	master._cancel_phase_1_action()
+	master.state = MasterBoss.State.CHASE
+	master.position.x = 0
+	player.position.x = 180
+	master.play_idle()
+	master._process(1.0 / 60.0)
+	check(master.phase_1_action != null, "Already in attack range starts a move without walking")
+	master._cancel_phase_1_action()
 	master.manual_control = true
 	master.state = MasterBoss.State.CHASE
 	master.position.x = 0

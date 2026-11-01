@@ -50,6 +50,7 @@ func run() -> void:
 	check(master.phase == 2 and master.state == MasterBoss.State.TRANSFORM, "Depleted health enters phase two")
 	check(master.charged_power == master.CHARGED_POWER_MAX, "Phase two retains the four spirit layers")
 	check(is_zero_approx(master.phase_2_buff_remaining), "Layers alone never grant the phase-two buff")
+	check(is_equal_approx(master.get_phase_2_attack_speed(), 1.0 + float(master.CHARGED_POWER_MAX - 1) * master.PHASE_2_DRUNK_STACK_SPEED), "Retained drunk stacks speed phase-two attacks without the circle")
 	while master.state == MasterBoss.State.TRANSFORM: await physics_frame
 	master._start_phase_2_howl()
 	master.spirit_aura.update_visual(0)
@@ -67,15 +68,18 @@ func run() -> void:
 	save.equip_special_item(ItemCatalog.HANGOVER_PILL)
 	master.phase_2_buff_remaining = 3.0
 	master.phase_2_finale_active = true
+	var howl_state := master.state
 	room._on_special_item_use_requested(ItemCatalog.HANGOVER_PILL)
-	check(master.phase_2_buff_remaining == 0 and not master.phase_2_finale_active and not master.howl_aura.active, "Real Q handler cancels howl, buff and gold finale")
-	check(master.sobering_remaining == master.SOBERING_OPENING and master.state == MasterBoss.State.PHASE_2_IDLE, "Successful use grants a real recovery opening")
-	check(not master.spirit_aura.visible and master.spirit_aura.strength == 0.0, "Red spirit visibly collapses after sobering")
+	check(master.charged_power == master.CHARGED_POWER_MAX - master.PHASE_2_SOBERING_STACK_REDUCTION, "Real Q handler removes three drunk stacks")
+	check(master.phase_2_buff_remaining == 3.0 and master.phase_2_finale_active, "Sobering keeps the magic-circle package running")
+	check(master.state == howl_state, "Sobering does not interrupt the current phase-two move")
+	check(is_zero_approx(master.sobering_remaining), "Sobering no longer opens a forced recovery window")
 	check(room._sobering_notice.is_toast_visible(), "Successful use has brief confirmation")
 	check(room._sobering_notice._toast_label.text == "醒酒成功", "Success confirmation stays short")
 	await capture("spirit_sobering_success")
-	check(not master.use_sobering_item(), "An inactive spirit cannot be cleared repeatedly")
+	check(master.use_sobering_item() and master.charged_power == 0, "A second pill can strip the remaining stacks without cancelling the buff")
+	check(not master.use_sobering_item(), "Zero drunk stacks refuse further sobering")
 	check(save.get_item_count(ItemCatalog.HANGOVER_PILL) == 1, "Existing infinite-use item stays owned")
-	check(master.phase_2_howl_cooldown_remaining > 0, "Cleared spirit does not immediately restart its howl")
+	check(is_zero_approx(master.phase_2_howl_cooldown_remaining), "Sobering no longer forces the howl cooldown")
 	expect_save_untouched()
 	finish("MASTER SPIRIT")

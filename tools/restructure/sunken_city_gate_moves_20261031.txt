@@ -1,0 +1,6 @@
+# Legacy Chinese architectural components reused in the new city gate.
+assets/levels/chapter_2_underwater/r01/r01_mid.png -> assets/levels/chapter_2_underwater/city/environment/gate_facade_1792x720.png
+assets/levels/chapter_2_underwater/r03/r03_mid.png -> assets/levels/chapter_2_underwater/city/environment/timber_gallery_1792x720.png
+assets/levels/chapter_2_underwater/r08/r08_mid.png -> assets/levels/chapter_2_underwater/city/environment/ruined_quay_1792x720.png
+assets/levels/chapter_2_underwater/r02/r02_prop_grate.png -> assets/levels/chapter_2_underwater/city/environment/round_lattice_716x726.png
+assets/levels/chapter_2_underwater/r08/r08_stone.png -> assets/levels/chapter_2_underwater/city/environment/masonry_256x256.png
