@@ -467,7 +467,7 @@ func surface_from(at: Vector2) -> Array[int]:
 		await step(1)
 		if anim() == LanSwimMotor.ANIM_SURFACE:
 			if first == Vector2.INF: first = canvas_origin()
-			surface_drift = maxf(surface_drift, (canvas_origin() - first).length())
+			surface_drift = maxf(surface_drift, absf(canvas_origin().y - first.y))
 			if frames.is_empty() or frames[-1] != player.animated_sprite.frame:
 				frames.append(player.animated_sprite.frame)
 		if player.swim.is_floating(): break
@@ -479,7 +479,7 @@ func test_surface_exit() -> void:
 	# 1–2. Holding W: 出水start plays in order, then she stops and floats (no burst out).
 	var frames := await surface_from(Vector2(1800, 900))
 	check(frames == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], "Swimming up plays every 出水start frame in order: %s" % [frames])
-	check(surface_drift < 0.05, "出水start frames stay on their canvas places (drift %.2f px)" % surface_drift)
+	check(surface_drift < 0.05, "Surfacing keeps the authored waterline pinned vertically (drift %.2f px)" % surface_drift)
 	check(player.swim.is_floating() and swimming(), "Reaching the surface floats (still SWIMMING)")
 	check(absf(player.position.y - float_y()) < 0.01, "Float feet %.1f px under the surface" % (player.position.y - volume.position.y))
 	var row_y := canvas_origin().y + LanSwimMotor.EXIT_CANVAS_SURFACE_Y * sprite.scale.y
@@ -883,8 +883,8 @@ func test_normal_bank_jump_entry() -> void:
 	var row_y := canvas_origin().y + LanSwimMotor.CANVAS_SURFACE_Y * sprite.scale.y
 	check(absf(row_y - volume.position.y) < 1.0, "Splash waterline (canvas row %d) on the surface (%.1f vs %.1f)" % [LanSwimMotor.CANVAS_SURFACE_Y, row_y, volume.position.y])
 	# Splash → idle, frame by frame: the clip changes once, and the art never jumps —
-	# during the splash every frame sits exactly where the canvas puts it relative to the
-	# water; afterwards it moves only with the slow sink.
+	# during the splash the waterline stays pinned vertically, while the torso's x
+	# follows the collision-resolved root; afterwards it moves with the slow sink.
 	var clips: Array[StringName] = [anim()]
 	var first := canvas_origin()
 	var prev := first
@@ -896,12 +896,12 @@ func test_normal_bank_jump_entry() -> void:
 			clips.append(anim())
 		var o := canvas_origin()
 		if anim() == LanSwimMotor.ANIM_ENTER:
-			worst_splash = maxf(worst_splash, (o - first).length())
+			worst_splash = maxf(worst_splash, absf(o.y - first.y))
 		else:
 			worst_idle = maxf(worst_idle, (o - prev).length())
 		prev = o
 	check(clips == [LanSwimMotor.ANIM_ENTER, LanSwimMotor.ANIM_IDLE], "Splash (with settle) → idle once each, no flip-flop: %s" % [clips])
-	check(worst_splash < 0.05, "Splash frames stay on their canvas places (drift %.2f px)" % worst_splash)
+	check(worst_splash < 0.05, "Splash keeps the authored waterline pinned vertically (drift %.2f px)" % worst_splash)
 	check(worst_idle <= 1.6, "No art jump from splash into idle sinking (worst step %.2f px)" % worst_idle)
 	check(is_equal_approx(sprite.offset.y, LanSwimMotor.clip_offset(anim(), sprite.frame, true).y), "Idle uses its per-frame placement (%.1f)" % sprite.offset.y)
 	bank._unregister_surface()
