@@ -62,4 +62,18 @@ func run() -> void:
 	var file:=FileAccess.open(output.path_join("capture.json"),FileAccess.WRITE)
 	file.store_string(JSON.stringify(report,"\t"))
 	file.close()
+	if "--regions" in OS.get_cmdline_user_args():
+		var reference := load("res://../homeing-star-test/tools/level_design/cavern_region_reference.gd").new() as Node2D
+		reference.setup(picture,level.bounds,zoom)
+		var reference_layer := CanvasLayer.new()
+		reference_layer.layer = 100
+		reference_layer.add_child(reference)
+		root.add_child(reference_layer)
+		root.content_scale_size = Vector2i(4800,2560)
+		root.size = Vector2i(4800,2560)
+		for i in 3: await process_frame
+		await RenderingServer.frame_post_draw
+		var annotated := root.get_texture().get_image()
+		check(annotated.save_png(output.path_join("sunken_cavern_regions_a1_a27.png"))==OK,"Numbered region reference saved")
+		reference_layer.queue_free()
 	await close_capture(level)

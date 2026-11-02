@@ -396,7 +396,31 @@ func water_journey(id: String) -> bool:
 
 func swim_to(target: Vector2, mode: String) -> bool:
 	release()
+	var authored_target:=target
+	var clearance_planned:=false
 	for i in 1800:
+		# These are navigation waypoints, not collectible centres. Project a
+		# legacy wall-adjacent waypoint onto space the swimmer can occupy; the
+		# old route was authored for the standing 24px box. Never warp the actor
+		# or enlarge arrival tolerances to mask an unreachable waypoint.
+		if not clearance_planned and mode=="swim" and player.air_state==LanPlayer.AirState.SWIMMING \
+				and player.animated_sprite.animation in LanSwimMotor.PINNED_ANIMATIONS:
+			clearance_planned=true
+			var query:=player.swim._clearance_query(player)
+			query.transform.origin+=target-(player.position+LanSwimMotor.BODY_PROBE)
+			for attempt in 6:
+				var contacts:=player.get_world_2d().direct_space_state.collide_shape(query,8)
+				var push:=Vector2.ZERO
+				for contact in range(0,contacts.size(),2):
+					var correction: Vector2=contacts[contact+1]-contacts[contact]
+					if correction.normalized().y< -0.5: continue
+					if correction.length_squared()>push.length_squared(): push=correction
+				if push.length_squared()<0.0001: break
+				push+=push.normalized()*0.5
+				query.transform.origin+=push
+				target+=push
+			if target.distance_to(authored_target)>0.1:
+				print("WATER CLEARANCE GOAL ",authored_target," -> ",target)
 		var offset := target - (player.position + LanSwimMotor.BODY_PROBE)
 		var dx := target.x - player.position.x
 		if mode == "exit":

@@ -5,7 +5,7 @@ extends "capture_cavern_pool_branch.gd"
 
 func run() -> void:
 	use_memory_progress()
-	fixed_position_resets=3
+	fixed_position_resets=4
 	output=OS.get_environment("HOMING_STAR_TEST_OUTPUT")
 	DirAccess.make_dir_recursive_absolute(output)
 	level=(load(SCENE) as PackedScene).instantiate()
@@ -64,4 +64,20 @@ func run() -> void:
 	release()
 	check(not false_surface and safe_roof,"The actual side-recess ceiling is solid and never becomes a free surface")
 	await capture("05_covered_recess")
+	player.reset_after_map_fall(Vector2(9160,3100))
+	await step(3)
+	Input.action_press(&"ui_right")
+	await step(110)
+	await capture("06_horizontal_wall_clearance")
+	check(player.position.x<9300 and player.air_state==LanPlayer.AirState.SWIMMING,"The stable swim capsule stops the head before the real W2 east wall")
+	Input.action_press(&"ui_up")
+	await step(28)
+	await capture("07_turning_at_wall")
+	release()
+	Input.action_press(&"ui_left")
+	var wall_x:=player.position.x
+	await step(150)
+	print("W2 WALL RELEASE dx=",player.position.x-wall_x," velocity=",player.velocity," heading=",player.swim.heading," floating=",player.swim.floating)
+	check(player.position.x<wall_x-60,"The swimmer can turn away without sticking to the W2 wall")
+	release()
 	await end_pool_test(false)
