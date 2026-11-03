@@ -19,14 +19,15 @@ func run() -> void:
 		player.start_normal_hit(hit)
 		check(player.facing_direction==direction,"Same-X hit preserves the player's previous facing")
 		player.finish_hit_reaction()
-		player.special_attack_cooldown_remaining=0
-		player.start_special_attack(0)
-		player.update_special_attack_charge(.05)
-		check(is_instance_valid(player.timeline_attack_effect) and player.timeline_attack_effect.facing_direction==direction,"Releasing charged special after the hit creates a nonzero-facing effect")
+		player.sword_wave_cooldown_remaining=0
+		player.start_sword_wave(0, true)
+		player.update_sword_wave_charge(.05)
+		player.animated_sprite.frame = 7
+		check(player.sword_wave_fx.projectiles.back().facing == direction, "Releasing a sword wave after the hit preserves facing")
 		player.reset_after_map_fall(Vector2(500,555))
 		player.facing_direction=0
 		player.animated_sprite.flip_h=direction>0
-		player.special_attack_cooldown_remaining=0
+		player.sword_wave_cooldown_remaining=0
 		player.perform_special_attack(0,.5)
 		check(player.facing_direction==direction and player.timeline_attack_effect.facing_direction==direction,"Attack entry repairs an old zero-facing state from the retained visual side")
 	expect_save_untouched()

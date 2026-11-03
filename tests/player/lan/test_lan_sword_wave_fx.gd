@@ -1,5 +1,5 @@
 extends "../../support/harness.gd"
-## Effects of Lan's sword wave (H, LanSwordWaveFX / LanSwordWaveProjectile, 2026-10-19): gather on
+## Effects of Lan's sword wave (I, LanSwordWaveFX / LanSwordWaveProjectile, 2026-10-19): gather on
 ## frames 1–3, smears on the three cuts, three mini ground waves (the user's pixel art) that
 ## really hit a training dummy once each, mana per hit, facing both ways, cleanup, every smear baked,
 ## progress untouched. Optional user args: an output folder, then "frames" to save every
@@ -74,6 +74,7 @@ func run() -> void:
 	await process_frame
 
 	for facing: float in [1.0, -1.0]:
+		player.sword_wave_cooldown_remaining = 0.0
 		var folder := ""
 		if capture and facing > 0.0:
 			folder = output.path_join("sword_wave")
@@ -85,9 +86,10 @@ func run() -> void:
 		check((seen.wave as Array).size() == 3, "Facing %d: one ground wave per cut" % facing)
 		check((seen.wave_y as Array).all(func(y) -> bool: return is_equal_approx(y, 555.0)), "Facing %d: the waves run along the ground" % facing)
 		check((seen.frames as Dictionary).size() == LanSwordWaveProjectile.FRAME_COUNT, "Facing %d: the waves loop all four frames" % facing)
-		var expected: Array[int] = [LanSwordWaveFX.WAVE_DAMAGE, LanSwordWaveFX.WAVE_DAMAGE, LanSwordWaveFX.HEAVY_WAVE_DAMAGE]
+		var light := roundi(LanSwordWaveFX.WAVE_DAMAGE * 0.65)
+		var expected: Array[int] = [light, light, roundi(LanSwordWaveFX.HEAVY_WAVE_DAMAGE * 0.65)]
 		check(hits == expected, "Facing %d: each projectile hits the dummy once (%s)" % [facing, str(hits)])
-		check(is_equal_approx(player.combat_stats.mana, minf(3.0 * LanPlayer.MANA_GAIN_PER_HIT, player.combat_stats.max_mana)), "Facing %d: each hit gives Lan mana" % facing)
+		check(is_equal_approx(player.combat_stats.mana, minf(3.0 * LanPlayer.MANA_GAIN_PER_SKILL_HIT, player.combat_stats.max_mana)), "Facing %d: each hit gives Lan mana" % facing)
 		check(player.sword_wave_fx.projectiles.is_empty() and room.find_children("LanGround*", "", false, false).is_empty(), "Facing %d: projectiles free themselves when spent" % facing)
 		for k in 30: await process_frame
 		check(player.sword_wave_fx.pieces.is_empty(), "Facing %d: the smears are gone after fading" % facing)

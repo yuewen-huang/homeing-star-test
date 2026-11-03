@@ -63,17 +63,17 @@ func run() -> void:
 	Input.action_press(&"special_attack")
 	key(KEY_I)
 	await frames(50)
-	check(lan.special_attack_charging and lan.special_attack_charge_elapsed > 0.7,
+	check(lan.sword_wave_charging and lan.sword_wave_charge_elapsed > 0.7,
 		"Holding I accumulates real charge and holds the charge pose")
 	await capture("salt_heavy_charge")
 	before = field.feet
 	Input.action_release(&"special_attack")
 	await frames(1)
-	check(not lan.special_attack_charging and lan.special_attack_charge_ratio > 0,
-		"Releasing I commits charge to production heavy attack")
+	check(not lan.sword_wave_charging and lan.attack_state == LanPlayer.AttackState.SWORD_WAVE,
+		"Releasing I commits charge to production sword wave")
 	await frames(100)
-	check(field.feet.x > before.x and field.feet.y == before.y, "Heavy lunge moves planar feet along the shared curve")
-	check(field.pawn.can_move() and lan.position == Vector2.ZERO, "Heavy attack finishes without a stuck state or child drift")
+	check(field.feet == before, "Sword wave leaves planar feet in place")
+	check(field.pawn.can_move() and lan.position == Vector2.ZERO, "Sword wave finishes without a stuck state or child drift")
 	key(KEY_O)
 	check(lan.ultimate_armed and not field.pawn.can_move(), "First O arms the production ultimate and locks cast movement")
 	key(KEY_O)

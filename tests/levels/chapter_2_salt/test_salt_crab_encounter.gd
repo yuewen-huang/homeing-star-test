@@ -137,21 +137,16 @@ func run() -> void:
 	player.reset_after_map_fall(crab.position+Vector2(150,0))
 	crab.combat_stats.health = 1
 	player.perform_special_attack(-1,1.0,crab)
-	var max_effect: Node = player.timeline_attack_effect
-	player.animated_sprite.pause()
-	max_effect.set_timeline_frame(10)
-	await physics_frame
-	await physics_frame
+	var storm := crab.get_node("LanShadowClawStorm")
+	storm._physics_process(0.31)
 	await process_frame
-	check(crab.combat_stats.health==0 and not encounter.active,"Real enhanced special attack hitbox finishes encounter")
-	check(not is_instance_valid(max_effect) or max_effect.is_queued_for_deletion() or max_effect.detached_from_source,"Enhanced wolf effect cannot freeze on Lan after victory")
-	await create_timer(0.4).timeout
-	check(not is_instance_valid(max_effect) and player.active_attack_effects.is_empty(),"Victory releases the killing effect and its tracking references")
+	check(crab.combat_stats.health==0 and not encounter.active,"Detached enhanced E finishes encounter")
+	check(player.active_attack_effects.is_empty(),"Victory dialogue can pause the independent storm without attaching it to Lan")
 	await capture("salt_crab_special_kill_clean")
 	field.free()
 	current_scene = null
 	await process_frame
-	check(not paused,"Leaving a battle-triggered departure restores the tree pause state")
+	check(not paused and not is_instance_valid(storm),"Leaving a battle-triggered departure restores pause state and clears the storm")
 	# Old victories opt in at the peaceful crab; the shared dialogue/comic own input.
 	save._config = ConfigFile.new()
 	save._config.set_value("map_states","chapter_2_salt_field",{"boss_pile":1,"dug":[1]})

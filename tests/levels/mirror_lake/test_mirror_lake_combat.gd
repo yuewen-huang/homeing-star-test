@@ -97,7 +97,7 @@ func run() -> void:
 	Input.flush_buffered_events()
 	for method in [&"start_attack_1x", &"start_attack_2x", &"start_attack_2x_1", &"start_attack_2x_2",
 		&"start_attack_3x", &"start_jump_attack_1x", &"start_jump_attack_2x", &"start_dodge_attack_1x",
-		&"start_dodge_attack_2x", &"start_dodge_attack_3x", &"start_special_attack", &"perform_special_attack",
+		&"start_dodge_attack_2x", &"start_dodge_attack_3x", &"start_sword_wave", &"perform_special_attack",
 		&"start_sword_wave", &"start_instant_dash", &"arm_ultimate", &"start_ultimate_combo"]:
 		if method == &"perform_special_attack": player.call(method, 1.0)
 		else: player.call(method)
@@ -116,10 +116,10 @@ func run() -> void:
 	progress.allow_parry = true
 	# A charge release and a previously launched wave must not leak after switching.
 	reset_yin()
-	player.start_special_attack(1.0)
-	check(player.special_attack_charging, "Yin heavy charge begins")
+	player.start_sword_wave(1.0, true)
+	check(player.sword_wave_charging, "Yin sword-wave charge begins")
 	switch_side()
-	check(not player.special_attack_charging and player.timeline_attack_effect == null, "Yang cancels heavy charge before release")
+	check(not player.sword_wave_charging and player.timeline_attack_effect == null, "Yang cancels sword-wave charge before release")
 	player.perform_special_attack(1.0, 1.0)
 	check(player.attack_state == LanPlayer.AttackState.NONE, "Releasing the cancelled charge cannot commit damage")
 	reset_yin()

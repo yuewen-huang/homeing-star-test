@@ -202,11 +202,10 @@ func run() -> void:
 	player.reset_after_map_fall(pierce.tip + Vector2(-40, 60))
 	player.apply_attack_facing(1)
 	player.perform_special_attack(1, 0.0, player.find_throw_target())
-	var effect := player.timeline_attack_effect
-	effect.set_process(false)
-	check(player.special_attack_max_form and effect.skill_hit_context.max_form, "E throw selects the existing PLUS against a broken vine")
-	pierce.receive_skill_hit(effect.skill_hit_context, player.position)
-	player.cancel_uncommitted_attack_effects()
+	var storm := pierce.get_node_or_null("LanShadowClawStorm")
+	check(storm != null and storm.hit.max_form, "E launches enhanced claw storm against the broken vine")
+	if storm != null:
+		storm._physics_process(0.31)
 	check(pierce.dead and room._remaining_vines == 1 and room.combat_active, "skill damage restores the second vine without completing early")
 	# Saving failure retains the won result and does not reactivate vines.
 	save.writes_fail = true

@@ -68,7 +68,7 @@ func run() -> void:
 	for charge: float in [0.0, 0.5, 1.0]:
 		master.combat_stats.restore_health()
 		master.combat_stats.restore_poise()
-		player.special_attack_cooldown_remaining = 0.0
+		player.sword_wave_cooldown_remaining = 0.0
 		player.perform_special_attack(1.0, charge)
 		var effect: Node = player.active_attack_effects.back()
 		var hit := effect.skill_hit_context as SkillHitContext

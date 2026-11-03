@@ -148,11 +148,10 @@ func run() -> void:
 	player.reset_after_map_fall(middle.position + Vector2(-40, 0))
 	player.apply_attack_facing(1)
 	player.perform_special_attack(1, 0.0, player.find_throw_target())
-	var effect := player.timeline_attack_effect
-	effect.set_process(false)
-	check(player.special_attack_max_form and effect.skill_hit_context.max_form, "E throw selects the existing PLUS against a broken treant")
-	middle.receive_skill_hit(effect.skill_hit_context, player.global_position)
-	player.cancel_uncommitted_attack_effects()
+	var storm := middle.get_node_or_null("LanShadowClawStorm")
+	check(storm != null and storm.hit.max_form, "E launches enhanced claw storm against the broken treant")
+	if storm != null:
+		storm._physics_process(0.31)
 	check(middle.dead and room.combat_active and room._remaining_treants == 2, "one kill does not complete the three-target objective")
 	at_stele()
 	room._enemies[2].receive_hit(10, player.global_position)

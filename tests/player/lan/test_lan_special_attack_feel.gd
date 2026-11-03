@@ -111,16 +111,6 @@ func run() -> void:
 	var windup_seconds: float = 8.0 / (player.SPECIAL_ATTACK_FPS * player.SPECIAL_ATTACK_WINDUP_SPEED_SCALE)
 	check(windup_seconds < 0.13, "Damage opens within 0.13 s (%.3f)" % windup_seconds)
 	# Max form: slow wolf rise, snap pounce, held slash, hurried backward tail.
-	player.special_attack_max_form = true
-	var max_until_slash := 0.0
-	for f in 10:
-		max_until_slash += 1.0 / (player.SPECIAL_ATTACK_FPS * player.special_attack_speed_scale(f))
-	check(max_until_slash > 0.2 and max_until_slash < 0.3, "Max slash lands after a readable 0.2-0.3 s build-up (%.3f)" % max_until_slash)
-	check(player.special_attack_speed_scale(5) < player.special_attack_speed_scale(1) \
-		and player.special_attack_speed_scale(9) > player.special_attack_speed_scale(5) \
-		and player.special_attack_speed_scale(10) < player.special_attack_speed_scale(9) \
-		and player.special_attack_speed_scale(20) > player.special_attack_speed_scale(12), "Max curve: rise slower than crouch, pounce snaps, slash holds, tail hurries")
-	player.special_attack_max_form = false
 
 	player.facing_direction = -1.0
 	check(is_equal_approx(player.special_attack_lunge_reach(null), player.SPECIAL_ATTACK_LUNGE_DISTANCE), "Without a target the lunge uses its full distance")
@@ -128,41 +118,6 @@ func run() -> void:
 	check(is_equal_approx(player.special_attack_lunge_reach(near), 40.0 - 1.0 - player.NORMAL_ATTACK_MIN_GAP), "Lunge stops short of a close target's hurtbox")
 	near.queue_free()
 
-	# Max form: the cat spirit is drawn behind Lan's body.
-	var broken := receiver_at(world, player.global_position + Vector2(-150, 0))
-	broken.poise_bar = true
-	broken.broken_poise = true
-	broken.add_to_group(&"damageable")
-	player.perform_special_attack(-1.0, 0.0, player.find_throw_target())
-	check(player.special_attack_max_form and player.timeline_attack_effect.get_index() < player.animated_sprite.get_index(), "Max cat spirit draws behind Lan")
-	player.end_special_attack_early()
-	# I remains a heavy attack even with a broken enemy nearby.
-	Input.action_press(&"special_attack")
-	player.start_special_attack(-1.0)
-	check(player.special_attack_charging and not player.special_attack_max_form, "I charges instead of selecting PLUS on broken targets")
-	player.update_special_attack_charge(0.45)
-	check(player.special_attack_charging and not player.animated_sprite.is_playing(), "Held I keeps the windup pose and never hits")
-	Input.action_release(&"special_attack")
-	player.update_special_attack_charge(0.0)
-	check(not player.special_attack_max_form and player.timeline_attack_effect.skill_hit_context.damage == roundi(lerpf(CombatTuning.LAN_SPECIAL_DAMAGE, CombatTuning.LAN_SPECIAL_CHARGED_DAMAGE, 0.5)), "Half charge releases a tuned heavy attack")
-	player.end_special_attack_early()
-	broken.free()
-	for ratio in [0.0, 0.5, 1.0]:
-		player.update_player_resources(CombatTuning.LAN_SPECIAL_COOLDOWN)
-		player.perform_special_attack(-1.0, ratio)
-		check(is_equal_approx(player.special_attack_lunge_distance, lerpf(96.0, 300.0, ratio)), "Charge scales unobstructed travel: %s" % ratio)
-		check(player.timeline_attack_effect.skill_hit_context.damage == roundi(lerpf(CombatTuning.LAN_SPECIAL_DAMAGE, CombatTuning.LAN_SPECIAL_CHARGED_DAMAGE, ratio)), "Charge scales damage: %s" % ratio)
-		check(player.timeline_attack_effect.skill_hit_context.poise_damage == roundi(lerpf(CombatTuning.LAN_SPECIAL_POISE_DAMAGE, CombatTuning.LAN_SPECIAL_CHARGED_POISE_DAMAGE, ratio)) and not player.timeline_attack_effect.skill_hit_context.max_form, "Charge scales poise pressure without selecting the throw form")
-		player.end_special_attack_early()
-	player.update_player_resources(CombatTuning.LAN_SPECIAL_COOLDOWN)
-	Input.action_press(&"special_attack")
-	player.start_special_attack(-1.0)
-	player.update_special_attack_charge(2.0)
-	check(player.special_attack_charging and is_equal_approx(player.special_attack_charge_elapsed, 0.9), "Full charge caps and waits for release")
-	player.cancel_uncommitted_attack_effects()
-	check(not player.special_attack_charging, "An interrupted charge cannot release a phantom attack")
-	Input.action_release(&"special_attack")
-	player.update_player_resources(CombatTuning.LAN_SPECIAL_COOLDOWN)
 	player.perform_special_attack(-1.0)
 	var effect = player.timeline_attack_effect
 	check(effect.skill_hit_context.emphasis == SkillHitContext.Emphasis.HEAVY_SKILL and effect.skill_hit_context.poise_damage == player.SPECIAL_ATTACK_POISE_DAMAGE, "Heavy attack preserves skill poise")
