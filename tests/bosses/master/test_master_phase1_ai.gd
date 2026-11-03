@@ -4,23 +4,24 @@ func run() -> void:
 	use_memory_progress()
 	var brain := MasterPhase1AI.new()
 	brain.rng.seed = 173
-	check(brain.choose(0) == &"horizontal", "Opening begins with the familiar horizontal slash")
-	brain.started(&"horizontal")
-	check(brain.choose(0) == &"vertical", "Second opening teaches the delayed vertical slash")
+	check(brain.choose(0) == &"vertical", "Opening teaches the accepted heavy single chop")
 	brain.started(&"vertical")
+	check(brain.choose(0) == &"combo_three", "Second opening teaches the three-chop rhythm")
+	brain.started(&"combo_three")
 	for layer in 5:
-		var seen: Dictionary = {}
 		var valid := true
+		var seen: Dictionary = {}
 		for i in 250:
-			brain.clock += 2.0
+			brain.advance(4.0, 1.0, 360.0 if i % 3 == 0 else 150.0, true)
+			var was_remote := brain.remote_last
 			var pick := brain.choose(layer)
-			valid = valid and int(brain.UNLOCKS[pick]) <= layer and pick != brain.last_move
+			valid = valid and brain.available(layer).has(pick) and pick != brain.last_move
 			valid = valid and float(brain.ready_at.get(pick, -INF)) <= brain.clock
+			valid = valid and not (was_remote and pick in [&"mountain", &"rise_unbalance"])
 			seen[pick] = true
 			brain.started(pick)
-		check(valid and seen.size() == brain.available(layer).size(), "Layer %d uses its full table, respects cooldowns and avoids immediate repeats" % layer)
-	check(not brain.available(3).has(&"rise_unbalance") and brain.available(4).has(&"rise_unbalance"), "Loss of balance only unlocks when fully drunk")
-	check(not brain.available(4).has(&"finger_flick") and not brain.available(4).has(&"peanut_sword") and not brain.available(4).has(&"dodge"), "Both excluded mechanisms and the dodge never enter AI selection")
+		check(valid and seen.size() == 4, "Layer %d retains four readable moves, cooldowns and melee between ranged attacks" % layer)
+	check(brain.available(0).size() == 4 and not brain.available(4).has(&"combo_five"), "Drinking preserves the four-move vocabulary")
 	brain = MasterPhase1AI.new()
 	brain.advance(1, 0.81, 0, false)
 	check(not brain.drink_due(0), "No drink before the first blood threshold")
@@ -28,28 +29,20 @@ func run() -> void:
 	check(brain.drink_entitlements == 4 and brain.drink_due(0), "Burst damage queues all four blood thresholds without skipping drinks")
 	brain.drank()
 	brain.advance(19.99, 1.0, 0, false)
-	check(not brain.drink_due(1) and brain.drink_entitlements == 4, "Healing does not duplicate triggers; the 20-second spacing is real")
+	check(not brain.drink_due(1) and brain.drink_entitlements == 4, "Elapsed time alone cannot chain drinks; healing cannot duplicate thresholds")
+	brain.completed_exchange()
 	brain.advance(0.02, 1.0, 0, false)
 	check(brain.drink_due(1) and not brain.drink_due(4), "Queued next drink becomes eligible, four layers remain capped")
 	brain.advance(4.1, 1.0, 800, true)
 	check(brain.pursuing(), "Sustained evasion arms pursuit pressure")
-	# Pursuit is 50/50 combo_three vs weighted table; seed forces one of each across trials.
-	var pursuit_picks: Dictionary = {}
-	for trial in 40:
-		var probe := MasterPhase1AI.new()
-		probe.rng.seed = 9000 + trial
-		probe.opening_index = probe.OPENING.size()
-		probe.chase_time = MasterPhase1AI.PURSUIT_DELAY
-		pursuit_picks[probe.choose(0)] = true
-	check(pursuit_picks.has(&"combo_three") and pursuit_picks.size() >= 2, "Pursuit mixes combo_three with normal table picks %s" % [pursuit_picks.keys()])
-	brain.started(&"combo_three")
-	check(not brain.pursuing(), "Catching the player resets pursuit pressure")
-	brain.advance(3, 1.0, 800, true)
-	brain.advance(0.1, 1.0, 240, true)
-	check(is_zero_approx(brain.chase_time), "Briefly re-engaging resets an untriggered evasion timer")
-	brain.advance(3, 1.0, 800, true)
-	brain.advance(0.1, 1.0, 240, true)
-	check(is_zero_approx(brain.chase_time), "Briefly re-engaging resets an untriggered evasion timer")
+	brain.opening_index = brain.OPENING.size()
+	brain.target_gap = 360.0
+	check(brain.ranged_choice() == &"mountain", "Midrange escape invites a committed jump slash")
+	brain.started(&"mountain")
+	check(brain.ranged_choice() == &"", "A ranged move must return to a melee exchange")
+	brain.started(&"vertical")
+	brain.target_gap = 1000.0
+	check(brain.ranged_choice() == &"", "Outside real reach the master approaches instead of firing into empty space")
 	var room := load("res://scenes/levels/tutorial/tutorial_battle_room.tscn").instantiate() as Node2D
 	root.add_child(room)
 	current_scene = room
@@ -67,7 +60,7 @@ func run() -> void:
 	for i in 60:
 		master._process(1.0 / 60.0)
 		if master.phase_1_action != null: break
-	check(master.phase_1_action != null and master.phase_1_action.id == &"horizontal", "Production AI autonomously starts the real opening action")
+	check(master.phase_1_action != null and master.phase_1_action.id == &"vertical", "Production AI autonomously starts the real opening action")
 	var serial := master.attack_serial
 	var ticks := 0
 	while master.phase_1_action != null and ticks < 1000:
@@ -94,11 +87,12 @@ func run() -> void:
 	master._cancel_phase_1_action()
 	for layer in range(2, 5):
 		master.state = MasterBoss.State.CHASE
-		master.phase_1_ai.advance(20.1, 0.19, 0, false)
+		master.phase_1_ai.completed_exchange()
+		master.phase_1_ai.advance(0.1, 0.19, 0, false)
 		master._process(0.01)
 		check(master.state == MasterBoss.State.DRINK, "Eligible queued drink %d starts without replaying prior blood triggers" % layer)
 		master._on_body_animation_finished()
-		check(master.charged_power == layer and master.phase_1_ai.last_drink - last >= 20, "Drink %d respects spacing and settles once" % layer)
+		check(master.charged_power == layer and master.phase_1_ai.last_drink - last < 20, "Drink %d follows a completed exchange without a hard time gate" % layer)
 		last = master.phase_1_ai.last_drink
 	check(master.phase == 1 and master.charged_power == 4, "Fourth drink leaves the fully drunk move table playable")
 	master.state = MasterBoss.State.CHASE
@@ -112,7 +106,7 @@ func run() -> void:
 	master.phase_1_ai.chase_time = 4.1
 	master.play_walk()
 	master._process(0.25)
-	check(master.position.x > 90 and master.position.x < 200, "Anti-evasion pursuit walks quickly without teleporting")
+	check(master.position.x > 25 and master.position.x < 35 and is_equal_approx(master.body_base_speed, 1.0), "Approach keeps authored walk cadence instead of speed-walking")
 	# Near-melee engage band (200..280): must not burn walk_start; close fast and attack.
 	master.poise_broken = false
 	master.short_stun_remaining = 0.0

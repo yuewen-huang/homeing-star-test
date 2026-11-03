@@ -1,0 +1,130 @@
+{
+	"start_attack_1x_queued": {
+		"active_ticks": [
+			5,
+			6,
+			7,
+			8,
+			9,
+			10,
+			11,
+			12,
+			13,
+			14
+		],
+		"closed_tick": 19,
+		"end_tick": 27,
+		"next_state": 4
+	},
+	"start_attack_1x_single": {
+		"active_ticks": [
+			5,
+			6,
+			7,
+			8,
+			9,
+			10,
+			11,
+			12,
+			13,
+			14
+		],
+		"closed_tick": 19,
+		"end_tick": 27,
+		"next_state": 0
+	},
+	"start_attack_2x_1_queued": {
+		"active_ticks": [
+			2,
+			3,
+			4,
+			5,
+			6,
+			7,
+			8
+		],
+		"closed_tick": -1,
+		"end_tick": 10,
+		"next_state": 2
+	},
+	"start_attack_2x_1_single": {
+		"active_ticks": [
+			2,
+			3,
+			4,
+			5,
+			6,
+			7,
+			8
+		],
+		"closed_tick": -1,
+		"end_tick": 10,
+		"next_state": 0
+	},
+	"start_attack_2x_2_queued": {
+		"active_ticks": [
+			5,
+			6,
+			7,
+			8,
+			9,
+			10,
+			11
+		],
+		"closed_tick": 14,
+		"end_tick": 17,
+		"next_state": 2
+	},
+	"start_attack_2x_2_single": {
+		"active_ticks": [
+			5,
+			6,
+			7,
+			8,
+			9,
+			10,
+			11
+		],
+		"closed_tick": 14,
+		"end_tick": 17,
+		"next_state": 0
+	},
+	"start_attack_2x_queued": {
+		"active_ticks": [
+			10,
+			11,
+			12,
+			13,
+			14,
+			15,
+			16,
+			17,
+			18,
+			19,
+			20,
+			21
+		],
+		"closed_tick": 27,
+		"end_tick": 42,
+		"next_state": 6
+	},
+	"start_attack_2x_single": {
+		"active_ticks": [
+			10,
+			11,
+			12,
+			13,
+			14,
+			15,
+			16,
+			17,
+			18,
+			19,
+			20,
+			21
+		],
+		"closed_tick": 27,
+		"end_tick": 42,
+		"next_state": 0
+	}
+}

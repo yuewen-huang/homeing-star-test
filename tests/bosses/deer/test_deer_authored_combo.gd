@@ -82,7 +82,10 @@ func run() -> void:
 	deer.phase = 3
 	deer.manual_control = false
 	deer.phase_ai.choose(170)
-	check(deer.clash_phase.steps.any(func(s: Dictionary) -> bool: return s.move == &"authored"), "Production AI chooses approved combos")
+	check(deer.clash_phase.action_id == &"dash" or deer.clash_phase.steps.any(func(s: Dictionary) -> bool: return s.move == &"authored"), "Production AI chooses retained dash or approved combos")
+	deer.phase_ai.wind_repeat = 2
+	deer.phase_ai.choose(170)
+	check(deer.clash_phase.steps.any(func(s: Dictionary) -> bool: return s.move == &"authored"), "Long AI branch chooses approved authored combo")
 	deer.manual_control = true
 	deer._recover(0)
 	check(DeerAuthoredCombo.HEAVY_RADIUS == 320 and DeerAuthoredCombo.ground_spec().width == 640, "Heavy quake visual and gameplay radius are expanded together")

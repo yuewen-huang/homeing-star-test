@@ -120,7 +120,7 @@ func run() -> void:
 		await capture("crystal_crab_anchor_%d_active" % selected)
 		advance(score_end-first_beat+0.15)
 		check(not room.dummy.contacts.is_empty(),"Selected ground skill actually reaches the preview dummy %d" % selected)
-		check(crab.quake_vfx.last_impact==[&"claw_b",&"double",&"echo",&"double",&"burrow",&"aftershock"][selected],"Every combo routes its closing beat to the authored impact sound %d" % selected)
+		check(crab.quake_vfx.last_impact==[&"claw_b",&"double",&"echo",&"double",&"burrow",&"aftershock",&"double"][selected],"Every combo routes its closing beat to the authored impact sound %d" % selected)
 		check(crab.quake_vfx.impact_voices.all(func(voice): return voice.bus==&"SFX" and (voice.stream==null or voice.stream.resource_path.begins_with("res://assets/bosses/crystal_crab/audio/"))),"Crab voices use the SFX bus and no landing placeholder %d" % selected)
 	room.dummy_x.value = 688
 	room.play_action(1)
@@ -147,6 +147,13 @@ func run() -> void:
 	crab = room.adapter.boss as CrystalCrabBoss
 	crab.set_physics_process(false)
 	check(crab!=old and crab.action==&"idle" and crab.position==room.BOSS_START,"Reset recreates a clean specimen")
+	room.set_combat_simulation(true)
+	check(not crab.manual_control and crab.is_in_group(&"damageable") and crab.get_node("Hurtbox").collision_layer == 2, "Combat preview restores the real attackable enemy layer")
+	check(not room.dummy.visible and not room.player.input_frozen, "Combat preview frees player control and hides the dummy")
+	advance(.7)
+	check(not crab._idle_loop, "Combat preview starts the production attack AI")
+	room.set_combat_simulation(false)
+	check(crab.manual_control and not crab.is_in_group(&"damageable"), "Disabling combat returns to isolated manual preview")
 	room.select_boss(3)
 	await process_frame
 	check(room.adapter.boss is FroggerBoss,"Switching back preserves existing BOSS adapters")

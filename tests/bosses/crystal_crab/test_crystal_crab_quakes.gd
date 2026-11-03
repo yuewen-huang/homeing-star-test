@@ -99,7 +99,7 @@ func run() -> void:
 	place()
 	for danger in [1,2]:
 		crab.quake_vfx.cue(danger,0.10,crab.get_counter_slash_point())
-		check(crab.quake_vfx.glint_pieces.size()==2 and crab.quake_vfx.glint_pieces.all(func(piece): return not piece._clip.is_empty()),"Red/gold warning uses the current baked star and converging shards %d" % danger)
+		check(crab.quake_vfx.glint.pieces.size()==2 and crab.quake_vfx.glint.flare != null and crab.quake_vfx.glint.pieces.all(func(piece): return not piece._clip.is_empty()),"Red/gold warning uses the shared star, shards and live flare %d" % danger)
 		check(crab.quake_vfx.glint.global_position.distance_to(crab.get_counter_slash_point())<0.01,"Danger cue follows the current painted core %d" % danger)
 	# Data validation: fitted body rates, unique VFX recipes, visible landing frames.
 	for id in CrystalCrabQuakeRhythm.ORDER:
@@ -107,7 +107,7 @@ func run() -> void:
 		var rates_ok := true
 		for i in range(1,score.keys.size()):
 			var rate: float = float(score.keys[i][1]-score.keys[i-1][1])/float(score.keys[i][0]-score.keys[i-1][0])
-			if rate>0: rates_ok = rates_ok and rate>=4 and rate<=40
+			if rate>0: rates_ok = rates_ok and (rate>=4 or id in [&"flurry", &"triple"]) and rate<=40
 		check(rates_ok,"VFX-first fitted frames stay within 4–40 fps: "+String(id))
 		for beat in score.beats:
 			crab.quake_vfx.spawn_quake(beat, Vector2(820,555), 0.0)
@@ -194,7 +194,28 @@ func run() -> void:
 	crab._parry_pause = 1
 	crab._physics_process(0.10)
 	check(is_equal_approx(crab.quake_time,frozen),"Hit-stop freezes body and quake score together")
-	# Representative in-engine warning, active and recovery renders for all six scores.
+	for facing in [-1.0, 1.0]:
+		place()
+		lan.position.x = crab.position.x + facing * 100
+		var origin := crab.position.x
+		crab.start_quake(&"flurry", lan.position)
+		var flurry := crab.rhythm
+		for beat in flurry.beats:
+			var pose := flurry.pose(float(beat.t))
+			check(pose[0] == CrystalCrabQuakeRhythm.CONTACTS[beat.anchor].clip and pose[1] == CrystalCrabQuakeRhythm.CONTACTS[beat.anchor].frame, "Each drum beat has its own authored landing pose")
+		for frame in 650:
+			if crab.rhythm == null: break
+			# Follow the 90px advance to exercise all six real hurtbox/parry settlements.
+			lan.position.x = crab.position.x + facing * 100
+			tick(1.0/120, true)
+		check(results.size() == 6 and results.all(func(r): return r == CombatHitResult.Type.PARRY_SUCCESS), "Both facings allow six independent normal parries")
+		check(is_equal_approx(crab.position.x, origin + facing * 90), "Forward pressure has a bounded ninety-pixel budget")
+		place()
+		crab.start_quake(&"flurry", crab.position + Vector2(facing * 100,0))
+		lan.position.x = crab.position.x - facing * 260
+		tick(4.2)
+		check(results.is_empty() and crab.direction == facing, "A flank escape stays safe; drumming does not turn to track Lan")
+	# Representative in-engine warning, active and recovery renders.
 	for id in CrystalCrabQuakeRhythm.ORDER:
 		place()
 		lan.position = Vector2(480,555)

@@ -38,6 +38,14 @@ func run() -> void:
 	food.advance(food._seating_time+0.01)
 	check(food.needed == 1 and food.rounds == 3 and food.pickups.size() == 3 and food.formation.swords.size() == 3,"After seating, each round requests one item and creates the patrol formation")
 	check(food.display.bubble.visible and food.display.food_icon.texture.resource_path.ends_with(String(MasterFoodMechanism.FOODS[food.wanted])+".png") and food.display.countdown.digits.text == "20","Current food appears as an icon bubble with a separate numeric countdown")
+	var pads_safe := true
+	for item in food.pickups:
+		var local_pad := (boss.get_parent() as Node2D).to_local(item.node.global_position)
+		pads_safe = pads_safe and absf(local_pad.x - boss.position.x) >= (food.formation.orbit_radii.x + 140.0) * absf(boss.scale.x) + 100.0
+	check(pads_safe, "Food and its full pickup zone spawn outside the maximum sword envelope")
+	for tick in 480: food.formation.advance(1.0 / 60.0)
+	check(food.formation.swords.all(func(sword: MasterFlyingSword) -> bool: return sword.state == MasterFlyingSword.State.ORBIT and sword.sweep_serial == 0), "Collection swords orbit without any autonomous pursuit or sweep")
+	check(food.speech.visible, "Seating has a brief character bubble alongside the request icon")
 	var labels := food.find_children("*","Label",true,false)
 	check(labels.size() == 1 and (labels[0] as Label).text.is_valid_int(),"Food mechanism contains no text prompts, only countdown digits")
 	food.advance(0.31)
@@ -82,8 +90,8 @@ func run() -> void:
 			check(food.display.countdown.digits.text == str(ceili(boss.food_time_limit)) and is_equal_approx(food.display.countdown.seconds,boss.food_time_limit),"Last-moment delivery refills the displayed timer to a full new round")
 	check(food.stage == MasterFoodMechanism.Stage.OPENING,"Only completing every round opens the stuffed-master window")
 	check(not food.display.bubble.visible and not food.display.countdown.visible,"Success hides both request icon and collection countdown without a text message")
-	food.advance(5.9)
-	check(not food.finished,"Success gives the full six-second output window")
+	food.advance(food.opening_time - 0.1)
+	check(not food.finished,"Success preserves the configured output window")
 	food.advance(0.11)
 	check(not food.finished and food.stage == MasterFoodMechanism.Stage.STANDING and boss.animated_sprite.frame == 34,"Success waits until the full output window ends before starting the authored getup")
 	food.advance(1.61)
@@ -137,6 +145,14 @@ func run() -> void:
 	hurtbox.add_child(collision)
 	spy.global_position = Vector2(500,400)
 	boss.combat_target = spy
+	var orbit_sword := food.formation.swords[0]
+	spy.global_position = orbit_sword.to_global(Vector2(55, 0))
+	food.formation.advance(0.001)
+	check(spy.calls == 1, "Actual orbiting blade contact uses shared settlement")
+	food.formation.advance(0.001)
+	check(spy.calls == 1, "Continuous contact cannot deal damage each frame")
+	spy.calls = 0
+	spy.global_position = Vector2(500,400)
 	var combat := MasterFlyingSwordCombat.new()
 	combat.boss = boss
 	var a := Vector2(440,390)
@@ -177,6 +193,20 @@ func run() -> void:
 	dev.play_action(4)
 	boss = dev.adapter.master
 	check(boss.manual_control and boss.food_mechanism != null and boss.combat_target == player,"Full mechanism is also available as a safe manual preview")
+	# Spawn safety also holds when the seated master is pressed against either wall.
+	for side in [-1, 0, 1]:
+		dev.play_action(4)
+		boss = dev.adapter.master
+		boss.set_process(false)
+		boss.position.x = boss.world_min_x + 80 if side < 0 else (boss.world_max_x - 80 if side > 0 else (boss.world_min_x + boss.world_max_x) * 0.5)
+		food = boss.food_mechanism
+		food.begin_collect()
+		var safe := true
+		for item in food.pickups:
+			var x: float = (boss.get_parent() as Node2D).to_local(item.node.global_position).x
+			safe = safe and x >= boss.world_min_x + 55 and x <= boss.world_max_x - 55
+			safe = safe and absf(x - boss.position.x) + 0.001 >= (food.formation.orbit_radii.x + 140.0) * absf(boss.scale.x) + 100.0
+		check(safe and food.pickups.size() == 3, "Food remains reachable outside the ring at arena placement %d" % side)
 	# Audit all three exits independently, including the whole seated rage and getup interval.
 	for outcome: String in ["timeout","solved","wrong"]:
 		dev.play_action(4)

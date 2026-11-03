@@ -61,8 +61,11 @@ func run() -> void:
 			check(not action.active,"Finishing disables all gameplay collision immediately")
 			await process_frame
 	master.phase_2_buff_remaining=0
-	master.phase_2_body_choice=2  # skip the two short sheet slots in the mixed P2 rotation
+	master.phase_2_body_choice=0
 	for id: StringName in MasterPhase2BodyAction.IDS:
+		master._start_phase_2_regular_attack(100)
+		check(master.state == MasterBoss.State.PHASE_2_ATTACK, "A short attack separates every long combination")
+		master._interrupt_phase_2_action(.5)
 		master._start_phase_2_regular_attack(100)
 		check(master.phase_2_body_action.id==id,"Formal AI chooses the three new combos")
 		master._interrupt_phase_2_action(.5)
@@ -127,4 +130,20 @@ func run() -> void:
 	master.charged_power=4
 	var finale_id:=master.phase_2_body_action.id
 	check(master.use_sobering_item() and master.charged_power==1 and master.phase_2_body_action!=null and master.phase_2_body_action.id==finale_id and master.phase_2_finale_active,"Sobering cuts three drunk stacks without cancelling the finale")
+	var finale := master.phase_2_body_action
+	var expected_dangers := [CombatAttackData.DangerType.NORMAL, CombatAttackData.DangerType.COUNTERABLE_DANGER, CombatAttackData.DangerType.UNPARRYABLE_DANGER]
+	for i in finale.data.clips.size():
+		var clip: Dictionary = finale.data.clips[i]
+		for group: Dictionary in clip.groups:
+			check(finale._danger(clip, group) == expected_dangers[i], "Finale keeps normal rise and red dash before the gold finisher")
+	for stacks in [1, 4]:
+		master.charged_power = stacks
+		master.phase_2_finale_active = true
+		master.finish_phase_2_body_action()
+		var expected_recovery := 1.9 if stacks == 1 else 1.6
+		check(is_equal_approx(master.phase_2_idle_remaining, expected_recovery), "Finale grants a longer stationary punish window after sobering")
+		master._update_phase_2_idle(expected_recovery - .05, 100)
+		check(master.state == MasterBoss.State.PHASE_2_IDLE and not master.attack_hitbox.monitoring, "Close player cannot trigger an early attack during recovery")
+		check(master.phase_2_howl_cooldown_remaining > 8, "Finale cannot immediately restart the magic-circle pressure")
+	expect_save_untouched()
 	finish("MASTER PHASE TWO ARRANGEMENTS")

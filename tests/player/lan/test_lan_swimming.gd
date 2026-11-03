@@ -553,13 +553,13 @@ func test_surface_exit() -> void:
 	var saw_roll := false
 	for i in 180:
 		peak = minf(peak, player.position.y)
-		if player.air_state == LanPlayer.AirState.ROLL_LANDING:
+		if player.air_state == LanPlayer.AirState.GROUNDED:
 			saw_roll = true
 			break
 		await step(1)
 	Input.action_release(&"ui_up")
 	check(absf((takeoff_y - peak) - land_rise) < 2.0, "Exit jump rises like a land jump (%.1f vs %.1f px)" % [takeoff_y - peak, land_rise])
-	check(saw_roll, "Moving onto the bank uses the existing roll landing")
+	check(saw_roll, "Moving onto the bank restores grounded control immediately")
 	check(not swimming() and absf(player.position.y - 500.0) < 0.5 and player.position.x < 400.0, "She lands on the bank (%s)" % player.position)
 	Input.action_release(&"ui_left")
 	await surface_from(Vector2(470, 800))
@@ -574,10 +574,10 @@ func test_surface_exit() -> void:
 	var saw_land := false
 	for i in 100:
 		await step(1)
-		if player.air_state == LanPlayer.AirState.LANDING:
-			saw_land = anim() == &"land"
+		if player.air_state == LanPlayer.AirState.GROUNDED:
+			saw_land = anim() == &"idle"
 			break
-	check(saw_land and absf(player.position.y - 500.0) < 0.5, "Releasing movement above the bank uses the existing stationary land clip")
+	check(saw_land and absf(player.position.y - 500.0) < 0.5, "Releasing movement above the bank lands idle without an action lock")
 	bank._unregister_surface()
 	bank.queue_free()
 	await step(2)
@@ -608,6 +608,7 @@ func launch_from_surface() -> void:
 	Input.action_press(&"jump")
 	await step(1)
 	Input.action_release(&"jump")
+	await step(1) # A real release must be sampled before another press.
 
 
 func test_surface_air_actions() -> void:
@@ -865,7 +866,7 @@ func test_normal_bank_jump_entry() -> void:
 	Input.action_press(&"ui_right")
 	Input.action_press(&"jump")
 	await step(2)
-	Input.action_release(&"jump")
+	# Hold for the full bank-to-water arc; a tap now intentionally makes a short hop.
 	var normal_airborne := true
 	var entered := false
 	for i in 180:
@@ -876,6 +877,7 @@ func test_normal_bank_jump_entry() -> void:
 		# Stop steering above water; a held swim direction intentionally cancels splash.
 		if player.position.x >= 470.0:
 			Input.action_release(&"ui_right")
+			Input.action_release(&"jump")
 		normal_airborne = normal_airborne and anim() not in LanSwimMotor.SWIM_ANIMATIONS
 	release_all()
 	check(normal_airborne, "Moving bank jump keeps normal air control until water contact")

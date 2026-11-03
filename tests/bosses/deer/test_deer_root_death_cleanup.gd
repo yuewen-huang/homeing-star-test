@@ -84,9 +84,9 @@ func run() -> void:
 	var terrain := roots.add_nodule(Vector2(1100, 555))
 	terrain._register_support()
 	var replacement := roots._new_volley("final", 20)
-	roots.final_volley = replacement
-	roots._spawn_final(1.0)
-	check(is_instance_valid(replacement) and replacement.cancelled and replacement.is_queued_for_deletion(), "replacing final volley immediately cancels the old one")
+	boss.phase = 2
+	roots.pattern.start(false)
+	check(is_instance_valid(replacement) and replacement.cancelled and replacement.is_queued_for_deletion(), "starting a new pursuit immediately cancels the old volley")
 	roots.cancel_attacks()
 	check(is_instance_valid(terrain) and terrain.support_registered, "phase cancellation preserves permanent root terrain")
 	check(roots.volleys.is_empty(), "phase cancellation clears all attack tracking")

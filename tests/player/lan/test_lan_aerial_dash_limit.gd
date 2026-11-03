@@ -23,8 +23,10 @@ func tick(count := 1) -> void:
 
 func press_direction(action: StringName) -> void:
 	Input.action_press(action)
+	Input.action_press(&"instant_dash")
 	tick()
 	Input.action_release(action)
+	Input.action_release(&"instant_dash")
 	tick()
 
 func take_off() -> void:
@@ -63,7 +65,7 @@ func run() -> void:
 	take_off()
 	var start_x := player.position.x
 	press_direction(&"ui_right")
-	check(player.attack_state == LanPlayer.AttackState.AERIAL_DASH and player.aerial_dash_used, "Airborne direction press starts and spends the first dash")
+	check(player.attack_state == LanPlayer.AttackState.AERIAL_DASH and player.aerial_dash_used, "Airborne U press starts and spends the first dash")
 	var elapsed := player.aerial_dash_elapsed
 	var target := player.aerial_dash_target_x
 	player.start_aerial_dash(-1)
@@ -86,7 +88,7 @@ func run() -> void:
 	check(player.aerial_dash_used and player.attack_state != LanPlayer.AttackState.AERIAL_DASH, "Wall jump does not restore the spent dash")
 	for i in 180:
 		tick()
-		if player.air_state in [LanPlayer.AirState.LANDING, LanPlayer.AirState.ROLL_LANDING]: break
+		if player.air_state == LanPlayer.AirState.GROUNDED: break
 	check(player.position.y == 2000 and not player.aerial_dash_used, "Real ground contact restores the dash")
 	if player.air_state == LanPlayer.AirState.ROLL_LANDING: player.finish_roll_landing()
 	else: player.finish_landing()
