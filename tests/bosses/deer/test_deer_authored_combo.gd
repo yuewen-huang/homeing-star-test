@@ -34,7 +34,12 @@ func run() -> void:
 	deer.set_physics_process(false)
 	deer.vfx.set_process(false)
 	room.select_combo(2)
+	await wind_motion_contract()
 	check(DeerClashPhase.LIBRARY.size() == 4, "Development library contains the current AI and three approved arrangements")
+	var return_move: Dictionary = DeerAuthoredCombo.library().moves.deer_phase3_return_four
+	check(return_move.events.back().danger == CombatAttackData.DangerType.COUNTERABLE_DANGER, "Return rhythm ends on its red counter instead of hiding a later uppercut")
+	for i in range(1, return_move.events.size()):
+		check(float(return_move.events[i].contact) - float(return_move.events[i - 1].contact) >= 0.35, "Rearranged contacts retain manual parry spacing")
 	for retired in [&"three_ding", &"accel_five", &"delayed_feint", &"red_finale", &"three_cuts", &"heavy", &"thrust", &"rear_gore", &"flick", &"sweep"]:
 		check(not deer.start_clash(retired, room.dummy.position.x), "Retired phase-three entry cannot start: " + String(retired))
 	for i in 3:
@@ -58,13 +63,13 @@ func run() -> void:
 		room.play_action(4)
 		check(is_instance_valid(deer.clash_phase.authored), "Development room starts " + DeerAuthoredCombo.label(DeerAuthoredCombo.IDS[i]))
 		var combo := deer.clash_phase.authored
-		check(combo.definition.events.size() == [5, 4, 6][i], "Imported event count matches approved arrangement")
+		check(combo.definition.events.size() == [3, 4, 5][i], "Imported event count matches approved arrangement")
 		for step in 540:
 			tick(1)
 			if not OS.get_cmdline_user_args().is_empty(): await process_frame
 			if step == 80: await capture("combo_%d" % i)
 			if i == 2 and step == 265: await capture("heavy_front")
-		check(room.dummy.contacts.size() == [5, 4, 6][i], "Real production probes reach all expected contacts: " + str(room.dummy.contacts.size()))
+		check(room.dummy.contacts.size() == [3, 4, 5][i], "Real production probes reach all expected contacts: " + str(room.dummy.contacts.size()))
 		print("CONTACTS ", JSON.stringify(room.dummy.contacts))
 		check(deer.state == DeerBoss.State.IDLE and not is_instance_valid(deer.clash_phase.authored), "Recovery releases authored attack owner")
 	room.play_action(4)
@@ -113,7 +118,7 @@ func run() -> void:
 	room.set_playback_speed(0)
 	room.play_action(4)
 	tick(1150)
-	check(room.dummy.contacts.size() == 5 and deer.state == DeerBoss.State.IDLE, "Quarter speed preserves all contacts and clean completion")
+	check(room.dummy.contacts.size() == 3 and deer.state == DeerBoss.State.IDLE, "Quarter speed preserves all contacts and clean completion")
 	room.set_playback_speed(2)
 	room.play_action(4)
 	var dying := deer.clash_phase.authored
@@ -147,6 +152,34 @@ func run() -> void:
 	print("DEER AUTHORED: ", checks, " checks, ", failures, " failures")
 	quit(1 if failures else 0)
 
+func wind_motion_contract() -> void:
+	room.play_action(0)
+	var combo := deer.clash_phase.authored
+	var event: Dictionary = combo.definition.events[1]
+	combo.advance(lerpf(float(event.release), float(event.end), .4), 0)
+	var row: Dictionary = combo.rows[1]
+	var effect = row.effect
+	check(effect.motion_kind == "sweep", "Head flick uses a swept sheet instead of a translated punch front")
+	check(not is_equal_approx(effect._width_at(0.0), effect._width_at(1.0)), "Flick retains the source's varying blade breadth")
+	check(effect.speed_at(.15) > effect.speed_at(.75) * 3.0, "Wind deformation follows the fast release and slow settle")
+	var vertices: PackedVector2Array = effect._body.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var tip := (vertices[-1] + vertices[-2]) * .5
+	var tip_world: Vector2 = row.anchor.global_transform * tip
+	check(tip_world.distance_to(row.probes[0].transform.origin) < .01, "Rendered sheet tip and real contact share one path clock")
+	var start := (vertices[0] + vertices[1]) * .5
+	var middle := (vertices[64] + vertices[65]) * .5
+	var chord := tip - start
+	check(absf(chord.cross(middle - start)) / maxf(1.0, chord.length()) > 15.0, "Sweep silhouette actually bends through the arc")
+	check(effect._lens == null or effect._lens.visible, "Native swept wind retains its transparent pressure ring")
+	if effect._lens != null:
+		var ring_center: Vector2 = effect._lens.transform * Vector2(.58, .5)
+		check(ring_center.distance_to(tip) < .01, "Pressure ring follows the moving contact rather than the source origin")
+		check(effect._copy.copy_mode == BackBufferCopy.COPY_MODE_VIEWPORT, "Mirrored pressure ring copies a complete screen source")
+	effect.advance(0.0)
+	check(vertices == effect._body.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX], "A paused action cannot advance or deform the wind")
+	await capture("wind_sweep_active")
+	deer._recover(0)
+
 func contact_contract(mode: String) -> void:
 	var original: LanPlayer = deer.combat_target
 	var target: LanPlayer = load("res://scenes/player/lan/lan_player.tscn").instantiate()
@@ -161,7 +194,8 @@ func contact_contract(mode: String) -> void:
 	room.play_action(4)
 	deer.combat_stats.restore_poise()
 	var combo := deer.clash_phase.authored
-	combo.advance(3.05 if mode == "red" else 0.4, 0.4)
+	var event: Dictionary = combo.definition.events.back() if mode == "red" else combo.definition.events[0]
+	combo.advance(lerpf(float(event.release), float(event.end), 0.5), 0.4)
 	var row: Dictionary = combo.rows.back() if mode == "red" else combo.rows[0]
 	var probe: Dictionary = row.probes[0]
 	target.global_position = (probe.transform as Transform2D).origin + Vector2(0, 29)

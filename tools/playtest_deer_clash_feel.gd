@@ -82,7 +82,7 @@ func next_run() -> void:
 	delay = 0
 	boss.manual_control = false
 	boss.start_clash(plans[slot], player.position.x)
-	runs.append({"combo": plans[slot], "start": began, "hp": player.combat_stats.health, "source_events": [5, 4, 6][slot]})
+	runs.append({"combo": plans[slot], "start": began, "hp": player.combat_stats.health, "source_events": [3, 4, 5][slot]})
 	print("START ", plans[slot])
 
 func _physics_process(delta: float) -> bool:
@@ -127,7 +127,7 @@ func on_parry(source: DamageReceiver2D, attack: CombatAttackData, contact: Vecto
 func finish() -> void:
 	active = false
 	Input.action_release(&"parry")
-	var expected := [5, 3 if hard else 4, 6]
+	var expected := [3, 4, 5]
 	var passed := runs.size() == expected.size()
 	for i in runs.size(): passed = passed and int(runs[i].damage) == 0 and int(runs[i].parries) == expected[i]
 	FileAccess.open(output.path_join("events.json"), FileAccess.WRITE).store_string(JSON.stringify({"runs": runs, "events": records}, "\t"))

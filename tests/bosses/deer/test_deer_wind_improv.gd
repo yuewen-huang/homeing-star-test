@@ -2,7 +2,7 @@ extends SceneTree
 ## Wind phase: the leap is gone; gale dash closes to DASH_SPACING and thrusts; gale pull
 ## drags the player in above the usual wind cap and releases them. Since 2026-10-16 the
 ## AI composes 拼刀 rhythms: far → dash/pull first, one rhythm, never the same rhythm three
-## times running, a parry run sometimes adds a gold charge; the production AI uses it.
+## times running, with guaranteed recovery after the final beat.
 
 var room
 var deer: DeerBoss
@@ -85,7 +85,7 @@ func run() -> void:
 	deer.position.x = 820.0
 	deer.direction = -1.0
 	clash.start(&"deer_phase3_forest_five", 820.0 - 100.0)
-	tick(18)
+	tick(30)
 	check(deer.position.x > 820.0 + 40.0, "Pressed too close, the deer steps back before the thrust (now %.0f px away)" % (deer.position.x - 720.0))
 	idle()
 
@@ -101,7 +101,7 @@ func run() -> void:
 		deer.position.x = 820.0
 		deer.direction = -1.0
 		var far := trial % 4 == 0
-		clash.parry_streak = DeerClashPhase.IMPROV_DISRUPT_STREAK if trial % 3 == 0 else 0
+		clash.parry_streak = 3 if trial % 3 == 0 else 0
 		clash.last_result = -1
 		clash.start(&"improv", 820.0 - (520.0 if far else 170.0))
 		var moves: Array = clash.steps.map(func(step: Dictionary) -> StringName: return step.move)
@@ -119,14 +119,19 @@ func run() -> void:
 	check(one_rhythm and played.size() >= 3, "Every AI combo plays exactly one rhythm, and the rhythms vary %s" % [played.keys()])
 	check(triples == 0, "No rhythm repeats three times in a row")
 	check(charge_last, "The gold charge only ever follows the rhythm")
-	var disrupted := 0
-	for i in 200:
-		clash.rhythm_history.clear()
-		clash.parry_streak = DeerClashPhase.IMPROV_DISRUPT_STREAK
-		var composed := clash._compose()
-		if composed.back().move == &"charge" and clash.parry_streak == 0: disrupted += 1
-	var rate := disrupted / 200.0
-	check(absf(rate - DeerClashPhase.IMPROV_DISRUPT_CHANCE) < 0.12, "A run of %d parries brings a gold charge about %.0f%% of the time (%.0f%%), so it cannot be timed" % [DeerClashPhase.IMPROV_DISRUPT_STREAK, DeerClashPhase.IMPROV_DISRUPT_CHANCE * 100.0, rate * 100.0])
+	for streak in [0, 3, 20]:
+		clash.parry_streak = streak
+		for trial in 30:
+			check(clash._compose().back().move == &"authored", "Parry history cannot add a gold pursuit")
+	clash.start(&"improv", deer.position.x - 170.0)
+	for frame in 900:
+		if deer.state != DeerBoss.State.CLASH: break
+		tick(1)
+	check(deer.state == DeerBoss.State.RECOVER and deer._recovery == 1.5, "Authored final beat opens 1.5 seconds for counterattacks")
+	deer.manual_control = false
+	tick(60)
+	check(deer.state == DeerBoss.State.RECOVER, "Close target cannot interrupt the counterattack window")
+	deer.manual_control = true
 	clash.parry_streak = 0
 	clash._on_hit_resolved(player, CombatHitResult.Type.PARRY_SUCCESS)
 	check(clash.parry_streak == 0 or deer.state == DeerBoss.State.CLASH, "Parry streak only counts during a clash")
@@ -139,21 +144,47 @@ func run() -> void:
 	deer._recover(0.0)
 	tick(2)
 
-	# The production AI improvises, and occasionally inserts short dash pressure.
+	# Production selection responds to distance and health, never player inputs.
 	deer.manual_control = false
-	var saw_improv := false
-	var saw_short := false
-	for _trial in 48:
-		deer.phase_ai.choose(150.0)
-		if deer.state == DeerBoss.State.CLASH:
-			if clash.improv and clash.steps.any(func(step: Dictionary) -> bool: return step.move == &"authored"):
-				saw_improv = true
-			elif (not clash.improv) and clash.steps.any(func(step: Dictionary) -> bool: return step.move == &"dash"):
-				saw_short = true
-		clash.cancel(); deer._recover(0.0)
-		if saw_improv and saw_short: break
-	check(saw_improv, "Production AI starts an approved annotated combo in the wind phase")
-	check(saw_short, "Production AI also inserts occasional short dash pressure in the wind phase")
+	deer.position.x = 820
+	player.position.x = 650
+	deer.combat_stats.restore_health()
+	var last: StringName = &""
+	for trial in 12:
+		deer.phase_ai.choose(170.0)
+		var selected: StringName = clash.steps.back().combo
+		check(clash.steps.size() == 1 and selected != &"deer_phase3_mountain_six", "First half uses close three/four beat exchanges")
+		check(selected != last, "Consecutive combat rounds change rhythm")
+		last = selected
+		deer._recover(0)
+	player.position.x = 250
+	deer.phase_ai.choose(570.0)
+	check(clash.steps.front().move == &"dash" and clash.steps.back().move == &"authored", "Far targets receive one visible approach before the rhythm")
+	deer._recover(0)
+	deer.combat_stats.health = deer.combat_stats.max_health / 2
+	var saw_long := false
+	for trial in 40:
+		deer.phase_ai.choose(570.0)
+		saw_long = saw_long or clash.steps.back().combo == &"deer_phase3_mountain_six"
+		deer._recover(0)
+	check(saw_long, "Second half unlocks the rising five-beat exchange")
+	deer.manual_control = true
+
+	deer.manual_control = true
+	deer.wind_ultimate.start()
+	for frame in 1200:
+		if deer.wind_ultimate.stage == DeerWindUltimate.Stage.CUT: break
+		tick(1)
+	var pressure_x := deer.position.x
+	check(is_zero_approx(player.horizontal_combat_wind()), "Wind hunt leaves movement under player control")
+	for frame in 1200:
+		if deer.wind_ultimate.stage == DeerWindUltimate.Stage.WARNING: break
+		tick(1)
+	check(is_equal_approx(deer.position.x, pressure_x) and deer.wind_ultimate.beat == 3, "Three fixed-tempo pressure cuts stay on one side")
+	for frame in 1200:
+		if not deer.wind_ultimate.active: break
+		tick(1)
+	check(deer.state == DeerBoss.State.RECOVER and deer._recovery == 2.2, "Unassisted hunt ends with a full counterattack window")
 
 	var after := FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) if FileAccess.file_exists(SaveProgressService.SAVE_PATH) else PackedByteArray()
 	check(after == saved, "Improv checks leave saved progress unchanged")

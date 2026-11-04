@@ -1,4 +1,9 @@
 extends SceneTree
+class RecordedTransition extends SceneTransitionService:
+	var requested_scene := ""
+	func transition_to(scene_path: String, _next_music: AudioStream = null) -> void:
+		requested_scene = scene_path
+
 class MemorySave extends SaveProgressService:
 	var fail_writes := false
 	func load_progress() -> void:
@@ -114,7 +119,7 @@ func run() -> void:
 	for i in 6: tick()
 	check(RootAnchorArt.frame_at(wind.root_age) == 5, "Standing stake alternates the final two cels")
 	check(until(func() -> bool: return wind.stage == DeerWindUltimate.Stage.CUT), "First close pressure strike begins")
-	for i in 15: tick()
+	for i in 27: tick()
 	await capture("wind_cut")
 	check(until(func() -> bool: return wind.stage == DeerWindUltimate.Stage.WARNING), "Exactly three beats lead into gold finisher warning")
 	check(wind.beat == 3 and deer.warning_kind == &"gold", "Finisher has distinct gold danger")
@@ -215,7 +220,13 @@ func run() -> void:
 	room.free()
 	await process_frame
 	current_scene = null
-	# Formal-room wiring: no test overrides, actual contextual Q dispatch and retry.
+	# Record scene departures so later isolated attack checks retain their arena.
+	var old_transition := root.get_node("SceneTransition")
+	root.remove_child(old_transition)
+	old_transition.free()
+	var recorded_transition := RecordedTransition.new()
+	recorded_transition.name = "SceneTransition"
+	root.add_child(recorded_transition)
 	save.load_progress()
 	var arena = load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate()
 	root.add_child(arena)
@@ -231,6 +242,8 @@ func run() -> void:
 	deer.phase = 3
 	deer.reset_phase()
 	arena.player.reset_after_map_fall(Vector2(1200, 555))
+	arena.player.combat_stats.restore_health()
+	arena.player.set_input_frozen(false)
 	deer.start_mist_hunt()
 	arena.refresh_context_item()
 	check(arena.player.contextual_special_item == ItemCatalog.ROOT_ANCHOR, "Formal wind phase selects root skill in contextual Q slot")
@@ -243,6 +256,7 @@ func run() -> void:
 	arena._revive()
 	check(not deer.wind_ultimate.active and arena.player.combat_winds.is_empty(), "Formal death immediately releases root and wind state")
 	await process_frame
+	check(recorded_transition.requested_scene == arena.return_scene, "Defeat requests the formal return scene")
 	deer.set_physics_process(false)
 	deer.phase = 3
 	deer.reset_phase()
@@ -251,6 +265,8 @@ func run() -> void:
 	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	deer.position = Vector2(1500, 555)
 	arena.player.reset_after_map_fall(Vector2(1200, 555))
+	arena.player.combat_stats.restore_health()
+	arena.player.set_input_frozen(false)
 	deer.start_mist_hunt()
 	arena._on_special_item(ItemCatalog.ROOT_ANCHOR)
 	check(until(func() -> bool: return deer.wind_ultimate.stage == DeerWindUltimate.Stage.WARNING), "Rooted formal encounter reaches its terminal warning")
@@ -263,6 +279,8 @@ func run() -> void:
 	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_player_invincible(false)
 	deer.position = Vector2(1500, 555)
 	arena.player.reset_after_map_fall(Vector2(1200, 555))
+	arena.player.combat_stats.restore_health()
+	arena.player.set_input_frozen(false)
 	deer.start_mist_hunt()
 	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	check(until(func() -> bool: return deer.wind_ultimate.stage == DeerWindUltimate.Stage.CHARGE), "Unassisted formal wind hunt reaches its finisher")

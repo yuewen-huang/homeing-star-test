@@ -10,6 +10,54 @@ GAME = ROOT / 'homeing-star-game'
 SCRIPTS = 'scripts/bosses/deer/studio_vfx/'
 ASSETS = 'assets/bosses/deer/fx/studio/'
 
+def arrange_wind(moves):
+    """Build three combat roles from measured source clips and source-timed contacts."""
+    from copy import deepcopy
+    sources = {}
+    for move in moves.values():
+        for clip in move['clips']:
+            label = clip['label']
+            if label in sources:
+                continue
+            start, end = clip['begin'], clip['begin'] + clip['duration']
+            events = [deepcopy(e) for e in move['events'] if start <= e['release'] < end]
+            for event in events:
+                for key in ['wind', 'release', 'contact', 'end', 'fade_end']:
+                    event[key] -= start
+            sources[label] = (deepcopy(clip), events)
+    recipes = [
+        ('deer_phase3_forest_five', '探风三式', ['角刺', '甩头挑击', '红色角击']),
+        ('deer_phase3_return_four', '压风四式', ['角力前进', '角刺', '红色角击']),
+        ('deer_phase3_mountain_six', '升风五式', ['角刺', '角力前进', '冲刺上挑整体' if '冲刺上挑整体' in sources else '冲刺上挑', '人立践踏']),
+    ]
+    for identity, title, labels in recipes:
+        clips, events, cursor = [], [], 0.0
+        for index, label in enumerate(labels):
+            clip, hits = deepcopy(sources[label])
+            if label == '角力前进':
+                hits = hits[:2]
+                clip['duration'] = max(h['fade_end'] for h in hits) + 0.1
+            if label == '冲刺上挑':
+                clip['duration'] = min(clip['duration'], max(h['fade_end'] for h in hits) + 0.15)
+            if label == '人立践踏':
+                clip['source_from'] += 0.25
+                clip['duration'] -= 0.25
+                for event in hits:
+                    for key in ['wind', 'release', 'contact', 'end', 'fade_end']:
+                        event[key] -= 0.25
+            lead = min(0.3, clip['source_from']) if index == 0 else 0.0
+            clip['source_from'] -= lead
+            clip['duration'] += lead
+            clip['begin'] = cursor
+            for event in hits:
+                for key in ['wind', 'release', 'contact', 'end', 'fade_end']:
+                    event[key] += cursor + lead
+                events.append(event)
+            clips.append(clip)
+            cursor += clip['duration']
+        moves[identity] = dict(title=title, clips=clips, events=events, body_duration=cursor)
+
+
 def main():
     bridge = json.loads((DEMO / '.local-data/deer_phase3_bridge.json').read_text(encoding='utf-8-sig'))
     raw = DEMO / 'characters/deer_phase3/character.json'
@@ -44,7 +92,8 @@ def main():
                 events.append(out)
             cursor += clip['duration']
         moves[combo['id']] = dict(title=combo['title'], body_duration=cursor, clips=clips, events=events)
-    output = dict(version=1, source_sha256=digest, native_scale=1.792, heavy_radius=320.0, moves=moves)
+    arrange_wind(moves)
+    output = dict(version=3, source_sha256=digest, native_scale=1.792, heavy_radius=320.0, moves=moves)
     target = GAME / 'assets/bosses/deer/fx/phase3'
     target.mkdir(parents=True, exist_ok=True)
     encoded = json.dumps(output, ensure_ascii=False, indent=2)
