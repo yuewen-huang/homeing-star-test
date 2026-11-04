@@ -2,7 +2,7 @@ extends SceneTree
 func _initialize() -> void: call_deferred("open_room")
 func open_room() -> void:
 	var root_phase := OS.get_cmdline_user_args().has("--root-phase")
-	DisplayServer.window_set_title("鹿 · 第二阶段 / 根台 · 根脊 · 生台接横冲" if root_phase else "鹿 · 第一阶段 / 冲刺 · 常驻落叶 · 红刃反弹")
+	DisplayServer.window_set_title("鹿 · 第二阶段 / 争夺高台 · 根浪逼位" if root_phase else "鹿 · 第一阶段 / 连续攻势 · 破韧爆发")
 	var room := load("res://scenes/dev/boss_development_room.tscn").instantiate() as BossDevelopmentRoom
 	root.add_child(room)
 	current_scene = room
@@ -14,4 +14,4 @@ func open_room() -> void:
 			break
 	await process_frame
 	room.set_combat_simulation(true)
-	print("DEER ROOT DUEL READY: five moves, two root layouts, drop-rush combo; real combat, isolated progress" if root_phase else "DEER DUEL READY: burst rush, persistent leaves, red leaf reflection; real combat, isolated progress")
+	print("DEER ROOT DUEL READY: contested summit, lowland root waves; real combat, isolated progress" if root_phase else "DEER DUEL READY: continuous phrases, independent leaves, sustained break reward; real combat, isolated progress")

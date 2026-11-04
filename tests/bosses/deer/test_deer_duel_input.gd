@@ -115,10 +115,11 @@ func run() -> void:
 			check(lan.combat_stats.health == health,"Scenario %d facing %d is avoidable with real input" % [scenario,facing])
 			if scenario in [1,2,5]:
 				check(contacts.count(CombatHitResult.Type.PARRY_SUCCESS) == 1,"Scenario %d facing %d real K parries once" % [scenario,facing])
-				check(opening_at >= 1.20,"Parry reward preserves its full recovery window")
+				var natural_opening: float = {1:1.0,2:17.0/12.0+.1,5:.60}[scenario]
+				check(absf(opening_at-natural_opening)<.04,"Defense reaches the authored end recovery without an extra parry stun")
 			if scenario in [0,1,2,3]: check(deer.combat_stats.health < boss_health,"Real J fits after defense, facing %d scenario %d" % [facing,scenario])
 			if scenario == 6: check(deer.combat_stats.health < boss_health,"Real J hits vulnerable body while leaf is flying")
-	# Autonomous transitions run on the same clock and give a new unique parry chain.
+	# Each complete phrase owns a group; natural follow-ups keep that same group.
 	release_inputs()
 	lan.combat_stats.restore_health()
 	assist.set_player_invincible(true)
@@ -132,7 +133,7 @@ func run() -> void:
 	for frame in 3600:
 		await physics_frame
 		if observed.size() >= 14: break
-	check(observed.size() >= 14 and chain_keys.size() == observed.size(),"Autonomous moves keep transitioning with independent parry groups")
+	check(observed.size() >= 14 and chain_keys.size() >= 4 and chain_keys.size() < observed.size(),"Autonomous phrases advance and preserve grouped follow-ups")
 	check(observed.has(&"rush") and observed.has(&"sweep") and observed.has(&"drop") and observed.has(&"leaf"),"Actual autonomous fight uses all four moves")
 	check(deer.phase == 1 and not deer.auto_advance_phases,"No later phases are enabled")
 	print("AUTONOMOUS ORDER ",observed)

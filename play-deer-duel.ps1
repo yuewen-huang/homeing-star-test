@@ -7,7 +7,7 @@ New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $arguments = @('--path', $game, '--rendering-method', 'gl_compatibility', '--script', $script, '--log-file', (Join-Path $logDir 'game.log'))
 if ($RootPhase) { $arguments += @('--','--root-phase') }
 $quoted = @($arguments | ForEach-Object { '"' + $_ + '"' })
-$process = Start-Process -FilePath $Godot -ArgumentList $quoted -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $logDir 'stdout.log') -RedirectStandardError (Join-Path $logDir 'stderr.log')
+$process = Start-Process -FilePath $Godot -ArgumentList $quoted -WindowStyle Normal -PassThru -RedirectStandardOutput (Join-Path $logDir 'stdout.log') -RedirectStandardError (Join-Path $logDir 'stderr.log')
 $null = $process.Handle
 Write-Host "DEER DUEL PID=$($process.Id); logs: $logDir"
 $process.WaitForExit()
