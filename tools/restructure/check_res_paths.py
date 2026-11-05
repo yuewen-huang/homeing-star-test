@@ -27,6 +27,8 @@ LEGACY_TEST_FILES = {"tests/autoload/test_save_path_migration.gd"}
 # Importers contain literal paths belonging to their source Godot project.
 # Resolve only these exact references there; all production paths still use the game.
 STUDIO_REFERENCES = {
+    "tools/art/import_deer_wind.py": {"vfx/", "vfx/magic/shaders/%s.gdshader"},
+    "tools/verify_deer_wind_editor.gd": {"node_editor.tscn", "combos/deer_wind_%s/combo.json"},
     "tools/art/import_master_phase2_arrangements.py": {"combos/", "vfx/combo_player.gd"},
     "tools/art/import_master_phase2_studio.py": {"tools/export_master_runtime.gd", "vfx/"},
     "tools/art/import_parry_wave.py": {"vfx/"},
@@ -68,7 +70,8 @@ def check(ws: rp.Workspace):
                 if not rel or rel.startswith(".godot/") or rel in KNOWN_MISSING:
                     continue
                 if repo_name == rp.TEST and rel in STUDIO_REFERENCES.get(path.relative_to(repo).as_posix(), set()):
-                    if not exists(ws.root / "combat-vfx-studio", rel):
+                    source_rel = rp.static_prefix(rel) if rp.is_dynamic(rel) else rel
+                    if not exists(ws.root / "combat-vfx-studio", source_rel):
                         errors[where].append(f"Studio source missing: {rel}")
                     continue
                 if repo_name == rp.TEST and rel in DEMO_REFERENCES.get(path.relative_to(repo).as_posix(), set()):

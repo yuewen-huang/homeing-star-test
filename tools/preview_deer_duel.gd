@@ -3,6 +3,8 @@ func _initialize() -> void: call_deferred("open_room")
 func open_room() -> void:
 	var root_phase := OS.get_cmdline_user_args().has("--root-phase")
 	var vine_phase := OS.get_cmdline_user_args().has("--vine-phase")
+	var pursuit := OS.get_cmdline_user_args().has("--vine-pursuit")
+	var wind_phase := OS.get_cmdline_user_args().has("--wind-phase")
 	var redraw := OS.get_cmdline_user_args().has("--rush-redraw")
 	DisplayServer.window_set_title("鹿 · 第二阶段 / 争夺高台 · 根浪逼位" if root_phase else "鹿 · 第一阶段 / 连续攻势 · 破韧爆发")
 	if vine_phase: DisplayServer.window_set_title("鹿 · 第三阶段 / 重踏爆藤 · 凌空落藤")
@@ -12,11 +14,24 @@ func open_room() -> void:
 	await process_frame
 	await process_frame
 	for index in BossDevelopmentRoom.BOSS_CATALOG.size():
-		if BossDevelopmentRoom.BOSS_CATALOG[index].adapter.resource_path.ends_with("deer_vine_duel_adapter.gd" if vine_phase else ("deer_root_duel_adapter.gd" if root_phase else "deer_duel_adapter.gd")):
+		if BossDevelopmentRoom.BOSS_CATALOG[index].adapter.resource_path.ends_with("deer_wind_duel_adapter.gd" if wind_phase else "deer_vine_pursuit_adapter.gd" if pursuit else "deer_vine_duel_adapter.gd" if vine_phase else ("deer_root_duel_adapter.gd" if root_phase else "deer_duel_adapter.gd")):
 			room.select_boss(index)
 			break
 	await process_frame
+	if vine_phase and OS.get_cmdline_user_args().has("--plow-uppercut"):
+		DisplayServer.window_set_title("鹿 · 犁地冲刺上挑 / 原稿动作预览")
+		room.play_segment(&"ALL")
+		print("DEER PLOW UPPERCUT READY: source-only 32 frames, original timing, isolated progress")
+		return
 	room.set_combat_simulation(true)
+	if wind_phase:
+		DisplayServer.window_set_title("鹿 · 第四阶段御风实战")
+		print("DEER WIND READY: authored transformation, five Studio wind spells, adaptive combat, isolated progress")
+		return
+	if pursuit:
+		DisplayServer.window_set_title("鹿 · 第三阶段追击实战 / 跳落·叶刃恢复 / 独立大招")
+		print("DEER VINE PURSUIT READY: retained rush, uppercut, horn, stomp, jump drop and leaf; separate half-health ultimate; isolated progress")
+		return
 	if redraw:
 		DisplayServer.window_set_title("鹿 · 新造型横冲试玩 / 蓄力 · 突进 · 收势")
 		room.combo_picker.select(1)
@@ -24,6 +39,12 @@ func open_room() -> void:
 		print("DEER RUSH REDRAW READY: real combat, repeated rush, isolated progress")
 		return
 	if vine_phase:
+		if OS.get_cmdline_user_args().has("--vine-hunt"):
+			room.combo_picker.select(4)
+			room.select_combo(4)
+			DisplayServer.window_set_title("鹿 · 第三阶段 / 藤刺追猎试玩")
+			print("DEER VINE HUNT READY: locked eruption, crossing rush, low return, horn finish; real combat, isolated progress")
+			return
 		if OS.get_cmdline_user_args().has("--vine-ground"):
 			room.combo_picker.select(2)
 			room.select_combo(2)
