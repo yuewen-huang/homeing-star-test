@@ -101,7 +101,7 @@ func run() -> void:
 	ordinary_stats.apply_health_damage(ordinary_stats.max_health)
 	check(ordinary_stats.health==0,"Unprotected combatant stats retain ordinary lethal damage")
 	ordinary_stats.free()
-	room.deer.reset_phase()
+	room.restart_mist_phase()
 	check(assist.player_invincible, "encounter restart preserves the session's protection setting")
 	check(FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) == saved, "protection toggle does not change story progress")
 	room.queue_free()

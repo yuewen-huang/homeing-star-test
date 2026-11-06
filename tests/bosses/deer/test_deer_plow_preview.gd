@@ -14,7 +14,7 @@ func run() -> void:
 	current_scene = room
 	await process_frame
 	for index in BossDevelopmentRoom.BOSS_CATALOG.size():
-		if BossDevelopmentRoom.BOSS_CATALOG[index].adapter.resource_path.ends_with("deer_vine_duel_adapter.gd"):
+		if BossDevelopmentRoom.BOSS_CATALOG[index].adapter.resource_path.ends_with("deer_vine_pursuit_adapter.gd"):
 			room.select_boss(index)
 			break
 	await process_frame

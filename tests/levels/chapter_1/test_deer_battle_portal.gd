@@ -79,12 +79,12 @@ func run() -> void:
 	check(not save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED), "Failed challenge does not grant victory")
 	room = enter_deer()
 	# Final settlement conditions are the same ones the production landing emits.
-	room.deer.phase = 4
-	room.deer.vine_phase.human = true
-	room.deer.phase_transition._human_defeat = true
-	room.deer.state = DeerBoss.State.COMPLETE
+	room.encounter._spawn_phase(4,1500)
+	room.encounter.start()
+	room.deer.transform_left=0
 	save.fail_writes = true
-	room.deer.phase_completed.emit(4)
+	room.deer.combat_stats.apply_health_damage(room.deer.combat_stats.health)
+	for i in 90: room.encounter._physics_process(1.0/60)
 	check(room.get_node("ReturnGate").visible and room._return_prompt.available and room.story.victory_pending, "Final defeat reopens the return portal even if victory persistence must be retried")
 	save.fail_writes = false
 	save._config.set_value("progress", String(DeerStory.REWARD_PRESENTED_ID), true)

@@ -1,101 +1,55 @@
-extends SceneTree
-
-class MemoryProgress extends SaveProgressService:
-	func load_progress() -> void:
-		_config = ConfigFile.new()
-		_loaded = true
-	func save_progress() -> bool:
-		return true
-
-var checks := 0
-var failures := 0
-
-func _initialize() -> void:
-	call_deferred("run")
-
-func check(ok: bool, label: String) -> void:
-	checks += 1
-	if not ok: failures += 1
-	print("OK " if ok else "FAIL ", label)
-
+extends "../../support/harness.gd"
+class HeldRoom extends Chapter1DeerBossRoom:
+	var returned := false
+	func _return_after_defeat() -> void: returned=true
 func run() -> void:
-	(get_root().get_node("BattleAssist") as BattleAssistSettingsService).set_player_invincible(false)
-	var saved := FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH)
-	var original := root.get_node("SaveProgress")
-	root.remove_child(original)
-	original.free()
-	var memory := MemoryProgress.new()
-	memory.name = "SaveProgress"
-	root.add_child(memory)
-	var room := load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate() as Chapter1DeerBossRoom
+	use_memory_progress()
+	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_player_invincible(false)
+	var room=load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate()
+	room.set_script(HeldRoom)
+	var comic := WindSightingComic.new()
+	var packed := PackedScene.new()
+	packed.pack(comic)
+	comic.free()
+	room.deer_intro_scene=packed
 	root.add_child(room)
-	current_scene = room
-	await process_frame
-	await process_frame
-	if room.story.comic != null: room.story.comic._request_finish(true)
-	room.set_physics_process(false)
+	current_scene=room
+	await wait_frames(3)
 	room.player.set_physics_process(false)
-	var boss := room.deer
-	boss.set_physics_process(false)
-	boss.manual_control = true
-	var roots := boss.root_phase
-	var deaths := [0]
-	var transition := root.get_node("SceneTransition") as SceneTransitionService
-	# Hold travel after lethal contact so cleanup can be inspected before teardown.
-	# The real exterior transition is covered by test_deer_battle_portal.
-	room.player.combat_stats.health_depleted.connect(func() -> void:
-		deaths[0] += 1
-		transition.is_transitioning = true)
-	for profile in ["tracking", "heavy", "final"]:
-		room.player.reset_after_map_fall(Vector2(600, 555))
-		room.player.combat_stats.health = 1
-		boss.phase = 2
-		boss._change_state(DeerBoss.State.LIGHT)
-		# The same tick would open the next hoof contact without the death guard.
-		boss._time = 0.4
-		var nodule := roots.add_nodule(Vector2(1100, 555))
-		nodule._register_support()
-		var volley := roots._new_volley(profile, 20)
-		volley.preview_only = false
-		volley.add_root(600, 0, 0, "high1", false)
-		var pending := roots._new_volley("tracking", 20)
-		pending.preview_only = false
-		pending.add_root(600, 0, 0, "high1", false)
-		boss._physics_process(0.2)
-		check(room.player.combat_stats.health == 0, profile + ": real root hit emits player death")
-		check(is_instance_valid(volley) and volley.cancelled and volley.is_queued_for_deletion(), profile + ": executing volley is cancelled and deferred for deletion")
-		check(is_instance_valid(pending) and pending.cancelled and not pending.hit_target, profile + ": other volley cannot hit after death")
-		check(roots.volleys.is_empty() and roots.nodules.is_empty(), profile + ": encounter tracking is cleared synchronously")
-		check(room.player.sloped_ground_surfaces.is_empty(), profile + ": root terrain support is removed")
-		check(boss.attack_hitbox.attack == null, profile + ": boss cannot reopen an attack in the dying frame")
-		await process_frame
-		await process_frame
-		boss.set_physics_process(false)
-		check(not is_instance_valid(volley) and not is_instance_valid(pending), profile + ": cancelled volleys are actually freed")
-		check(room._returning_after_defeat and room.player.combat_stats.health == 0 and not boss.is_physics_processing(), profile + ": defeat remains stopped while returning outside")
-		check(transition.take_scene_entry_anchor() == room.return_anchor, profile + ": defeat targets the exterior portal marker")
-		check(roots.volleys.is_empty() and roots.nodules.is_empty(), profile + ": defeat leaves no old roots")
-		transition.is_transitioning = false
-		room._returning_after_defeat = false
-		room.player.set_input_frozen(false)
+	for phase in [2,3,4]:
 		room.restart_mist_phase()
-		boss.set_physics_process(false)
-	check(deaths[0] == 3, "exactly one death signal per lethal root hit")
-	var terrain := roots.add_nodule(Vector2(1100, 555))
-	terrain._register_support()
-	var replacement := roots._new_volley("final", 20)
-	boss.phase = 2
-	roots.pattern.start(false)
-	check(is_instance_valid(replacement) and replacement.cancelled and replacement.is_queued_for_deletion(), "starting a new pursuit immediately cancels the old volley")
-	roots.cancel_attacks()
-	check(is_instance_valid(terrain) and terrain.support_registered, "phase cancellation preserves permanent root terrain")
-	check(roots.volleys.is_empty(), "phase cancellation clears all attack tracking")
-	roots.reset_all()
-	roots.reset_all()
-	check(roots.nodules.is_empty() and room.player.sloped_ground_surfaces.is_empty(), "repeated reset safely clears permanent terrain")
-	check(FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) == saved, "regression does not change the saved progress")
-	room.queue_free()
-	await process_frame
-	await process_frame
-	print("ROOT_DEATH_CLEANUP: %d checks, %d failures" % [checks, failures])
-	quit(1 if failures else 0)
+		room.encounter._spawn_phase(phase,1500)
+		room.encounter.start()
+		var actor: DeerDuelBoss=room.deer
+		actor.set_physics_process(false)
+		if phase==2:
+			actor._ensure_contest_platform()
+			actor.terrain.advance(2.4)
+			check(not room.player.sloped_ground_surfaces.is_empty(),"Fixture creates actual root support")
+		elif phase==3:
+			actor.start_phrase(2)
+		else:
+			actor.transform_left=0
+			actor.start_spell(1)
+			actor._release_spell()
+			check(not actor.spells.is_empty(),"Fixture creates detached wind spells")
+		room.player.reset_after_map_fall(Vector2(1100,555))
+		room.player.combat_stats.health=1
+		var hit := CombatAttackData.new(StringName("fatal_%d"%phase),actor,30,0,0,0,CombatAttackData.DangerType.UNPARRYABLE_DANGER)
+		room.player.receive_combat_hit(hit)
+		check(room.player.combat_stats.health==0 and room._returning_after_defeat and not room.encounter.active,"Phase %d real lethal hit stops the encounter without practice refill"%phase)
+		check(room.player.sloped_ground_surfaces.is_empty() and actor.attack_hitbox.attack==null,"Phase %d death clears terrain support and body contacts"%phase)
+		if phase==3: check(actor.arena.hazards.is_empty(),"Vine hazards are cancelled on player death")
+		if phase==4: check(actor.spells.is_empty(),"All detached wind spells are cancelled on actual player death")
+		await wait_frames(2)
+		check(room.returned and not actor.is_physics_processing(),"Defeat requests the normal exterior return and stays stopped")
+	room.restart_mist_phase()
+	room.deer.combat_stats.apply_health_damage(room.deer.combat_stats.health)
+	room.player.combat_stats.apply_health_damage(room.player.combat_stats.health)
+	for i in 180: room.encounter._physics_process(1.0/60)
+	check(room.encounter.phase==1 and not room.encounter.transitioning,"Player death during handoff cannot spawn a later phase")
+	current_scene=null
+	room.free()
+	await wait_frames(2)
+	expect_save_untouched()
+	finish("DEER DEATH CLEANUP")

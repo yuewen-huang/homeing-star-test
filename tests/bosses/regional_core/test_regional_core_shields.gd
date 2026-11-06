@@ -8,7 +8,7 @@ class LocalProgress extends SaveProgressService:
 	func show_toast(_message: String) -> void: pass
 
 var room
-var progress: LocalProgress
+var progress: SaveProgressService
 var checks := 0
 var failures := 0
 var output := ""
@@ -39,9 +39,13 @@ func run() -> void:
 	progress = LocalProgress.new()
 	progress.name = "SaveProgress"
 	root.add_child(progress)
+	var fixture := progress
 	room = load("res://scenes/dev/boss_development_room.tscn").instantiate()
 	root.add_child(room)
 	current_scene = room
+	await process_frame
+	await process_frame
+	progress = room._preview_progress
 	room.player.set_physics_process(false)
 	check(not room.shield_row.visible, "Unrelated bosses do not show core shield controls")
 	for region in 4:
@@ -63,7 +67,7 @@ func run() -> void:
 			if state[0] or state[1]:
 				check(core.combat_stats.health == hp and core.combat_stats.poise == poise, "Either remaining shield blocks normal and skill damage without draining poise")
 			else:
-				check(core.combat_stats.health == hp - 26 and core.combat_stats.poise == poise - 10, "Removing both layers restores shared damage contracts")
+				check(core.combat_stats.health == hp - 26 and core.combat_stats.poise == poise, "Removing both layers restores shared damage contracts")
 			await capture("shield_%d_%d_%d" % [region, int(state[0]), int(state[1])], core)
 		check(progress._config.encode_to_text() == config_before, "Debug overrides never change completion records")
 		progress.set_stele_state(RegionalCoreProtection.CONDITIONS[region][0], 2)
@@ -91,7 +95,7 @@ func run() -> void:
 		core._parry_pause = 0.5
 		core._physics_process(0.1)
 		check(is_equal_approx(core.shield.elapsed, clock), "Shield flow and fade follow combat pause")
-		core.combat_stats.apply_health_damage(300)
+		core.combat_stats.apply_health_damage(core.combat_stats.health)
 		progress.progress_changed.emit()
 		check(not core.shield.visible and not core.gold_shield_active and not core.blue_shield_active and core.invulnerable, "Death clears both shells; later progress changes cannot show them again")
 		var previous: WeakRef = weakref(core.shield)
@@ -102,7 +106,7 @@ func run() -> void:
 	current_scene = null
 	finished.free()
 	await process_frame
-	progress.free()
+	fixture.free()
 	root.add_child(original)
 	await process_frame
 	check(FileAccess.file_exists(SaveProgressService.SAVE_PATH) == existed and (not existed or saved == FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH)), "User save remains byte-identical")

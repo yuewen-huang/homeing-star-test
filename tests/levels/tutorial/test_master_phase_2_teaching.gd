@@ -86,7 +86,7 @@ func run() -> void:
 	teaching._process(0)
 	await process_frame
 	teaching._process(0)
-	check(paused and teaching.lesson_player.lesson_id == &"phase_2_poise_throw", "Second-form poise break uses second-form throw footage")
+	check(not master.poise_broken and not teaching._pending.has(&"phase_2_poise_throw"), "Second-form defense never queues the removed break lesson")
 	teaching.lesson_player.close_lesson(true)
 	master.poise_broken = false
 	master.combat_stats.restore_poise()

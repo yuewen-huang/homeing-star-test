@@ -185,15 +185,12 @@ func test_encounter() -> void:
 	check(frog != null and not frog.manual_control and frog.tutorial_protected and encounter.current_wave == 5, "fifth wave spawns a real autonomous frog instead of training dummy")
 	check(room.player.world_max_x < 1800, "road remains blocked until frog defeat")
 	var normal := SkillHitContext.new(&"lan_special_attack", 18)
-	var max_hit := SkillHitContext.new(&"lan_special_attack", 60, false, false, false, true)
-	frog.receive_skill_hit(max_hit, Vector2.ZERO)
-	check(not progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_MAX_USED), "Max before normal demonstration cannot complete tutorial")
+	# Before learning I, ordinary damage preserves the last HP; no break is needed.
+	for hit in 100: frog.receive_hit(1, Vector2.ZERO)
+	check(frog.combat_stats.health == 1 and not frog.poise_broken, "Tutorial death protection does not create a break state")
 	frog.receive_skill_hit(normal, Vector2.ZERO)
-	check(progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_NORMAL_USED) and not frog.is_poise_broken(), "normal special registers without prematurely breaking poise")
-	for hit in ceili(float(CombatTuning.FROGGER_HEALTH) / CombatTuning.BOSS_LIGHT_HIT_HEALTH) + 2: frog.receive_hit(1, Vector2.ZERO)
-	check(frog.combat_stats.health == 1 and frog.poise_broken and not progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SLIMES_DEFEATED), "tutorial preserves last HP and leaves a broken-poise Max window")
-	frog.receive_skill_hit(max_hit, Vector2.ZERO)
-	check(progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_TUTORIAL_COMPLETE) and not frog.tutorial_protected and frog.combat_stats.health == 0, "broken Max completes lesson, removes protection and settles killing damage")
+	check(progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_NORMAL_USED), "Actual I contact records the demonstration")
+	check(progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_TUTORIAL_COMPLETE) and not frog.tutorial_protected and frog.combat_stats.health == 0, "I completes lesson, removes protection and settles killing damage")
 	for frame in 60: frog._physics_process(1.0 / 60)
 	check(progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SLIMES_DEFEATED) and encounter.frog_boss == null and room.player.world_max_x == 1800, "defeat clears fifth wave and restores road boundary")
 	await process_frame
@@ -262,14 +259,14 @@ func test_encounter() -> void:
 	player.start_parry(true)
 	frog.start_action(&"tongue")
 	frog._physics_process(0.35)
-	check(player.combat_stats.health == 100 and frog.combat_stats.poise == CombatTuning.FROGGER_POISE - CombatTuning.BOSS_NORMAL_PARRY_POISE, "real successful parry preserves health and removes shared frog poise")
+	check(player.combat_stats.health == 100 and frog.combat_stats.poise == CombatTuning.FROGGER_POISE, "real successful parry preserves health without default poise depletion")
 	for counter in ceili(float(CombatTuning.FROGGER_POISE) / CombatTuning.BOSS_NORMAL_PARRY_POISE) - 1:
 		player.reset_after_map_fall(Vector2(500,555))
 		player.start_parry(true)
 		frog._parry_pause = 0
 		frog.start_action(&"tongue")
 		frog._physics_process(0.35)
-	check(frog.poise_broken and frog.action == &"hurt" and frog.attack_hitbox.attack == null, "shared parries break frog poise and cancel the attack")
+	check(not frog.poise_broken and frog.stagger_remaining == 0, "Repeated parries do not turn frog into a stationary break target")
 	assist.set_difficulty(prior_difficulty)
 	assist.set_player_invincible(prior_invincible)
 	frog.free()
@@ -335,16 +332,12 @@ func test_native_alley() -> void:
 	check(progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_NORMAL_USED), "available I attack advances the beginner lesson")
 	var light := LanAttackEffectCatalog.attack_1x().attack_hit_context
 	var hits := 0
-	while not frog.poise_broken and hits < 10:
+	while frog.combat_stats.health>0 and hits<100:
 		frog.receive_attack_hit(light, alley.player.global_position)
-		hits += 1
-		if not frog.poise_broken:
-			for frame in 45: frog._physics_process(1.0 / 60)
-	check(frog.poise_broken and hits <= 10 and frog.combat_stats.health > 0, "ten paced J hits can break poise after I without advanced abilities")
-	check(frog.stagger_remaining >= 6.0, "beginner still gets six action seconds to find the contextual E finisher")
-	frog.receive_skill_hit(SkillHitContext.new(&"lan_special_attack", CombatTuning.LAN_SPECIAL_MAX_DAMAGE, false, false, false, true), alley.player.global_position)
-	for frame in 60: frog._physics_process(1.0 / 60)
-	check(progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_TUTORIAL_COMPLETE) and progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SLIMES_DEFEATED), "one novice I/J/finisher sequence completes the lesson and clears the alley")
+		hits+=1
+	check(not frog.poise_broken and frog.stagger_remaining==0, "Beginner attacks never require or trigger default break")
+	for frame in 60: frog._physics_process(1.0/60)
+	check(progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_TUTORIAL_COMPLETE) and progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SLIMES_DEFEATED), "Available I and J complete lesson and clear alley without E")
 	current_scene = null
 	alley.free()
 	progress.free()

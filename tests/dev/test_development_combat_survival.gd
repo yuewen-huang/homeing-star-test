@@ -15,6 +15,8 @@ func run() -> void:
 	room.player.set_physics_process(false)
 	var player: LanPlayer=room.player
 	var maximum:=player.combat_stats.max_health
+	var deaths: Array=[]
+	player.combat_stats.health_depleted.connect(func(): deaths.append(true))
 	var normal:=CombatAttackData.new(&"practice_hit",master,10,0,100,0,CombatAttackData.DangerType.NORMAL)
 	var lethal:=CombatAttackData.new(&"practice_lethal",master,maximum+10,0,100,0,CombatAttackData.DangerType.NORMAL)
 	check(not player.is_invulnerable(),"Practice keeps actual damage and defense processing enabled")
@@ -26,6 +28,12 @@ func run() -> void:
 		check(player.combat_stats.health==maximum and player.hit_reaction_active,"Health refills without discarding the hit reaction")
 		room._process(0)
 	check(room._combat_result.is_empty() and not player.input_frozen,"Repeated lethal hits never freeze the practice session")
+	check(deaths.is_empty(),"Practice refill never emits defeat to boss or room listeners")
+	var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
+	assist.set_player_invincible(true)
+	assist.set_player_invincible(false)
+	player.combat_stats.apply_health_damage(maximum)
+	check(player.combat_stats.health==maximum and deaths.is_empty(),"F12 toggles and direct damage preserve the practice refill contract")
 	check(master.is_processing()==false,"Health refill does not rebuild or restart the boss")
 	player.reset_after_map_fall(room.PLAYER_START)
 	player.defense_state=LanPlayer.DefenseState.PARRY_ACTIVE

@@ -6,7 +6,8 @@ const ROOM := "res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn"
 var save: SaveProgressService
 var room: Chapter1DeerBossRoom
 var story: DeerStory
-var boss: DeerBoss
+var boss: DeerDuelBoss:
+	get: return room.deer
 var checks := 0
 var failures := 0
 var output := ""
@@ -40,7 +41,6 @@ func enter(intro: PackedScene = null) -> void:
 	root.add_child(room)
 	current_scene = room
 	story = room.story
-	boss = room.deer
 	await process_frame
 	await process_frame
 func key(code: Key = KEY_E) -> void:
@@ -65,20 +65,18 @@ func capture(label: String) -> void:
 	await RenderingServer.frame_post_draw
 	check(root.get_texture().get_image().save_png(output.path_join(label + ".png")) == OK, "Capture " + label)
 func prepare_human() -> void:
-	boss.phase = 4
-	boss.reset_phase()
+	room.encounter._spawn_phase(4,room.room_size.x*.5+180)
+	room.encounter.start()
 	boss.set_physics_process(false)
-	for i in 900:
-		boss._physics_process(1.0 / 60)
-		if boss.vine_phase.human and boss.vine_phase.step == DeerVinePhase.Step.HOVER: break
-	check(boss.vine_phase.human and boss.vine_phase.step == DeerVinePhase.Step.HOVER, "Actual authored transformation reaches human hover")
+	for i in 210: boss._physics_process(1.0/60)
+	check(room.encounter.transformation_progress()==1.0,"Actual authored transformation reaches human hover")
 func kill_human() -> void:
 	var already_won := save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED)
 	boss.combat_stats.apply_health_damage(boss.combat_stats.health)
-	check(boss.state == DeerBoss.State.PHASE_END and save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED) == already_won, "Lethal hit before final landing preserves previous victory state")
-	for i in 400:
-		boss._physics_process(1.0 / 60)
-		if boss.state == DeerBoss.State.COMPLETE: break
+	check(boss.state == DeerBoss.State.PHASE_END and save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED) == already_won,"Lethal hit before final presentation preserves previous victory state")
+	for i in 90:
+		room.encounter._physics_process(1.0/60)
+		if room.encounter.complete: break
 	await process_frame
 func dismiss_reward() -> void:
 	if story.reward_reveal != null:
@@ -96,17 +94,9 @@ func run() -> void:
 	check(not save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED), "Signals without actual final human completion cannot fake victory")
 	# M10 short reactions use only production facts and never pause combat.
 	boss.set_physics_process(false)
-	boss.phase = 2
-	# Isolate this optional reaction from the direct-route save's locked core powers.
-	boss.manual_control = true
-	boss.root_phase.item_available = true
-	boss.root_phase.start_ultimate()
-	boss.root_phase.elapsed = 1.5
-	check(boss.root_phase.use_decoy(), "Production root counter accepts a valid decoy")
-	story._process(0.8)
-	check(story._said.has(&"decoy") and not paused, "Successful decoy queues only a nonblocking bubble")
-	boss.root_phase.reset_all()
-	boss.manual_control = false
+	story.phase_completed(1)
+	story._process(.8)
+	check(story._said.has(&"rise") and not paused,"First phase completion queues only a nonblocking bubble")
 	story._pending_bubble = ""
 	story._queue_bubble(&"capture", "过去了！")
 	boss.warning_kind = &""
@@ -118,7 +108,7 @@ func run() -> void:
 	story._process(0)
 	check(story._said.has(&"human"), "Actual human transformation enables its single short reaction")
 	var inventory := save.get_inventory_items().duplicate(true)
-	boss.vine_phase.spawn_strike(&"curtain", room.player.position.x, room.player.position.x - 200, 1)
+	boss.start_spell(4)
 	await kill_human()
 	check(save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED) and not story.victory_pending, "Final production landing saves victory before any inspection")
 	check(story.reward_reveal != null and save.get_item_count(ItemCatalog.DEER_RELIC) == 1 and not story.chapter_gate.visible, "Final landing grants exactly one relic and presents it before unlocking portal")
@@ -129,7 +119,7 @@ func run() -> void:
 	check(save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED), "Victory reloads from disk")
 	check(boss.state == DeerBoss.State.COMPLETE and not boss.visible and not boss.is_physics_processing() and story.resident != null, "Persisted victory replaces completed combat body with permanent resident")
 	check(not boss.is_in_group("damageable") and (boss.get_node("Hurtbox") as Area2D).collision_layer == 0, "Resident has no lingering combat target or hurtbox")
-	check(boss.vine_phase.strikes.is_empty() and boss.root_phase.nodules.is_empty() and not room.mist_field.hunting, "Final cleanup leaves no attacking vines, root terrain or hunt")
+	check(boss.spells.is_empty() and not room.mist_field.hunting, "Final cleanup leaves no attacking vines, root terrain or hunt")
 	check(save.get_stele_state(&"vine_puzzle_high_swing") == 0 and save.get_stele_state(&"vine_combat_branch_arena") == 0 \
 		and not save.has_completed(SaveProgressService.STORY_C1_XIAOSUI_MET) and save.get_inventory_items() == inventory, "Direct boss route grants only the relic without residents or steles")
 	await stand(boss.position + Vector2(-70, 0))
@@ -190,7 +180,6 @@ func run() -> void:
 	await create_timer(3.0).timeout
 	room = current_scene as Chapter1DeerBossRoom
 	story = room.story
-	boss = room.deer
 	check(story.is_rematch and story.comic == null and boss.phase == 1 and boss.is_physics_processing(), "Resident rematch starts full fight without intro comic")
 	check(story.resident == null and not story.chapter_gate.visible, "Rematch has no resident or chapter portal during live combat")
 	check(not (root.get_node("SceneTransition") as SceneTransitionService).deer_rematch_requested, "Rematch entry request consumed once")

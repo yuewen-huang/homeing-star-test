@@ -1,6 +1,6 @@
 """Native Aseprite export + isolated, traceable Studio wind renderer import."""
 from pathlib import Path
-import hashlib, json, re, shutil, subprocess
+import argparse, hashlib, json, re, shutil, subprocess
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -14,7 +14,7 @@ sha = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
 
 def write_json(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n', encoding='utf-8', newline='\n')
 
 def bodies():
     ARCHIVE.mkdir(parents=True, exist_ok=True)
@@ -47,7 +47,7 @@ def bodies():
     write_json(ARCHIVE/'audit.json',audit)
 
 def renderers():
-    queue = ['magic/wind/puff.gd','magic/wind/tornado.gd','magic/wind/gust.gd','render_caps.gd']
+    queue = ['magic/wind/puff.gd','magic/wind/tornado.gd','magic/wind/gust.gd','magic/wind/core_pulse.gd','magic/wind/core_burst.gd','render_caps.gd']
     found = {}
     pattern = re.compile(r'res://vfx/([\w./-]+\.(?:gdshaderinc|gdshader|gd|png))')
     while queue:
@@ -74,7 +74,7 @@ def renderers():
         data=pattern.sub(lambda m:'res://'+str((FX if m[1].endswith('.gd') else ART).relative_to(GAME)).replace('\\','/')+'/'+m[1],data)
         data=data.replace('res://vfx/magic/shaders/%s.gdshader','res://assets/bosses/deer/fx/wind_studio/magic/shaders/%s.gdshader')
         dest.parent.mkdir(parents=True,exist_ok=True)
-        dest.write_text(data,encoding='utf-8')
+        dest.write_text(data,encoding='utf-8',newline='\n')
         audit.append({'source':'vfx/'+rel,'source_sha256':sha(STUDIO/'vfx'/rel),'runtime':str(dest.relative_to(GAME)).replace('\\','/'),'runtime_sha256':sha(dest)})
     write_json(ART/'import_manifest.json',{'adaptations':['namespaced resource paths','remove global class names','stage uses Node2D proxy','floor 555','remove Studio dummy tornado control; gameplay owns capture'],'files':audit})
 
@@ -96,10 +96,14 @@ def profiles():
         if not (folder/'style.json').exists():
             write_json(folder/'style.json',dict(title=recipe['name'],language='zh',renderer='magic',magic_quality='ultimate',pixel=2,thickness=1))
         scene=(STUDIO/"combos/wind_blade/wind_blade.tscn").read_text(encoding="utf-8").replace("wind_blade","deer_wind_"+key)
-        (folder/('deer_wind_'+key+'.tscn')).write_text(scene, encoding='utf-8')
+        (folder/('deer_wind_'+key+'.tscn')).write_text(scene, encoding='utf-8', newline='\n')
         write_json(ART/(key+'.json'),recipe)
     write_json(ART/'profiles_manifest.json',{'profiles':[{'key':k,'source':'combos/deer_wind_'+k+'/combo.json','sha256':sha(STUDIO/'combos'/('deer_wind_'+k)/'combo.json')} for k in recipes]})
 
 if __name__=='__main__':
-    bodies(); renderers(); profiles()
-    print('Imported 80 original cells, 9 physical segments, Studio wind renderer and 5 editable recipes.')
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--effects-only',action='store_true',help='Reimport the current editable Studio recipes/renderers; preserve all body assets.')
+    args=parser.parse_args()
+    if not args.effects_only: bodies()
+    renderers(); profiles()
+    print('Imported Studio wind renderer and 5 editable recipes.' if args.effects_only else 'Imported 80 original cells, 9 physical segments, Studio wind renderer and 5 editable recipes.')

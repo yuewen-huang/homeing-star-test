@@ -8,6 +8,7 @@ param(
   [switch]$Prepare,
   [switch]$CheckOnly,
   [switch]$Visual,
+  [switch]$Realtime,
   [int]$TimeoutSeconds = 120,
   [string[]]$TestArguments = @()
 )
@@ -60,7 +61,8 @@ try {
     if (-not (Invoke-Engine @('--headless','--path',$Project,'--editor','--import','--quit') 'import')) { throw 'Godot import failed' }
   }
   foreach ($item in $selected) {
-    $arguments = @('--path',$Project,'--fixed-fps','60','--script',$item.FullName)
+    $arguments = @('--path',$Project,'--script',$item.FullName)
+    if (-not $Realtime) { $arguments += @('--fixed-fps','60') }
     if (-not $Visual -or $CheckOnly) { $arguments = @('--headless')+$arguments }
     if ($CheckOnly) { $arguments += '--check-only' }
     if ($TestArguments.Count) { $arguments += @('--')+$TestArguments }

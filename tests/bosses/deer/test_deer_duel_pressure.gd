@@ -108,26 +108,11 @@ func run() -> void:
 			parried_leaf = true
 			break
 	check(parried_leaf and deer.pressure.active and deer.opening==0,"Real K removes the leaf without cancelling the casting phrase")
-	# True poise depletion still interrupts and preserves the five-second release.
-	deer.combat_stats.apply_poise_damage(deer.combat_stats.poise)
-	check(deer.poise_broken and not deer.pressure.active and deer.attack_probes().is_empty(),"Actual break cancels the phrase and every detached hazard")
+	# Default poise depletion must not interrupt an authored phrase or grant E.
+	deer.combat_stats.apply_poise_damage(100000)
+	check(not deer.poise_broken and deer.pressure.active,"Removed poise break cannot cancel the phrase or its detached hazards")
+	check(not deer.has_poise_bar() and not deer.can_offer_break_empower(),"Phase one exposes neither a poise meter nor a generic break reward")
 	release()
-	for frame in 120:
-		await physics_frame
-		if lan.defense_state == LanPlayer.DefenseState.NONE and lan.ground_action_state == LanPlayer.GroundActionState.NONE: break
-	var hp := deer.combat_stats.health
-	lan.facing_direction = signf(deer.position.x-lan.position.x)
-	lan.position.x = deer.position.x-lan.facing_direction*100
-	check(lan.update_throw_prompt()==deer,"E has an eligible broken target after the parry pose completes")
-	print("E_READY defense=",lan.defense_state," ground=",lan.ground_action_state," air=",lan.air_state," break=",deer.stagger_remaining)
-	key(KEY_E,true)
-	for frame in 3: await physics_frame
-	key(KEY_E,false)
-	for frame in 60: await physics_frame
-	check(deer.combat_stats.health==hp-300,"Real E keeps its full 200 damage plus break multiplier")
-	check(not deer.break_empower_available,"Break E remains one redemption per window")
-	deer.receive_attack_hit(CombatAttackData.new(&"pressure_test_hit",lan,10,3,0,0),lan.global_position)
-	check(deer.short_stun_remaining>=.55 and deer.opening>=.65,"Repeated hits during break retain the intended pressure/stun reward")
 	reset_pair()
 	deer._leaf_casts = 2
 	phrase(1)

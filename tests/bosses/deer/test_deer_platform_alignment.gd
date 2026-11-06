@@ -56,9 +56,10 @@ func run() -> void:
 			deer._duel_sweep()
 			deer.effects.sync(deer)
 			var ribbon: Node2D=deer.effects._main[0]
-			var pose: Dictionary=ribbon.blade_pose(.13)
+			var anchor:=deer._native_point(Vector2(149,139))
+			var pose: Dictionary=DeerDuelBoss.HornSweep.contact_pose(.5,Vector2(anchor.x*facing,anchor.y))
 			var expected: Vector2=pose.tip*Vector2(facing,1)
-			check(expected.distance_to(deer.geometry.points[-1])<.01,"New horn crescent leading tip matches live hit geometry")
+			check(expected.distance_to(deer.geometry.points[-1])<.01 and ribbon.key=="sweep" and ribbon.side==facing,"Studio sweep mirrors with the unchanged live horn contact")
 		deer.cancel_duel(false)
 	deer.effects.advance(.6)
 	# The current specimen is phase two.

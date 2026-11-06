@@ -3,7 +3,7 @@ func _initialize() -> void: call_deferred("open_room")
 func open_room() -> void:
 	var root_phase := OS.get_cmdline_user_args().has("--root-phase")
 	var vine_phase := OS.get_cmdline_user_args().has("--vine-phase")
-	var pursuit := OS.get_cmdline_user_args().has("--vine-pursuit")
+	var pursuit := vine_phase
 	var wind_phase := OS.get_cmdline_user_args().has("--wind-phase")
 	var redraw := OS.get_cmdline_user_args().has("--rush-redraw")
 	DisplayServer.window_set_title("鹿 · 第二阶段 / 争夺高台 · 根浪逼位" if root_phase else "鹿 · 第一阶段 / 连续攻势 · 破韧爆发")
@@ -14,7 +14,7 @@ func open_room() -> void:
 	await process_frame
 	await process_frame
 	for index in BossDevelopmentRoom.BOSS_CATALOG.size():
-		if BossDevelopmentRoom.BOSS_CATALOG[index].adapter.resource_path.ends_with("deer_wind_duel_adapter.gd" if wind_phase else "deer_vine_pursuit_adapter.gd" if pursuit else "deer_vine_duel_adapter.gd" if vine_phase else ("deer_root_duel_adapter.gd" if root_phase else "deer_duel_adapter.gd")):
+		if BossDevelopmentRoom.BOSS_CATALOG[index].adapter.resource_path.ends_with("deer_wind_duel_adapter.gd" if wind_phase else "deer_vine_pursuit_adapter.gd" if pursuit else ("deer_root_duel_adapter.gd" if root_phase else "deer_duel_adapter.gd")):
 			room.select_boss(index)
 			break
 	await process_frame

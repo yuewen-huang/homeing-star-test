@@ -67,7 +67,7 @@ func plow_route(boss_x: float, player_x: float, guard: bool, difficulty: int) ->
 	check(source_frames.size()==32, "Combat samples every authored cell including recovery")
 	if guard:
 		check(lan.combat_stats.health==100 and contacts.size()>=2, "Both real horn contacts can be parried: %.0f -> %.0f" % [boss_x,player_x])
-		check(deer.defense_credit==1, "Two actual parries earn one defended exchange, not two rewards")
+		check(deer.defense_credit==2, "Two actual parries immediately break two beads")
 	else: check(lan.combat_stats.health<100, "Unguarded charge really damages the player")
 	check(deer.position.x>=deer.world_min_x+80 and deer.position.x<=deer.world_max_x-80, "Charge remains inside arena bounds")
 	print("PLOW_ROUTE "+JSON.stringify({"boss":boss_x,"player":player_x,"guard":guard,"hp":lan.combat_stats.health,"contacts":contacts,"frames":source_frames.keys()}))
@@ -215,7 +215,7 @@ func ultimate_route() -> void:
 		if moves.has(&"pursuit_sky_end") and deer.opening>0: complete_cast=true
 		if complete_cast and deer.pressure.completed>=4: break
 	check(moves.count(&"sky_cast")==1 and not premature, "Half-health ultimate waits for the exchange and triggers only once")
-	check(complete_cast and waves==2, "Ultimate preserves both rain waves, return and its separate finish window")
+	check(complete_cast and waves==4, "Ultimate completes four rain phrases, return and its separate finish window")
 	var ultimate_decisions: Array=deer.pressure.decisions.filter(func(d): return d.group==3)
 	check(ultimate_decisions.size()==1 and ultimate_decisions[0].step==1, "Ultimate never occupies an ordinary follow-up slot")
 	deer.restart_duel()
@@ -294,8 +294,8 @@ func run() -> void:
 	skill.poise_damage=500
 	deer.receive_skill_hit(skill,lan.position)
 	check(deer.combat_stats.health==hp-45 and not deer.poise_broken and deer.pressure.active, "Skill damage stays full without deleting the exchange or causing a long break")
-	for i in 3: deer.finish_defense_exchange(true)
-	check(deer.counter_ready and not deer.poise_broken and deer.opening==0, "Three defended exchanges store one reward without stunning the boss")
+	for i in DeerDuelBoss.COUNTER_PARRIES: deer.on_attack_parried(CombatAttackData.new(StringName("bead_%d" % i),deer,0,0,0,0),deer.position)
+	check(deer.counter_ready and not deer.poise_broken and deer.opening==0, "Six successful parries store one reward without stunning the boss")
 	check(not deer.can_offer_break_empower(), "Stored throw requires a genuine finish window")
 	deer.pressure.active=false
 	deer.move=&"pursuit_rest"
