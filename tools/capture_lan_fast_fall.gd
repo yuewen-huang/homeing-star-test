@@ -18,9 +18,13 @@ func run() -> void:
 		player.air_state=player.AirState.FALLING
 		player.play_air_animation(&"fall")
 		Input.action_press(&"ui_down")
-		Input.action_press(&"jump")
+		var key := InputEventKey.new()
+		key.physical_keycode = KEY_J
+		key.pressed = true
+		Input.parse_input_event(key)
 		await step(2)
-		Input.action_release(&"jump")
+		key.pressed = false
+		Input.parse_input_event(key)
 		Input.action_release(&"ui_down")
 		check(player.attack_state==player.AttackState.FAST_FALL,"Production scene accepts fast fall from %.0f" % height)
 		for i in 120:

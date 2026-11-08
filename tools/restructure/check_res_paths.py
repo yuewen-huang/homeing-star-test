@@ -35,6 +35,7 @@ STUDIO_REFERENCES = {
 }
 DEMO_REFERENCES = {
     "tools/art/import_deer_phase3_arrangements.py": {"vfx/", "vfx/vendor_studio/magic/shaders/"},
+    "tools/art/import_sandstorm_fighter.py": {"vfx/", "vfx/track_claw.gd", "main.tscn", "characters/%s", "characters/<id>/character.json"},
 }
 # This historical generator describes its own output, retired from the runtime.
 # Keep reporting it as a warning rather than treating it as a production dependency.
@@ -75,7 +76,8 @@ def check(ws: rp.Workspace):
                         errors[where].append(f"Studio source missing: {rel}")
                     continue
                 if repo_name == rp.TEST and rel in DEMO_REFERENCES.get(path.relative_to(repo).as_posix(), set()):
-                    if not exists(ws.root / "smear-combo-demo", rel):
+                    source_rel = rp.static_prefix(rel) if rp.is_dynamic(rel) else rel
+                    if not exists(ws.root / "smear-combo-demo", source_rel):
                         errors[where].append(f"Smear demo source missing: {rel}")
                     continue
                 if repo_name == rp.TEST and rel in RETIRED_OUTPUTS.get(path.relative_to(repo).as_posix(), set()):

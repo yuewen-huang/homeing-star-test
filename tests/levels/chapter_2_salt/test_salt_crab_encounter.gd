@@ -27,7 +27,7 @@ func capture(label_: String) -> void:
 	var output := OS.get_environment("HOMING_STAR_TEST_OUTPUT")
 	if output.is_empty() or DisplayServer.get_name()=="headless": return
 	await process_frame
-	await RenderingServer.frame_post_draw
+	RenderingServer.force_draw()
 	root.get_texture().get_image().save_png(output.path_join(label_+".png"))
 func wait_for_map_fade() -> void:
 	var transition := root.get_node("SceneTransition") as SceneTransitionService
@@ -75,6 +75,15 @@ func run() -> void:
 	Input.action_release(&"ui_down")
 	check(player.animated_sprite.animation==&"crouch","Production crouch restored")
 	player.reset_after_map_fall(encounter.pull_to)
+	var salt = crab.get_node("SaltBindings")
+	crab.start_idle()
+	salt._sync()
+	check(salt.strips.size() == 2 and salt.strips[0].visible, "Salt seams are visible on the production crab")
+	var expected: Vector2 = crab.animated_sprite.to_local(crab.get_counter_slash_point()) + Vector2(-29,16)
+	check(salt.strips[0].position.is_equal_approx(expected), "Salt seams follow measured authored shell anchor")
+	crab.face_target(crab.position + Vector2(-500,0)); salt._sync()
+	check(salt.strips[0].global_position.is_equal_approx(crab.animated_sprite.to_global(expected)), "Salt seams inherit the actual body flip")
+	await capture("salt_crab_bound_idle")
 	crab.start_quake(&"double",player.position)
 	crab._physics_process(0.45)
 	await capture("salt_crab_warning")
@@ -103,6 +112,7 @@ func run() -> void:
 	await process_frame
 	check(crab.combat_stats.health==0,"Real special attack hitbox kills crab")
 	check(not is_instance_valid(killing_effect) or killing_effect.is_queued_for_deletion() or killing_effect.detached_from_source,"Victory does not leave an attached undriven special effect")
+	check(crab.get_node("SaltBindings").released and not crab.get_node("SaltBindings").strips[0].visible, "Defeat releases salt seams before the optional departure")
 	check(crab.peaceful and not encounter.active and encounter.pending_victory,"Defeat pacifies immediately even if persistence fails")
 	check(player.get_parent()==field.pawn and not player.is_physics_processing() and not player.hurtbox.monitorable,"Victory returns to planar exploration")
 	check(crab.attack_hitbox.attack==null and not crab.is_in_group("damageable"),"Peaceful crab has no attacks and is not targetable")
@@ -120,6 +130,8 @@ func run() -> void:
 	enter()
 	check(field.crab_encounter.crab.peaceful and not field.crab_encounter.active,"Reentry restores peaceful crab without entrance or refight")
 	var resident: CrystalCrabBoss = field.crab_encounter.crab
+	await process_frame
+	check(resident.get_node("SaltBindings").released and not resident.get_node("SaltBindings").strips[0].visible, "Old victories restore a clean crab")
 	resident.start_action(&"walk",resident.position+Vector2(100,0))
 	resident.receive_hit(99,resident.position)
 	check(resident.combat_stats.health==resident.combat_stats.max_health and resident.invulnerable,"Reentered resident stays invulnerable while walking")
@@ -154,7 +166,7 @@ func run() -> void:
 	enter()
 	encounter = field.crab_encounter
 	player = field.pawn.player
-	check(not encounter.session_active and not encounter.portal.visible,"Old victory does not force playback or unlock an unseen route")
+	check(not encounter.session_active and encounter.portal.visible,"Old victory opens the route without requiring optional playback")
 	field.feet = encounter.patrol_feet+Vector2(80,30)
 	field._sync_view(0)
 	check(encounter.can_talk() and encounter.crab_prompt.can_interact(),"Peaceful crab offers the shared E prompt near old-save player")
@@ -183,7 +195,7 @@ func run() -> void:
 	await capture("salt_departure_panel_06")
 	save.fail_write = true
 	route._request_finish(false)
-	check(route._pending_completion_retry and encounter.session_active and not encounter.portal.visible,"Comic save failure preserves the shared retry view and keeps the gate locked")
+	check(route._pending_completion_retry and encounter.session_active and encounter.portal.visible,"Comic retry leaves the victory-unlocked gate available after closing playback")
 	save.fail_write = false
 	# Interrupt rather than complete; recovery must not require fighting again.
 	field.free()

@@ -23,6 +23,10 @@ func step(n: int) -> void:
 	for i in n: await physics_frame
 
 func release() -> void:
+	var key := InputEventKey.new()
+	key.physical_keycode = KEY_J
+	key.pressed = false
+	Input.parse_input_event(key)
 	for action in [&"jump",&"ui_down",&"ui_left",&"ui_right",&"instant_dash"]: Input.action_release(action)
 
 func reset(height: float) -> void:
@@ -39,7 +43,10 @@ func reset(height: float) -> void:
 
 func trigger() -> void:
 	Input.action_press(&"ui_down")
-	Input.action_press(&"jump")
+	var key := InputEventKey.new()
+	key.physical_keycode = KEY_J
+	key.pressed = true
+	Input.parse_input_event(key)
 	await step(2)
 	release()
 
@@ -115,7 +122,7 @@ func run() -> void:
 	for height in [80.0,100.0,220.0,500.0]:
 		await reset(height)
 		await trigger()
-		check(p.attack_state==p.AttackState.FAST_FALL and p.velocity.y>0,"Down plus jump starts fast fall at height %.0f" % height)
+		check(p.attack_state==p.AttackState.FAST_FALL and p.velocity.y>0,"Down plus J starts downslash at height %.0f" % height)
 		check(not p.is_invulnerable() and not p.can_start_double_jump() and not p.can_start_aerial_dash(),"Fast fall grants no invulnerability or aerial cancel")
 		check(near.hits==0,"No midair hit before contact")
 		await capture("fall_%.0f" % height)
@@ -125,7 +132,7 @@ func run() -> void:
 		if height<=100:
 			check(p.fast_fall.last_damage==0 and near.hits==0 and get_nodes_in_group(&"lan_fast_fall_fx").is_empty(),"Low drop has body only, no damage, wave or smoke")
 		else:
-			check(near.hits==1 and near.damage==MOTOR.damage(height) and near.poise==1,"Touchdown settles one modest hit despite two hurtboxes")
+			check(near.hits==1 and near.damage==MOTOR.damage(p.fast_fall.last_height) and near.poise==1,"Touchdown settles one modest hit despite two hurtboxes")
 			check(far.hits==0 and shield.hits==0,"Out-of-range and shielded targets take no damage")
 			check(get_nodes_in_group(&"lan_fast_fall_fx").size()==2,"High touchdown emits one wave and one smoke sheet")
 		await step(3)
@@ -211,6 +218,65 @@ func run() -> void:
 	p.hit_reaction_active=true
 	check(not p.fast_fall.can_start(p),"Hit reaction cannot be cancelled into fast fall")
 	p.hit_reaction_active=false
+	await reset(250)
+	Input.action_press(&"ui_down")
+	Input.action_press(&"jump")
+	await step(2)
+	check(p.attack_state != p.AttackState.FAST_FALL, "Old down plus jump no longer starts downslash")
+	await reset(250)
+	var foothold := receiver(Vector2(600,440), true)
+	await trigger()
+	for i in 20:
+		await step(1)
+		if foothold.hits > 0: break
+	check(foothold.hits == 1 and p.velocity.y < 0, "Swept downslash hits enemy once and bounces before landing")
+	check(p.can_start_double_jump() and not p.has_buffered_attack(), "Bounce restores double jump and consumes attack input")
+	check(not p.is_invulnerable(), "Bounce grants no invulnerability")
+	await capture("downslash_bounce")
+	# Spend the bounce refill, then chain a wall jump without landing.
+	p.start_double_jump()
+	check(p.double_jump_used, "Double jump spends the downslash refill")
+	p.aerial_dash_used = true
+	p.wall_slide_normal_x = -1.0
+	p.start_wall_slide()
+	check(p.double_jump_used, "Wall contact alone does not refill double jump")
+	var stamina_before_wall := p.combat_stats.stamina
+	p.start_wall_jump()
+	check(p.velocity.y < 0 and p.can_start_double_jump(), "Wall jump restores double jump after a downslash chain")
+	check(p.aerial_dash_used and p.combat_stats.stamina == stamina_before_wall, "Wall jump preserves spent dash and does not refund stamina")
+	p.start_double_jump()
+	check(p.double_jump_used and not p.can_start_double_jump(), "Wall refill gives exactly one extra jump")
+	foothold.queue_free()
+	targets.erase(foothold)
+	await step(2)
+	await reset(250)
+	var pad := rock(Rect2(580,430,40,10))
+	pad.add_to_group(&"pogo_target")
+	await trigger()
+	for i in 20:
+		await step(1)
+		if p.attack_state == p.AttackState.NONE: break
+	check(p.velocity.y < 0 and p.can_start_double_jump(), "Explicit solid pogo target bounces and refreshes")
+	pad.queue_free()
+	await step(2)
+	await reset(250)
+	var armored := receiver(Vector2(600,440))
+	armored.shielded = true
+	await trigger()
+	for i in 20:
+		await step(1)
+		if p.attack_state == p.AttackState.NONE: break
+	check(p.velocity.y < 0 and armored.hits == 0, "Protected targets allow foothold without bypassing their damage immunity")
+	armored.queue_free()
+	targets.erase(armored)
+	await step(2)
+	await reset(250)
+	var key := InputEventKey.new()
+	key.physical_keycode = KEY_J
+	key.pressed = true
+	Input.parse_input_event(key)
+	await step(2)
+	check(p.attack_state == p.AttackState.JUMP_ATTACK_1X, "J without down retains ordinary aerial attack")
 	check(p.get_node("StateTrace").report_count==0,"No animation-owner contradictions")
 	release()
 	expect_save_untouched()
