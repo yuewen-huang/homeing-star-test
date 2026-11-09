@@ -103,17 +103,22 @@ func run() -> void:
 	save.fail_write = true
 	player.reset_after_map_fall(crab.position+Vector2(150,0))
 	crab.combat_stats.health = 1
-	player.perform_special_attack(-1,1.0)
+	player.start_attack_3x(-1)
+	player.combat_timeline.pause()
+	player._timeline_attack_3_effect_frame(7)
 	var killing_effect: Node = player.timeline_attack_effect
-	player.animated_sprite.pause()
-	killing_effect.set_timeline_frame(10)
 	await physics_frame
 	await physics_frame
 	await process_frame
-	check(crab.combat_stats.health==0,"Real special attack hitbox kills crab")
-	check(not is_instance_valid(killing_effect) or killing_effect.is_queued_for_deletion() or killing_effect.detached_from_source,"Victory does not leave an attached undriven special effect")
+	check(crab.combat_stats.health==0,"Real normal finisher hitbox kills crab")
 	check(crab.get_node("SaltBindings").released and not crab.get_node("SaltBindings").strips[0].visible, "Defeat releases salt seams before the optional departure")
-	check(crab.peaceful and not encounter.active and encounter.pending_victory,"Defeat pacifies immediately even if persistence fails")
+	var finisher := field.get_node_or_null("BossFinisherEffect")
+	check(finisher != null and finisher.direction < 0.0 and encounter.active,"The left-facing finishing blow plays in the combat camera")
+	check(crab.peaceful and encounter.pending_victory,"Defeat pacifies immediately even if persistence fails")
+	await crab.wait_for_boss_finisher()
+	await process_frame
+	check(not encounter.active and not is_instance_valid(finisher),"Battle camera exits after the finishing blow fades")
+	check(not is_instance_valid(killing_effect) or killing_effect.is_queued_for_deletion() or killing_effect.detached_from_source,"Victory does not leave an attached undriven finisher effect")
 	check(player.get_parent()==field.pawn and not player.is_physics_processing() and not player.hurtbox.monitorable,"Victory returns to planar exploration")
 	check(crab.attack_hitbox.attack==null and not crab.is_in_group("damageable"),"Peaceful crab has no attacks and is not targetable")
 	var start := crab.position
@@ -148,9 +153,12 @@ func run() -> void:
 	crab.set_physics_process(false)
 	player.reset_after_map_fall(crab.position+Vector2(150,0))
 	crab.combat_stats.health = 1
-	player.perform_special_attack(-1,1.0,crab)
+	player.cast_shadow_claw_storm(crab)
 	var storm := crab.get_node("LanShadowClawStorm")
 	storm._physics_process(0.31)
+	await process_frame
+	check(field.has_node("BossFinisherEffect"),"Detached skill kills also play the finishing blow")
+	await crab.wait_for_boss_finisher()
 	await process_frame
 	check(crab.combat_stats.health==0 and not encounter.active,"Detached enhanced E finishes encounter")
 	check(player.active_attack_effects.is_empty(),"Victory dialogue can pause the independent storm without attaching it to Lan")
@@ -161,11 +169,21 @@ func run() -> void:
 	check(not paused and not is_instance_valid(storm),"Leaving a battle-triggered departure restores pause state and clears the storm")
 	# Old victories opt in at the peaceful crab; the shared dialogue/comic own input.
 	save._config = ConfigFile.new()
-	save._config.set_value("map_states","chapter_2_salt_field",{"boss_pile":1,"dug":[1]})
+	save._config.set_value("map_states","chapter_2_salt_field",{"boss_pile":2,"dug":[2]})
 	save._config.set_value("progress","chapter_2_salt_crab_defeated",true)
+	save.fail_write = true
 	enter()
 	encounter = field.crab_encounter
 	player = field.pawn.player
+	check(field.state.is_empty() and not is_instance_valid(encounter.crab),
+		"Blocked legacy migration never places the crab on a puzzle heap")
+	save.fail_write = false
+	field.target = 4
+	field._finish_dig()
+	var migrated_pile := int(field.state.boss_pile)
+	check(migrated_pile not in SaveProgressService.SALT_WORM_PUZZLE_PILES and field.piles[2].excavated \
+		and encounter.crab.peaceful and encounter.patrol_feet == field.piles[migrated_pile].ground_position,
+		"Old victory moves the peaceful crab out of the puzzle pit without replaying the fight")
 	check(not encounter.session_active and encounter.portal.visible,"Old victory opens the route without requiring optional playback")
 	field.feet = encounter.patrol_feet+Vector2(80,30)
 	field._sync_view(0)

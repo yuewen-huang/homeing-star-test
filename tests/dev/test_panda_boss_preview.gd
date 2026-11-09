@@ -53,7 +53,7 @@ func run() -> void:
 	await process_frame
 	await process_frame
 	room.player.set_physics_process(false)
-	check(room.boss_picker.item_count == 10, "Ten bosses populate the selector")
+	check(room.boss_picker.item_count == BossDevelopmentRoom.BOSS_CATALOG.size(), "All registered bosses populate the selector")
 	var index := -1
 	for i in room.boss_picker.item_count:
 		if room.boss_picker.get_item_text(i).contains("熊猫"): index = i

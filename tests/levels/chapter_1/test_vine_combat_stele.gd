@@ -201,7 +201,7 @@ func run() -> void:
 	check(pierce.is_poise_broken() and pierce.combat_stats.health == 8, "three sword hits break poise and leave a damage window")
 	player.reset_after_map_fall(pierce.tip + Vector2(-40, 60))
 	player.apply_attack_facing(1)
-	player.perform_special_attack(1, 0.0, player.find_throw_target())
+	player.cast_shadow_claw_storm(player.find_throw_target())
 	var storm := pierce.get_node_or_null("LanShadowClawStorm")
 	check(storm != null and storm.hit.max_form, "E launches enhanced claw storm against the broken vine")
 	if storm != null:

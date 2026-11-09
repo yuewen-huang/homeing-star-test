@@ -28,16 +28,22 @@ func run() -> void:
 	player.set_physics_process(false)
 	var trial := scene.ink_trial
 	trial.set_physics_process(false)
-	player.position.x = trial.TURTLE_X - 110
+	player.position.x = trial.TURTLE_X - 100
 	scene.camera_x = MirrorLake.camera_x_for(trial.TURTLE_X + 100)
 	scene.update_scroll()
 	scene.update_debug_label()
 	await shot("01_yang_bixi")
-	trial.tick(0.01)
+	scene.story._process(0.01)
+	var interact := InputEventAction.new()
+	interact.action = &"interact"
+	interact.pressed = true
+	Input.parse_input_event(interact)
+	Input.flush_buffered_events()
+	scene.story.choices.choose(2)
 	await shot("02_turtle_dialogue_right")
-	trial.dialogue.advance()
+	scene.story.dialogue.advance()
 	await shot("03_lan_dialogue_left")
-	while trial.dialogue != null: trial.dialogue.advance()
+	while scene.story.dialogue != null: scene.story.dialogue.advance()
 	scene.request_switch()
 	scene.advance_switch(3)
 	player.position.x = trial.STELE_X - 160

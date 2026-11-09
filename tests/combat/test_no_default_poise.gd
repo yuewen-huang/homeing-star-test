@@ -36,7 +36,7 @@ func run() -> void:
 	encounter.frog_boss = frog
 	frog.tutorial_protected = true
 	world.add_child(encounter)
-	encounter._on_frog_special_attack_received(false, false)
+	encounter._on_frog_sword_wave_received()
 	check(save.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_TUTORIAL_COMPLETE) and not frog.tutorial_protected, "Actual unbroken sword-wave hit completes tutorial and releases death protection")
 	var piece := VineTrialPiece.new()
 	piece.kind = "vine"

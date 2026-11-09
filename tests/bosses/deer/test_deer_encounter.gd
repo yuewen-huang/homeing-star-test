@@ -35,7 +35,9 @@ func run() -> void:
 			check(actor.terrain.roots.size()>0 and actor.terrain.age>2.4,"Production root phase creates the real contest terrain")
 		if phase==4:
 			check(room.encounter.transformation_progress()==1.0,"Fourth phase completes the authored human transformation")
-		actor.combat_stats.apply_health_damage(actor.combat_stats.health)
+		var final_hit := AttackHitContext.new(&"attack_1", actor.combat_stats.health, 0)
+		actor.receive_attack_hit(final_hit, room.player.global_position)
+		check(room.has_node("BossFinisherEffect") == (phase == 4), "Phase %d only plays the finisher for the final defeat" % phase)
 		check(room.encounter.transitioning and actor.invulnerable and not actor.is_physics_processing(),"Phase %d depletion stops attacks and enters one protected handoff"%phase)
 		check(not save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED),"Phase %d does not settle victory before the final presentation completes"%phase)
 		for frame in 180:

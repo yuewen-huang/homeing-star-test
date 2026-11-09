@@ -6,7 +6,7 @@ from PIL import Image,ImageDraw,ImageFont,ImageFilter
 BASE=Path('D:/HomingStar/homeing-star-temp-assert/Recordings/20261019_boss_real_maps')
 OUT=BASE/'short_video_release';OUT.mkdir(exist_ok=True)
 FF=Path('D:/MiniMax/com.minimax.hub/MiniMax Design/current/resources/ffmpeg/ffmpeg.exe');FP=FF.with_name('ffprobe.exe')
-MUSIC=Path('D:/HomingStar/homeing-star-game/assets/levels/town/audio/town_disorder_night.mp3')
+MUSIC=Path('D:/HomingStar/homeing-star-game/assets/levels/town/audio/长街灯灭时.mp3')
 FONT='C:/Windows/Fonts/msyhbd.ttc'; REG='C:/Windows/Fonts/msyh.ttc'; LAT='C:/Windows/Fonts/bahnschrift.ttf'
 FILES={x['folder']:BASE/'stems'/x['file'] for x in json.loads((BASE/'manifest.json').read_text(encoding='utf8'))}
 # start, native duration, output speed. No speed changes inside continuous parry runs.

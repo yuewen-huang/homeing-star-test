@@ -27,17 +27,18 @@ func reset() -> void:
 	player.ground_knockback_active = false
 	player.air_state = LanPlayer.AirState.GROUNDED
 	player.velocity = Vector2.ZERO
-	player.sword_wave_cooldown_remaining = 0.0
 	player.position = Vector2(0, 555)
 	player.combat_stats.restore_health()
+	player.combat_stats.restore_stamina(player.combat_stats.max_stamina)
 	player.play_idle()
 	player.resync_held_input_state()
 	tick()
 
-func finish_animation() -> void:
-	var sprite := player.animated_sprite
-	sprite.frame = sprite.sprite_frames.get_frame_count(&"sword_wave") - 1
-	player.on_animation_finished()
+func wait_for_wave_end() -> void:
+	for i in 90:
+		if player.attack_state != LanPlayer.AttackState.SWORD_WAVE:
+			return
+		await process_frame
 
 func run() -> void:
 	progress = use_memory_progress()
@@ -69,23 +70,53 @@ func run() -> void:
 	reset()
 	player.facing_direction = -1.0
 	player.apply_facing_direction()
+	player.combat_stats.add_mana(40.0)
 	var mana := player.combat_stats.mana
-	var stamina: float = player.combat_stats.stamina if "stamina" in player.combat_stats else 0.0
+	var stamina := player.combat_stats.stamina
+	var stamina_per_tick := LanPlayer.STAMINA_RECOVERY_PER_SECOND / 60.0
 	press_i()
 	check(player.attack_state == LanPlayer.AttackState.SWORD_WAVE and player.animated_sprite.animation == &"sword_wave", "Grounded I enters sword wave")
 	check(player.animated_sprite.offset == Vector2(-LanPlayer.SWORD_WAVE_SPRITE_OFFSET_X, -2.0) and not player.animated_sprite.flip_h, "Left-facing body uses the authored opening pivot")
 	check(player.sword_wave_charging and not player.animated_sprite.is_playing(), "I holds the sword-wave windup")
-	tick(70)
+	tick(41)
+	check(player.sword_wave_charge_elapsed < LanPlayer.SWORD_WAVE_CHARGE_TIME, "41 frames do not reach full charge at 60 Hz")
+	tick()
+	check(is_equal_approx(player.sword_wave_charge_elapsed, 0.9 / 1.3), "Full charge takes 42 frames at 60 Hz")
 	check(player.sword_wave_charging and player.sword_wave_fx.projectiles.is_empty(), "Full charge waits for release without firing")
 	release_i()
-	check(not player.sword_wave_charging and player.sword_wave_cooldown_remaining > 0.0, "Release commits the wave and starts cooldown")
-	finish_animation()
+	check(not player.sword_wave_charging and player.combat_stats.stamina == stamina, "Releasing I begins the attack without spending before the first wave")
+	check(is_equal_approx(player.animated_sprite.speed_scale, 1.5 * 1.45), "Fully charged release plays 50 percent faster than the original")
+	var spends: Array[float] = []
+	var record_spend := func(current: float, _maximum: float) -> void: spends.append(current)
+	player.combat_stats.stamina_changed.connect(record_spend)
+	await wait_for_wave_end()
+	player.combat_stats.stamina_changed.disconnect(record_spend)
 	check(player.attack_state == LanPlayer.AttackState.NONE and player.animated_sprite.animation == &"idle", "Natural animation completion restores idle")
-	tick(20)
-	check(player.attack_state == LanPlayer.AttackState.NONE, "Holding I does not repeat the move")
-	var stamina_after: float = player.combat_stats.stamina if "stamina" in player.combat_stats else 0.0
-	check(is_equal_approx(player.combat_stats.mana, mana) and is_equal_approx(stamina_after, stamina), "Sword wave has no resource cost")
+	check(spends == [stamina - 20.0, stamina - 40.0, stamina - 60.0], "Three animation-driven emissions each spend exactly 20 stamina")
+	check(player.combat_stats.mana == mana, "Emitting sword waves does not spend mana")
+	press_i()
+	check(player.sword_wave_charging, "A new I can charge immediately after animation recovery")
 	release_i()
+	player.cancel_uncommitted_attack_effects()
+	player.finish_ground_attack()
+	tick(20)
+	check(player.attack_state == LanPlayer.AttackState.NONE, "An interrupted release returns to idle")
+	release_i()
+
+	reset()
+	player.combat_stats.consume_stamina(player.combat_stats.stamina - 30.0)
+	press_i()
+	release_i()
+	await wait_for_wave_end()
+	var bar := player.get_node("SkillBar")
+	var icon: TextureRect = bar.skill_icons[&"special_attack"]
+	check(is_equal_approx(player.combat_stats.stamina, 10.0 + 2.0 * stamina_per_tick) and icon.modulate == bar.LOCKED_COLOR,
+		"Thirty stamina buys one emission and the slot dims when stamina runs low")
+	press_i()
+	check(not player.sword_wave_charging and player.attack_state == LanPlayer.AttackState.NONE, "I with less than 20 stamina does not start an attack")
+	release_i()
+	player.combat_stats.restore_stamina(10.0)
+	check(icon.modulate == bar.AVAILABLE_COLOR, "Recovering enough stamina restores the icon")
 
 	reset()
 	Input.action_press(&"ui_right")
@@ -93,12 +124,20 @@ func run() -> void:
 	Input.action_release(&"ui_right")
 	check(player.facing_direction > 0.0 and player.animated_sprite.offset == Vector2(LanPlayer.SWORD_WAVE_SPRITE_OFFSET_X, -2.0) and player.animated_sprite.flip_h, "Right-facing body mirrors around the same pivot")
 	release_i()
+	for i in 30:
+		if player.combat_stats.stamina < stamina:
+			break
+		await process_frame
+	check(player.combat_stats.stamina == stamina - 20.0, "Only the first emission has fired before parry")
 
 	Input.action_press(&"parry")
 	tick()
 	Input.action_release(&"parry")
 	await process_frame
 	check(player.attack_state == LanPlayer.AttackState.NONE and player.defense_state != LanPlayer.DefenseState.NONE, "K cancels sword wave into parry")
+	await wait_frames(60)
+	check(is_equal_approx(player.combat_stats.stamina, stamina - 20.0 + stamina_per_tick),
+		"K after the first wave prevents all subsequent stamina charges")
 	reset()
 	press_i()
 	check(player.attack_state == LanPlayer.AttackState.SWORD_WAVE, "A fresh I starts normally after parry recovery")
@@ -141,6 +180,24 @@ func run() -> void:
 	check(hit == CombatHitResult.Type.NORMAL_HIT and player.hit_reaction_active and player.attack_state == LanPlayer.AttackState.NONE, "A hit interrupts sword wave normally")
 	dummy.free()
 	release_i()
+	check(player.combat_stats.stamina == stamina, "A hit before the first emission spends no stamina")
+
+	reset()
+	press_i()
+	release_i()
+	for i in 50:
+		if player.combat_stats.stamina <= stamina - 40.0:
+			break
+		await process_frame
+	check(player.combat_stats.stamina == stamina - 40.0, "Exactly two emissions have fired before the incoming hit")
+	dummy = Node2D.new()
+	world.add_child(dummy)
+	dummy.position = Vector2(200, 555)
+	hit = player.receive_combat_hit(CombatAttackData.new(&"sword_wave_test_hit", dummy, 5, 5, 180.0, 0.0))
+	check(hit == CombatHitResult.Type.NORMAL_HIT and player.attack_state == LanPlayer.AttackState.NONE, "A hit cancels the third emission")
+	await wait_frames(60)
+	check(player.combat_stats.stamina == stamina - 40.0, "Taking a hit after two emissions does not charge the third")
+	dummy.free()
 
 	reset()
 	press_i()
@@ -162,6 +219,7 @@ func run() -> void:
 	release_i()
 	progress.locked.clear()
 
+	expect_save_untouched()
 	current_scene = null
 	world.free()
 	assist.set_player_invincible(was_invincible)

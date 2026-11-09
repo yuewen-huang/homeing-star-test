@@ -1,8 +1,9 @@
 extends SceneTree
 class MemorySave extends SaveProgressService:
+	var fail_write := false
 	func load_progress() -> void:
 		_config=ConfigFile.new(); _loaded=true
-	func save_progress() -> bool: return true
+	func save_progress() -> bool: return not fail_write
 var checks := 0
 var failures := 0
 func _initialize() -> void: run.call_deferred()
@@ -18,10 +19,29 @@ func capture(label_: String) -> void:
 func run() -> void:
 	var old:=root.get_node("SaveProgress"); root.remove_child(old); old.free()
 	var save:=MemorySave.new(); save.name="SaveProgress"; root.add_child(save)
+	var mixed_candidates: Array[int] = [2, 12, 16, 1]
+	check(save.ensure_salt_field_state(mixed_candidates).boss_pile == 1, "New saves exclude all three puzzle IDs from a mixed candidate pool")
+	save._config.set_value("map_states","chapter_2_salt_field",{"boss_pile":12,"dug":[12,1,4],"fed_worms":[12]})
+	save.fail_write = true
+	var snapshot := save._config.encode_to_text()
+	check(save.ensure_salt_field_state(mixed_candidates).is_empty() and save._config.encode_to_text() == snapshot,
+		"Failed migration leaves the old save intact and returns no spawn site")
+	save.fail_write = false
+	var migrated := save.ensure_salt_field_state(mixed_candidates)
+	check(migrated.boss_pile == 1 and migrated.dug == [12,1,4] and migrated.fed_worms == [12],
+		"Already discovered legacy boss moves to a dug ordinary heap and keeps feeding progress")
+	check(save.ensure_salt_field_state(mixed_candidates) == migrated, "Migrated site stays fixed on reload")
+	save._config.set_value("map_states","chapter_2_salt_field",{"boss_pile":16,"dug":[1]})
+	var exhausted := save.ensure_salt_field_state(mixed_candidates)
+	check(exhausted.boss_pile == 1 and exhausted.dug.is_empty(),
+		"An undiscovered legacy boss stays hidden if all eligible sites were dug")
 	save._config.set_value("map_states","chapter_2_salt_field",{"boss_pile":2,"dug":[4,27]})
 	var field:=load("res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn").instantiate() as Chapter2SaltField
 	root.add_child(field); current_scene=field; field.set_physics_process(false)
-	check(field.piles.size()==56 and field.state.boss_pile==2 and field.piles[4].excavated and field.piles[27].excavated and not field.piles[28].excavated,"Legacy 28-heap saves retain the hidden core and dug IDs while adding new heaps")
+	check(field.piles.size()==56 and field.state.boss_pile in field.CANDIDATES \
+		and field.state.boss_pile not in SaveProgressService.SALT_WORM_PUZZLE_PILES and not field.boss_found \
+		and field.state.dug == [4,27] and field.piles[4].excavated and field.piles[27].excavated \
+		and not field.piles[28].excavated, "Legacy 28-heap save relocates the hidden boss and preserves dug IDs")
 	check(field.baked_boundary!=null,"Wider authored reefs use the updated baked boundary")
 	var all_reachable:=true
 	var nonoverlap:=true

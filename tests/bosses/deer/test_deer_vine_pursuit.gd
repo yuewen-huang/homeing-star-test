@@ -296,7 +296,7 @@ func run() -> void:
 	check(deer.combat_stats.health==hp-45 and not deer.poise_broken and deer.pressure.active, "Skill damage stays full without deleting the exchange or causing a long break")
 	for i in DeerDuelBoss.COUNTER_PARRIES: deer.on_attack_parried(CombatAttackData.new(StringName("bead_%d" % i),deer,0,0,0,0),deer.position)
 	check(deer.counter_ready and not deer.poise_broken and deer.opening==0, "Six successful parries store one reward without stunning the boss")
-	check(not deer.can_offer_break_empower(), "Stored throw requires a genuine finish window")
+	check(deer.can_offer_break_empower(), "Stored throw is ready during a normal exchange")
 	deer.pressure.active=false
 	deer.move=&"pursuit_rest"
 	deer._recover(.85)

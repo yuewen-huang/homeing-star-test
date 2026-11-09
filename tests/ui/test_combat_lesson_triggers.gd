@@ -47,15 +47,18 @@ func run() -> void:
 	await capture("back_alley_frog_lesson")
 	encounter.lesson_player.close_lesson(true)
 	check(not save.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_NORMAL_USED), "Video does not pretend a heavy attack landed")
-	encounter._on_frog_special_attack_received(false, false)
-	encounter.frog_boss.combat_stats.apply_poise_damage(encounter.frog_boss.combat_stats.max_poise)
-	encounter._refresh_special_tutorial_hint()
+	var finisher := LanAttackEffectCatalog.attack_3x(LanPlayer.ATTACK_3_FPS).attack_hit_context
+	encounter.frog_boss.receive_attack_hit(finisher, alley.player.global_position)
+	check(not save.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_TUTORIAL_COMPLETE),
+		"J finisher cannot complete the sword-wave lesson")
+	var wave := SkillHitContext.new(&"sword_wave_ground_heavy", CombatTuning.LAN_HEAVY_SWORD_WAVE_DAMAGE)
+	encounter.frog_boss.receive_skill_hit(wave, alley.player.global_position)
 	await process_frame
 	encounter._process(0)
-	check(paused and encounter.lesson_player.lesson_id == &"poise_throw", "Actual broken poise introduces throw")
-	encounter.lesson_player.close_lesson(true)
-	check(encounter.key_hint == null, "Lan's existing E keycap owns the throw prompt")
-	check(not save.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_TUTORIAL_COMPLETE), "Viewing the throw does not finish the skill challenge")
+	check(save.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_TUTORIAL_COMPLETE),
+		"Actual sword-wave settlement completes the skill challenge")
+	check(not paused and not encounter.frog_boss.tutorial_protected and encounter.key_hint == null,
+		"Completing the lesson clears the hint and releases the frog's protection")
 	current_scene = null
 	alley.free()
 	var room := load("res://scenes/levels/tutorial/tutorial_battle_room.tscn").instantiate() as Node2D

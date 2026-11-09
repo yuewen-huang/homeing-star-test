@@ -58,6 +58,17 @@ func run() -> void:
 	var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
 	assist.player_invincible = false
 	enter()
+	var fed_ids := SaveProgressService.SALT_WORM_PUZZLE_PILES
+	var distinct_piles := true
+	for pile in field.piles:
+		var expected_tint := SaltFieldPile.PUZZLE_TINT if pile.pile_id in fed_ids else Color.WHITE
+		distinct_piles = distinct_piles and pile.sprite.self_modulate == expected_tint
+		distinct_piles = distinct_piles and field.worms.worms[pile.pile_id].find_children("*", "Label", true, false).is_empty()
+	check(distinct_piles, "Only the three puzzle heaps are tinted and no worm has a ground label")
+	field.feet = PROJECTION.unproject(field.puzzle_stele.position) + Vector2(0,65)
+	field.exploration_camera_position = field.puzzle_stele.position
+	field._sync_view(0)
+	await capture("salt_puzzle_three_lavender_heaps")
 	var animal_count: int = field.ambient.get_node("Wildlife").get_child_count()
 	check(animal_count==16 and field.ambient.puzzle_slots.size()==3,"Sixteen animals include three nearby puzzle supplies")
 	for animal in field.ambient.puzzle_slots:
@@ -119,9 +130,11 @@ func run() -> void:
 	field.feet = Vector2(3500,1700)
 	var animals: Array = field.ambient.get_node("Wildlife").get_children()
 	var snack = animals[1]
-	var fed_ids := SaveProgressService.SALT_WORM_PUZZLE_PILES
 	for id in fed_ids:
-		dig(id)
+		field.target = id
+		field._finish_dig()
+		check(field.piles[id].excavated and not field.boss_found and not field.crab_encounter.active,
+			"Excavating puzzle heap %d opens the worm pit without spawning the crab" % id)
 		var puzzle_worm = field.worms.worms[id]
 		check(puzzle_worm.puzzle_worm,"Each of three fixed pits is a puzzle worm")
 		reset_worm(puzzle_worm)

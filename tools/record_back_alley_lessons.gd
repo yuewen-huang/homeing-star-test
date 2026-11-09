@@ -90,13 +90,13 @@ func run() -> void:
 				lan.start_dodge_attack_3x(1)
 			&"charged_attack":
 				Input.action_press(&"special_attack")
-				lan.start_special_attack(1)
+				lan.start_sword_wave(1, true)
 				await wait_seconds(1)
 				Input.action_release(&"special_attack")
 			&"poise_throw":
 				frog.combat_stats.apply_poise_damage(frog.combat_stats.max_poise)
 				await wait_seconds(0.4)
-				lan.perform_special_attack(1, 0, frog)
+				lan.cast_shadow_claw_storm(frog)
 		await wait_seconds(2)
 		var hit: bool = frog.combat_stats.health < before_health if frog != null else encounter.live_enemies.size() < [1, 3, 1, 6][wave - 1]
 		for target in initial_targets:

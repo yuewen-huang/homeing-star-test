@@ -16,7 +16,9 @@ func run() -> void:
 	current_scene=room
 	await process_frame
 	room.select_combo(2)
+	check(room.player.heal.charges==0,"Manual preview granted a heal")
 	room.set_combat_simulation(true)
+	check(room.player.heal.charges==2,"Practice opening did not grant two heals")
 	root.get_node("BattleAssist").set_difficulty(1)
 	var actor: SandstormFighter=room.adapter.boss
 	var thrown:=false
@@ -69,7 +71,30 @@ func run() -> void:
 	for action in ["parry","interact","ui_left","ui_right"]: Input.action_release(action)
 	check(thrown and max_credit==6,"Could not earn/execute six-parry reward through actual input")
 	check(minimum==100,"Parry fixture took damage")
-	room.reset_room()
+	check(room.player.heal.charges==3,"Six real K parries did not refill heal independently of E")
+	room.player.combat_stats.apply_health_damage(25)
+	var key := InputEventKey.new()
+	key.keycode = KEY_R
+	key.physical_keycode = KEY_R
+	key.pressed = true
+	Input.parse_input_event(key)
+	await physics_frame
+	await physics_frame
+	key = key.duplicate() as InputEventKey
+	key.pressed = false
+	Input.parse_input_event(key)
+	await physics_frame
+	check(room.adapter.boss==actor and room.player.heal.charges==2,"R should heal during combat without restarting")
+	key = key.duplicate() as InputEventKey
+	key.shift_pressed = true
+	key.pressed = true
+	Input.parse_input_event(key)
+	Input.flush_buffered_events()
+	for i in 3: await physics_frame
+	key = key.duplicate() as InputEventKey
+	key.pressed = false
+	Input.parse_input_event(key)
+	check(not is_instance_valid(actor) and room.player.heal.charges==2,"Shift+R should restart with two fresh charges")
 	check(room.adapter.boss.defense_credit==0,"Development retry retained old credit")
 	print("SIX PARRY REAL INPUT: ",failures," failures; presses=",pressed.size()," max_credit=",max_credit," hp=",minimum," thrown=",thrown)
 	FileAccess.open(out.path_join("counter_input.json"),FileAccess.WRITE).store_string(JSON.stringify({"failures":failures,"presses":pressed.size(),"max_credit":max_credit,"minimum_health":minimum,"thrown":thrown},"\t"))

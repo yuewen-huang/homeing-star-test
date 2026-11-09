@@ -60,10 +60,17 @@ func run() -> void:
 		"Shared cooldown is visible and advancing")
 	before = field.feet; key(KEY_U); await frames(5)
 	check(field.feet == before and field.pawn.can_move(), "Cooldown rejects repeated U without locking movement")
+	lan.combat_stats.consume_stamina(lan.combat_stats.stamina)
+	key(KEY_I)
+	check(field.pawn.can_move(), "Planar I with no stamina leaves movement available")
+	lan.combat_stats.restore_stamina(lan.combat_stats.max_stamina)
+	var stamina_samples: Array[float] = [lan.combat_stats.stamina]
+	var record_stamina := func(current: float, _maximum: float) -> void: stamina_samples.append(current)
+	lan.combat_stats.stamina_changed.connect(record_stamina)
 	Input.action_press(&"special_attack")
 	key(KEY_I)
 	await frames(50)
-	check(lan.sword_wave_charging and lan.sword_wave_charge_elapsed > 0.7,
+	check(lan.sword_wave_charging and is_equal_approx(lan.sword_wave_charge_elapsed, 0.9 / 1.3),
 		"Holding I accumulates real charge and holds the charge pose")
 	await capture("salt_heavy_charge")
 	before = field.feet
@@ -74,6 +81,16 @@ func run() -> void:
 	await frames(100)
 	check(field.feet == before, "Sword wave leaves planar feet in place")
 	check(field.pawn.can_move() and lan.position == Vector2.ZERO, "Sword wave finishes without a stuck state or child drift")
+	lan.combat_stats.stamina_changed.disconnect(record_stamina)
+	var shot_costs: Array[float] = []
+	for index in range(1, stamina_samples.size()):
+		var decrease := stamina_samples[index - 1] - stamina_samples[index]
+		if decrease > 0.0:
+			shot_costs.append(decrease)
+	check(shot_costs.size() == 3 and shot_costs.all(func(cost: float) -> bool: return is_equal_approx(cost, 20.0)),
+		"Planar I spends 20 stamina per emission while stamina recovers")
+	check(lan.combat_stats.stamina < stamina_samples[0] - 30.0,
+		"Three emissions leave %.1f stamina out of %.1f after recovery" % [lan.combat_stats.stamina, stamina_samples[0]])
 	key(KEY_O)
 	check(lan.ultimate_armed and not field.pawn.can_move(), "First O arms the production ultimate and locks cast movement")
 	key(KEY_O)

@@ -5,7 +5,7 @@ import subprocess
 
 FF = Path('D:/MiniMax/com.minimax.hub/MiniMax Design/current/resources/ffmpeg/ffmpeg.exe')
 FP = FF.with_name('ffprobe.exe')
-BGM = Path('D:/HomingStar/homeing-star-game/assets/levels/town/audio/town_disorder_night.mp3')
+BGM = Path('D:/HomingStar/homeing-star-game/assets/levels/town/audio/长街灯灭时.mp3')
 
 def duration(path):
     return float(json.loads(subprocess.check_output([

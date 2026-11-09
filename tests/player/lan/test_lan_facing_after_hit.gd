@@ -19,7 +19,6 @@ func run() -> void:
 		player.start_normal_hit(hit)
 		check(player.facing_direction==direction,"Same-X hit preserves the player's previous facing")
 		player.finish_hit_reaction()
-		player.sword_wave_cooldown_remaining=0
 		player.start_sword_wave(0, true)
 		player.update_sword_wave_charge(.05)
 		player.animated_sprite.frame = 7
@@ -27,8 +26,8 @@ func run() -> void:
 		player.reset_after_map_fall(Vector2(500,555))
 		player.facing_direction=0
 		player.animated_sprite.flip_h=direction>0
-		player.sword_wave_cooldown_remaining=0
-		player.perform_special_attack(0,.5)
+		player.start_attack_3x()
+		player._timeline_attack_3_effect_frame(7)
 		check(player.facing_direction==direction and player.timeline_attack_effect.facing_direction==direction,"Attack entry repairs an old zero-facing state from the retained visual side")
 	expect_save_untouched()
 	finish("LAN FACING AFTER HIT")

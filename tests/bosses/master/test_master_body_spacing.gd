@@ -25,7 +25,7 @@ func run() -> void:
 		check(spacing.limit_motion(player, Vector2(-direction * 500, 0)).x == 0, "Ordinary attack advance cannot walk through the torso")
 		player.attack_state = LanPlayer.AttackState.NONE
 		check(is_equal_approx(spacing.limit_motion(player, Vector2(direction * 10, 0)).x, direction * 10), "Walking away is never sticky")
-		for skill in [LanPlayer.AttackState.DODGE_ATTACK_1X, LanPlayer.AttackState.DODGE_ATTACK_3X, LanPlayer.AttackState.INSTANT_DASH, LanPlayer.AttackState.AERIAL_DASH, LanPlayer.AttackState.SPECIAL_ATTACK]:
+		for skill in [LanPlayer.AttackState.DODGE_ATTACK_1X, LanPlayer.AttackState.DODGE_ATTACK_3X, LanPlayer.AttackState.INSTANT_DASH, LanPlayer.AttackState.AERIAL_DASH]:
 			player.attack_state = skill
 			check(spacing.limit_motion(player, Vector2(-direction * 500, 0)).x == -direction * 500, "Existing crossing skill retains movement")
 		player.attack_state = LanPlayer.AttackState.NONE

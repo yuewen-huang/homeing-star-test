@@ -147,7 +147,7 @@ func run() -> void:
 	check(middle.has_poise_bar() and middle.is_poise_broken() and middle.combat_stats.health == 16 and cancelled.cancelled and cancelled.active_rects().is_empty(), "shared normal attacks break poise and immediately cancel pending spikes")
 	player.reset_after_map_fall(middle.position + Vector2(-40, 0))
 	player.apply_attack_facing(1)
-	player.perform_special_attack(1, 0.0, player.find_throw_target())
+	player.cast_shadow_claw_storm(player.find_throw_target())
 	var storm := middle.get_node_or_null("LanShadowClawStorm")
 	check(storm != null and storm.hit.max_form, "E launches enhanced claw storm against the broken treant")
 	if storm != null:

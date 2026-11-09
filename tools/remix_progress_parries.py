@@ -7,7 +7,7 @@ O=B/'progress_share_xiaoxiao';W=O/'parry_mix';W.mkdir(exist_ok=True)
 FF=Path('D:/MiniMax/com.minimax.hub/MiniMax Design/current/resources/ffmpeg/ffmpeg.exe');FP=FF.with_name('ffprobe.exe')
 OLD=O/'归航星_开发进度分享_晓晓版.mp4'
 OUT=O/'归航星_开发进度分享_晓晓_震刀强化版.mp4'
-MUSIC=Path('D:/HomingStar/homeing-star-game/assets/levels/town/audio/town_disorder_night.mp3')
+MUSIC=Path('D:/HomingStar/homeing-star-game/assets/levels/town/audio/长街灯灭时.mp3')
 SR=48000
 duration=float(subprocess.check_output([str(FP),'-v','quiet','-show_entries','format=duration','-of','csv=p=0',str(OLD)]))
 N=round(duration*SR)

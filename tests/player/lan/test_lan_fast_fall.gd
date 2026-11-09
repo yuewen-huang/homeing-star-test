@@ -22,7 +22,14 @@ class Receiver extends DamageReceiver2D:
 func step(n: int) -> void:
 	for i in n: await physics_frame
 
+func set_down(pressed: bool) -> void:
+	var key := InputEventKey.new()
+	key.physical_keycode = KEY_S
+	key.pressed = pressed
+	Input.parse_input_event(key)
+
 func release() -> void:
+	set_down(false)
 	var key := InputEventKey.new()
 	key.physical_keycode = KEY_J
 	key.pressed = false
@@ -42,13 +49,9 @@ func reset(height: float) -> void:
 		target.poise=0
 
 func trigger() -> void:
-	Input.action_press(&"ui_down")
-	var key := InputEventKey.new()
-	key.physical_keycode = KEY_J
-	key.pressed = true
-	Input.parse_input_event(key)
+	set_down(true)
 	await step(2)
-	release()
+	set_down(false)
 
 func land() -> void:
 	for i in 160:
@@ -122,7 +125,7 @@ func run() -> void:
 	for height in [80.0,100.0,220.0,500.0]:
 		await reset(height)
 		await trigger()
-		check(p.attack_state==p.AttackState.FAST_FALL and p.velocity.y>0,"Down plus J starts downslash at height %.0f" % height)
+		check(p.attack_state==p.AttackState.FAST_FALL and p.velocity.y>0,"S alone starts downslash at height %.0f" % height)
 		check(not p.is_invulnerable() and not p.can_start_double_jump() and not p.can_start_aerial_dash(),"Fast fall grants no invulnerability or aerial cancel")
 		check(near.hits==0,"No midair hit before contact")
 		await capture("fall_%.0f" % height)
@@ -212,6 +215,10 @@ func run() -> void:
 	check(entered and p.attack_state==p.AttackState.NONE,"Fast fall into water becomes normal swimming")
 	check(near.hits==0 and get_nodes_in_group(&"lan_fast_fall_fx").is_empty(),"Water entry makes no ground damage, wave or smoke")
 	check(not p.fast_fall.can_start(p),"Swimming cannot trigger ground fast fall")
+	set_down(true)
+	await step(2)
+	check(p.air_state==p.AirState.SWIMMING and p.attack_state==p.AttackState.NONE,"S keeps swimming in control")
+	set_down(false)
 	water.queue_free()
 	await step(3)
 	await reset(250)
@@ -219,19 +226,34 @@ func run() -> void:
 	check(not p.fast_fall.can_start(p),"Hit reaction cannot be cancelled into fast fall")
 	p.hit_reaction_active=false
 	await reset(250)
-	Input.action_press(&"ui_down")
+	await land()
+	set_down(true)
+	await step(2)
+	check(p.air_state==p.AirState.GROUNDED and p.attack_state!=p.AttackState.FAST_FALL,"Ground S does not start a downslash")
+	await reset(250)
+	await land()
 	Input.action_press(&"jump")
 	await step(2)
-	check(p.attack_state != p.AttackState.FAST_FALL, "Old down plus jump no longer starts downslash")
+	var was_rising := p.air_state==p.AirState.RISING and p.velocity.y<0
+	Input.action_release(&"jump")
+	await trigger()
+	check(was_rising and p.attack_state==p.AttackState.FAST_FALL and p.velocity.y>0,"S immediately reverses an active jump into a downslash")
+	await reset(250)
+	Input.action_press(&"ui_down")
+	await step(2)
+	check(p.attack_state==p.AttackState.FAST_FALL,"Down action also starts downslash without an attack")
 	await reset(250)
 	var foothold := receiver(Vector2(600,440), true)
-	await trigger()
+	set_down(true)
 	for i in 20:
 		await step(1)
 		if foothold.hits > 0: break
 	check(foothold.hits == 1 and p.velocity.y < 0, "Swept downslash hits enemy once and bounces before landing")
 	check(p.can_start_double_jump() and not p.has_buffered_attack(), "Bounce restores double jump and consumes attack input")
 	check(not p.is_invulnerable(), "Bounce grants no invulnerability")
+	await step(4)
+	check(p.attack_state==p.AttackState.NONE and foothold.hits==1,"Holding S after a bounce does not trigger another downslash")
+	set_down(false)
 	await capture("downslash_bounce")
 	# Spend the bounce refill, then chain a wall jump without landing.
 	p.start_double_jump()

@@ -66,40 +66,64 @@ func run() -> void:
 	await create_timer(3.0).timeout
 	check(current_scene.scene_file_path == HOME_SCENE, "E at the first door enters Lan's home")
 	var home: Node = current_scene
-	home.player.set_physics_process(false)
-	check(home.player.position.y == home.FLOOR_Y, "Lan stands on the home's walkable floor")
+	check(is_equal_approx(home.player.position.y, home.FLOOR_Y), "Lan stands on the resized room's floor")
+	var room_art := home.get_node("RoomArt") as Sprite2D
+	check(room_art.texture.get_width() * room_art.scale.x < 640.0 and home.player.scale == Vector2.ONE,
+		"The room is smaller in world units and uses Lan's regular size")
+	Input.action_press(&"ui_right")
+	for i in 180:
+		if home.player.position.x >= 375.0 * home.ROOM_SCALE:
+			break
+		await physics_frame
+	Input.action_release(&"ui_right")
+	await create_timer(2.4).timeout
 	await capture("home_room")
+	Input.action_press(&"ui_right")
+	for i in 180:
+		if home.player.position.x >= home.BOOK_X - 8.0:
+			break
+		await physics_frame
+	Input.action_release(&"ui_right")
+	check(absf(home.player.position.x - home.BOOK_X) < 16.0 and is_equal_approx(home.player.position.y, home.FLOOR_Y),
+		"Actual movement reaches the relocated storybook on the resized floor")
 	before = save._config.encode_to_text()
-	home.open_storybook()
+	home._unhandled_input(key(KEY_E))
 	var book: Node = home.modal
-	check(paused and home.player.input_frozen and book.content_buttons.size() == Collection.COMICS.size(), "book opens its full contents and freezes gameplay")
-	await capture("home_book_contents")
-	book.select_comic(0)
-	check(book.panels.size() == Collection.comic_panels(0).size() and book.pages[0].texture_normal != null, "book uses the complete original comic rather than revisit playback")
+	check(paused and home.player.input_frozen and book.chapter_list.item_count == Collection.COMICS.size(), "E opens the window with its full comic list")
+	check(book.panels.size() == Collection.comic_panels(0).size() and book.page.texture_normal == book.panels[0], "Reader opens the first full comic panel")
 	await capture("home_book_reading")
-	book.turn_page(1)
-	await create_timer(0.5, true, false, true).timeout
-	check(book.page_index == 2 and not book.turning, "animated forward page turn completes while the world is paused")
-	book.turn_page(-1)
-	await create_timer(0.5, true, false, true).timeout
-	check(book.page_index == 0, "book supports reading backwards")
-	book.enlarge_page(0)
-	check(is_instance_valid(book.zoom), "a comic page can be enlarged")
+	book._input(key(KEY_RIGHT))
+	check(book.page_index == 1 and book.page.texture_normal == book.panels[1], "Right switches to the very next panel immediately")
+	book._input(key(KEY_LEFT))
+	book._input(key(KEY_LEFT))
+	check(book.page_index == 0, "Left returns to the first panel and clamps at its boundary")
+	book.page.pressed.emit()
+	await wait_frames()
+	check(book.zoomed and not book.chapter_list.visible and book._window.size.is_equal_approx(book.ZOOM_SIZE),
+		"Clicking the panel opens the larger reader window")
 	await capture("home_book_enlarged")
 	book._input(key(KEY_ESCAPE))
-	check(book.zoom == null and home.modal == book, "Esc leaves enlargement before closing the book")
-	book.show_contents()
-	book.select_comic(Collection.COMICS.size() - 1)
-	check(book.comic_index == Collection.COMICS.size() - 1, "later comics are freely viewable")
-	book.close()
+	check(not book.zoomed and book.chapter_list.visible and home.modal == book, "Esc leaves enlargement before closing the window")
+	book.chapter_list.item_selected.emit(Collection.COMICS.size() - 1)
+	check(book.comic_index == Collection.COMICS.size() - 1 and book.page_index == 0, "The last comic is accessible and opens on its first panel")
+	book._input(key(KEY_ESCAPE))
 	await wait_frames()
-	check(not paused and not home.player.input_frozen and home.modal == null, "closing book restores the original pause and input state")
+	check(not paused and not home.player.input_frozen and home.modal == null, "Closing the window restores the original pause and input state")
 	check(save._config.encode_to_text() == before, "replay never marks comics watched or grants progress/rewards")
 	var transition := root.get_node("SceneTransition") as SceneTransitionService
 	var original_music := transition.music_player.stream
 	var original_path := transition.current_music_path
-	home.open_music()
+	var cabinet_click := InputEventMouseButton.new()
+	cabinet_click.position = home.get_global_transform_with_canvas() * Vector2(home.MUSIC_X, 330.0 * home.ROOM_SCALE)
+	cabinet_click.button_index = MOUSE_BUTTON_LEFT
+	cabinet_click.pressed = true
+	root.push_input(cabinet_click)
+	cabinet_click = cabinet_click.duplicate()
+	cabinet_click.pressed = false
+	root.push_input(cabinet_click)
 	var music_view: Node = home.modal
+	check(is_instance_valid(music_view) and music_view.has_method("choose_track"),
+		"Clicking the scaled record cabinet still opens the music window")
 	music_view.choose_track(0)
 	check(home.music.playing and transition.music_player.stream_paused, "home playback pauses global BGM without layering two tracks")
 	music_view.step_track(1)

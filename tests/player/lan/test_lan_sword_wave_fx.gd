@@ -1,7 +1,7 @@
 extends "../../support/harness.gd"
 ## Effects of Lan's sword wave (I, LanSwordWaveFX / LanSwordWaveProjectile, 2026-10-19): gather on
 ## frames 1–3, smears on the three cuts, three mini ground waves (the user's pixel art) that
-## really hit a training dummy once each, mana per hit, facing both ways, cleanup, every smear baked,
+## really hit a training dummy once each, stamina per emission, facing both ways, cleanup, every smear baked,
 ## progress untouched. Optional user args: an output folder, then "frames" to save every
 ## frame of the move against the dummy.
 
@@ -24,7 +24,8 @@ func play(facing: float, capture := "") -> Dictionary:
 	hits.clear()
 	player.global_position = Vector2(0, 555)
 	dummy.global_position = Vector2(facing * 260.0, 555)
-	player.combat_stats.mana = 0.0
+	player.combat_stats.restore_stamina(player.combat_stats.max_stamina)
+	player.combat_stats.spend_mana(player.combat_stats.mana)
 	await process_frame
 	player.start_sword_wave(facing)
 	var fx := player.sword_wave_fx
@@ -45,8 +46,10 @@ func play(facing: float, capture := "") -> Dictionary:
 				(seen.wave as Array).append(projectile)
 				(seen.wave_y as Array).append(projectile.global_position.y)
 				var art := projectile.visual
-				check(signf(projectile.velocity.x) == facing and art.texture == LanSwordWaveProjectile.TEXTURE and art.flip_h == (facing > 0.0),
-					"Facing %d: the wave runs forward with the user's art, mirrored when running right" % facing)
+				check(is_equal_approx(projectile.velocity.x, facing * 1105.0) and art.texture == LanSwordWaveProjectile.TEXTURE and art.flip_h == (facing > 0.0),
+					"Facing %d: the wave flies 70 percent faster than the original with the matching art direction" % facing)
+				check(projectile.max_distance == 650.0 and is_equal_approx(projectile.life * absf(projectile.velocity.x), 650.0) and projectile.sheet_fps == 17.0,
+					"Flight keeps its original range and the wave animation matches its pace")
 		if not capture.is_empty(): await snapshot(capture.path_join("frame_%03d.png" % f))
 		f += 1
 	return seen
@@ -74,7 +77,6 @@ func run() -> void:
 	await process_frame
 
 	for facing: float in [1.0, -1.0]:
-		player.sword_wave_cooldown_remaining = 0.0
 		var folder := ""
 		if capture and facing > 0.0:
 			folder = output.path_join("sword_wave")
@@ -89,7 +91,8 @@ func run() -> void:
 		var light := roundi(LanSwordWaveFX.WAVE_DAMAGE * 0.65)
 		var expected: Array[int] = [light, light, roundi(LanSwordWaveFX.HEAVY_WAVE_DAMAGE * 0.65)]
 		check(hits == expected, "Facing %d: each projectile hits the dummy once (%s)" % [facing, str(hits)])
-		check(is_equal_approx(player.combat_stats.mana, minf(3.0 * LanPlayer.MANA_GAIN_PER_SKILL_HIT, player.combat_stats.max_mana)), "Facing %d: each hit gives Lan mana" % facing)
+		check(is_equal_approx(player.combat_stats.stamina, player.combat_stats.max_stamina - 60.0), "Facing %d: three shots spend 60 stamina" % facing)
+		check(is_equal_approx(player.combat_stats.mana, 3.0 * LanPlayer.MANA_GAIN_PER_SKILL_HIT), "Facing %d: sword-wave hits still award mana" % facing)
 		check(player.sword_wave_fx.projectiles.is_empty() and room.find_children("LanGround*", "", false, false).is_empty(), "Facing %d: projectiles free themselves when spent" % facing)
 		for k in 30: await process_frame
 		check(player.sword_wave_fx.pieces.is_empty(), "Facing %d: the smears are gone after fading" % facing)

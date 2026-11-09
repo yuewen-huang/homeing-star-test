@@ -67,7 +67,7 @@ func run() -> void:
 		elif stage == "phase_2_poise_throw":
 			master.combat_stats.apply_poise_damage(master.combat_stats.max_poise)
 			await _wait(0.4)
-			lan.perform_special_attack(1, 0, master)
+			lan.cast_shadow_claw_storm(master)
 			await _wait(1.5)
 		else:
 			master._face_phase_2_target(lan.position.x - master.position.x)

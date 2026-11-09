@@ -31,6 +31,7 @@ func run() -> void:
 		if boss is SandstormFighter:
 			boss.combat_enabled=true
 			boss.play_source("待机",true)
+			boss._update_hurtbox()
 		else: boss.set("manual_control",false)
 		if boss is RegionalCoreBoss:
 			boss.begin_encounter()

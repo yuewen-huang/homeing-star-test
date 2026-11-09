@@ -125,16 +125,25 @@ func run_test() -> void:
 	var battle_room = (load("res://scenes/levels/tutorial/tutorial_battle_room.tscn") as PackedScene).instantiate()
 	battle_room.get_node("MasterBoss").manual_control = true
 	root.add_child(battle_room)
+	current_scene = battle_room
 	await process_frame
 	battle_room.process_mode = Node.PROCESS_MODE_DISABLED
-	var battle_player = battle_room.get_node("Lan")
-	var battle_boss = battle_room.get_node("MasterBoss")
+	var battle_player := battle_room.get_node("Lan") as LanPlayer
+	var battle_boss := battle_room.get_node("MasterBoss") as MasterBoss
 	# Keep this as a geometry-only check. Headless tests have no active gameplay
 	# scene for CombatFeedback, so do not dispatch damage while tracing slashes.
 	for room_hurtbox in get_nodes_in_group(&"hurtbox"):
 		if room_hurtbox is Node and battle_room.is_ancestor_of(room_hurtbox):
 			room_hurtbox.remove_from_group(&"hurtbox")
+	var red := CombatAttackData.new(&"master_red", battle_boss, 18, 0, 0.0, 0.0,
+		CombatAttackData.DangerType.COUNTERABLE_DANGER)
+	battle_player.start_parry()
+	var result := battle_player.receive_combat_hit(red)
+	battle_boss.attack_hitbox._complete_hit(battle_player, battle_player.global_position, red, result)
+	check(battle_boss.red_parry_hold, "Master waits for the red-parry counter")
 	battle_player.start_ultimate_combo()
+	check(battle_player.ultimate_active and not battle_boss.red_parry_hold,
+		"Ultimate releases the master when it replaces the red-parry counter")
 	for _index in range(1, 16):
 		battle_player.update_ultimate_combo(1.0)
 	var boss_hurtbox := battle_boss.get_node("Hurtbox") as Area2D

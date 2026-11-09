@@ -184,7 +184,7 @@ func test_encounter() -> void:
 	frog.set_physics_process(false)
 	check(frog != null and not frog.manual_control and frog.tutorial_protected and encounter.current_wave == 5, "fifth wave spawns a real autonomous frog instead of training dummy")
 	check(room.player.world_max_x < 1800, "road remains blocked until frog defeat")
-	var normal := SkillHitContext.new(&"lan_special_attack", 18)
+	var normal := SkillHitContext.new(&"sword_wave_ground", CombatTuning.LAN_SWORD_WAVE_DAMAGE)
 	# Before learning I, ordinary damage preserves the last HP; no break is needed.
 	for hit in 100: frog.receive_hit(1, Vector2.ZERO)
 	check(frog.combat_stats.health == 1 and not frog.poise_broken, "Tutorial death protection does not create a break state")
@@ -328,7 +328,7 @@ func test_native_alley() -> void:
 	frog._idle()
 	frog.combat_stats.restore_health()
 	frog.combat_stats.restore_poise()
-	frog.receive_skill_hit(SkillHitContext.new(&"lan_special_attack", CombatTuning.LAN_SPECIAL_DAMAGE), alley.player.global_position)
+	frog.receive_skill_hit(SkillHitContext.new(&"sword_wave_ground_heavy", CombatTuning.LAN_HEAVY_SWORD_WAVE_DAMAGE), alley.player.global_position)
 	check(progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_NORMAL_USED), "available I attack advances the beginner lesson")
 	var light := LanAttackEffectCatalog.attack_1x().attack_hit_context
 	var hits := 0

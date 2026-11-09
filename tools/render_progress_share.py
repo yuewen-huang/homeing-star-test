@@ -8,7 +8,7 @@ P=B/'short_video_release'; NEURAL='--xiaoxiao' in sys.argv
 O=B/('progress_share_xiaoxiao' if NEURAL else 'progress_share_release');O.mkdir(exist_ok=True)
 RAW=Path('D:/HomingStar/homeing-star-test/artifacts/录屏/movie3.avi')
 FF=Path('D:/MiniMax/com.minimax.hub/MiniMax Design/current/resources/ffmpeg/ffmpeg.exe');FP=FF.with_name('ffprobe.exe')
-MUSIC=Path('D:/HomingStar/homeing-star-game/assets/levels/town/audio/town_disorder_night.mp3')
+MUSIC=Path('D:/HomingStar/homeing-star-game/assets/levels/town/audio/长街灯灭时.mp3')
 FONT='C:/Windows/Fonts/msyhbd.ttc'; REG='C:/Windows/Fonts/msyh.ttc'
 CUES=json.loads((O/'narration_timeline.json').read_text(encoding='utf8'))
 END=max(83.2,CUES[-1]['start']+CUES[-1]['duration']+1.5)

@@ -40,14 +40,15 @@ func run() -> void:
 	frog.set_physics_process(false)
 	frog.combat_stats.max_health = 1200
 	frog.combat_stats.restore_health()
-	frog._begin_break_window(6.0)
+	frog.set_counter_progress(frog.COUNTER_PARRIES)
 	await process_frame
 	player.get_node("SkillBar").hide()
 
-	check(player.find_throw_target() == frog, "E finds a broken target 400 px away")
-	frog.position.x = player.position.x + player.THROW_RANGE + 1.0
-	check(player.find_throw_target() == null, "Out-of-range target cannot offer E")
-	frog.position.x = 750.0
+	check(player.find_throw_target() == frog, "E finds a counter-ready boss 400 px away")
+	frog.position.x = player.position.x + player.THROW_RANGE + 100.0
+	player.apply_attack_facing(-1.0)
+	frog.start_action(&"tongue")
+	check(player.find_throw_target() == frog, "E finds an attacking boss beyond the old range and behind Lan")
 	var initial_health := frog.combat_stats.health
 	var cast_x := player.position.x
 	var cast_animation := player.animated_sprite.animation
@@ -62,16 +63,23 @@ func run() -> void:
 	check(player.attack_state == LanPlayer.AttackState.NONE and player.animated_sprite.animation == cast_animation,
 		"Cast leaves Lan's body animation and attack state alone")
 	check(not frog.can_offer_break_empower() and player.find_throw_target() == null,
-		"Cast consumes the existing break opportunity once")
+		"Cast consumes the existing counter opportunity once")
 	check(storm.rear.z_index < frog.z_index and storm.front.z_index > frog.z_index,
 		"Rear and front layers straddle the boss body")
 	check(frog.combat_stats.health == initial_health, "The opening swirl is harmless before contact")
+	check(frog.is_throw_controlled() and frog.action == &"hurt" and frog.attack_hitbox.attack == null,
+		"Cast immediately cancels the ordinary attack and holds the boss")
+	frog.set_physics_process(true)
 
 	var folder := OS.get_environment("HOMING_STAR_TEST_OUTPUT")
 	var capture := not folder.is_empty() and DisplayServer.get_name() != "headless"
 	Input.action_press(&"ui_left")
+	var held_at := frog.position
+	var stayed_held := true
 	for frame in 150:
 		await physics_frame
+		if is_instance_valid(storm) and not storm.is_queued_for_deletion():
+			stayed_held = stayed_held and frog.action_time == 0.0 and frog.position == held_at
 		if frame < 32:
 			player._physics_process(1.0 / 60.0)
 		elif frame == 32:
@@ -81,9 +89,11 @@ func run() -> void:
 			await RenderingServer.frame_post_draw
 			root.get_texture().get_image().save_png(folder.path_join("claw_%03d.png" % frame))
 	check(player.position.x < cast_x - 30.0, "Lan can walk away during the detached cast")
-	check(frog.combat_stats.health == initial_health - CombatTuning.damage_during_poise_break(player.SPECIAL_ATTACK_MAX_DAMAGE, true),
+	check(frog.combat_stats.health == initial_health - player.SPECIAL_ATTACK_MAX_DAMAGE,
 		"One authored contact settles the existing enhanced E damage")
 	check(not is_instance_valid(storm), "Both layers clean up after playback")
+	check(stayed_held and not frog.is_throw_controlled() and frog.action_time > 0.0,
+		"Boss stays held until the last frame and then resumes its action clock")
 	expect_save_untouched()
 	current_scene = null
 	room.free()

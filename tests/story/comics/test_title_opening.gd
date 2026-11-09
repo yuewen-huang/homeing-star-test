@@ -203,20 +203,18 @@ func run() -> void:
 	check(Collection.comic_panels(0).size() == 12 and save._config.encode_to_text() == story_before, "storybook extracts twelve panels without progression callbacks")
 	var book := Book.new()
 	root.add_child(book)
-	for button: Button in book.content_buttons:
-		check(button.position.x + button.size.x <= 1140 and button.position.y + button.size.y < 576, "storybook entry stays inside two-page contents: " + button.text)
-	check(book.content_buttons.size() == Collection.COMICS.size(), "all thirteen comics remain accessible")
+	check(book.chapter_list.item_count == Collection.COMICS.size(), "The window includes the complete comic directory")
+	for index in Collection.COMICS.size():
+		check(book.chapter_list.get_item_text(index) == Collection.COMICS[index][0], "Window lists " + Collection.COMICS[index][0])
 	# Hide title only for the independent gallery capture.
 	current_scene.hide()
 	await capture("11_storybook_contents")
 	book.select_comic(0)
 	await capture("12_storybook_opening")
-	for page in 5:
+	for page in 11:
 		book.turn_page(1)
-		if book.turning:
-			await book.turn_tween.finished
-	check(book.page_index == 10 and book.pages[0].texture_normal == Collection.comic_panels(0)[10]
-		and book.pages[1].texture_normal == Collection.comic_panels(0)[11], "storybook reaches final pair of twelve-panel opening")
+	check(book.page_index == 11 and book.page.texture_normal == Collection.comic_panels(0)[11],
+		"Reader reaches the final panel of the twelve-panel opening")
 	await capture("13_storybook_opening_last")
 	check(save._config.encode_to_text() == story_before, "opening replay never writes progress")
 	book.free()

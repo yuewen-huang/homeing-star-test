@@ -62,16 +62,28 @@ func make_scene() -> void:
 	check(mouth_at.x < -70 and mouth_at.y < -130 and mouth_at.y > -170, "resized art keeps the mouth on the dragon head")
 func charge_round() -> void:
 	side(MirrorLake.Side.YIN)
-	for i in 5: trial.receive_hit(1, player.global_position)
+	for i in 5:
+		trial.receive_hit(1, player.global_position)
+		check(trial.visual.charge == i + 1 and trial.visual.collecting, "each valid hit fills exactly one seal")
 	check(trial.state == MirrorLakeInkTrial.State.WINDUP, "five yin contacts arm exactly one stroke")
-func parry_round() -> void:
+	check(trial.visual.windup == 0.0 and not trial.visual.press_now, "full charge starts the mouth tell before any press cue")
+func parry_round(offset := -120.0) -> void:
 	side(MirrorLake.Side.YANG)
-	place(MirrorLakeInkTrial.STELE_X - 120)
-	trial.tick(MirrorLakeInkTrial.RELEASE_DELAY + 0.01)
+	place(MirrorLakeInkTrial.STELE_X + offset)
+	trial.tick(MirrorLakeInkTrial.RELEASE_DELAY - 0.06)
+	check(trial.visual.press_now == (offset < 0.0), "only the near shot asks for a parry before release")
+	trial.tick(0.07)
 	check(trial.hitbox.global_position.distance_to(trial.mouth.global_position) < 0.01, "ink originates at the measured Bixi mouth")
 	check(trial.stroke.kind == &"horizontal", "trial uses only the authored horizontal stroke")
 	check(trial.stroke_velocity.y > 0, "mouth shot aims down toward standing player's guard")
 	check(trial.hitbox.attack != null and trial.hitbox.attack.health_damage == 0, "released ink stroke deals zero damage")
+	check(trial.stroke.pigment.get_shader_parameter("progress") > 1.0 and not trial.visual.collecting,
+		"ink is already fully visible on the first collision frame")
+	for i in 45:
+		if trial.visual.press_now or trial.state != MirrorLakeInkTrial.State.FLIGHT: break
+		trial.tick(1.0 / 60)
+		await physics_frame
+	check(trial.visual.press_now and trial.state == MirrorLakeInkTrial.State.FLIGHT, "moving ink signals a reachable contact")
 	await process_frame
 	key(KEY_K, true)
 	player._physics_process(1.0 / 60)
@@ -104,11 +116,26 @@ func run() -> void:
 		check(effect.draw_duration > 0 and effect.picture.texture != null, "%s package can play authored timing" % kind)
 		effect.queue_free()
 	check(trial.state == MirrorLakeInkTrial.State.LOCKED, "trial initially locked")
+	check(not trial.visual.collecting and not trial.visual.press_now, "locked trial shows no combat cues")
+	var cue_ink := Rect2(0, 0, 70, 28)
+	var cue_body := Rect2(160, 4, 28, 58)
+	check(is_inf(MirrorLakeInkTrial._time_to_contact(cue_ink, Vector2.LEFT * 520, cue_body)),
+		"ink flying away cannot signal a press")
+	var raised_body := Rect2(cue_body.position - Vector2(0, 100), cue_body.size)
+	check(is_inf(MirrorLakeInkTrial._time_to_contact(cue_ink, Vector2.RIGHT * 520, raised_body)),
+		"ink flying past at the wrong height cannot signal a press")
 	place(MirrorLakeInkTrial.TURTLE_X - 100)
 	trial.tick(0.01)
-	check(trial.dialogue != null and trial.dialogue.opened and player.input_frozen, "first approach automatically opens dialogue and freezes player")
+	scene.story._process(0.01)
+	check(scene.story.dialogue == null and not player.input_frozen, "passing the turtle leaves Lan in control")
+	key(KEY_E, true)
+	key(KEY_E, false)
+	check(scene.story.choices != null, "nearby E opens the turtle's optional topics")
+	key(KEY_3, true)
+	key(KEY_3, false)
+	check(scene.story.dialogue != null and scene.story.dialogue.opened and player.input_frozen, "choosing ink trial opens its explanation")
 	check(not scene.request_switch(), "dialogue blocks map switch")
-	while trial.dialogue != null: trial.dialogue.advance()
+	while scene.story.dialogue != null: scene.story.dialogue.advance()
 	check(trial.state == MirrorLakeInkTrial.State.CHARGING and not player.input_frozen, "finishing intro unlocks trial")
 	check(memory.has_completed(trial.INTRO_FACT), "intro completion persisted independently")
 	check(trial.combat_stele.state == MinigameStele.SteleState.UNLOCKED, "opening ink trial unlocks that same combat stele")
@@ -123,6 +150,7 @@ func run() -> void:
 		player._physics_process(1.0 / 60)
 		await physics_frame
 	check(trial.charge >= 1, "real J sword collision charges the stele")
+	check(trial.visual.charge == trial.charge, "real J contact also fills the corresponding ink seal")
 	trial._reset_round()
 	charge_round()
 	trial.tick(trial.RELEASE_DELAY - 0.1)
@@ -130,12 +158,14 @@ func run() -> void:
 	trial.tick(0.2)
 	trial.tick(trial.FLIGHT_DURATION + 0.1)
 	check(trial.state == MirrorLakeInkTrial.State.CHARGING and trial.successes == 0, "miss resets charge without success")
+	check(trial.visual.charge == 0 and not trial.visual.press_now and not trial.stroke.visible,
+		"miss clears the seal row and the press cue")
 	charge_round()
 	await parry_round()
 	check(trial.successes == 1 and not memory.has_completed(trial.SOLVED_FACT), "one real parry does not complete trial")
 	charge_round()
 	memory.reject = true
-	await parry_round()
+	await parry_round(300.0)
 	check(trial.successes == 2 and trial.state == MirrorLakeInkTrial.State.SETTLING, "second parry waits for successful save")
 	memory.reject = false
 	memory.reject_stele = true
@@ -149,7 +179,7 @@ func run() -> void:
 	await process_frame
 	make_scene()
 	await process_frame
-	check(trial.state == MirrorLakeInkTrial.State.COMPLETE and trial.dialogue == null, "re-entry restores completed state without repeating intro")
+	check(trial.state == MirrorLakeInkTrial.State.COMPLETE and scene.story.dialogue == null, "re-entry restores completed state without repeating intro")
 	check(trial.combat_stele.state == MinigameStele.SteleState.COMPLETED, "re-entry restores combat-stele completion on the trial carrier")
 	scene.queue_free()
 	await process_frame

@@ -1,5 +1,5 @@
 extends SceneTree
-## 镜湖 BGM：进关播放 moonlight_on_the_ink（Music 总线、循环）/ 熊猫开战淡出 / 淡出后熊猫 BGM steel_at_the_jade_gate 循环。
+## 镜湖进关循环播放《墨中见月》，熊猫开战时淡出并切换到循环播放的《一子惊湖》。
 ## 用法：homeing-star-test/run-tests.ps1 -Test test_mirror_lake_bgm
 class MemoryProgress extends SaveProgressService:
 	func _ready() -> void:
@@ -18,8 +18,8 @@ func run() -> void:
 	memory.name = "SaveProgress"
 	root.add_child(memory)
 	var t := root.get_node("SceneTransition") as SceneTransitionService
-	check(MirrorLakeMusic.EXPLORE.resource_path == "res://assets/levels/mirror_lake/audio/moonlight_on_the_ink.mp3", "explore BGM path")
-	check(MirrorLakeMusic.PANDA_FIGHT.resource_path == "res://assets/levels/mirror_lake/audio/steel_at_the_jade_gate.mp3", "panda fight BGM path")
+	check(MirrorLakeMusic.EXPLORE.resource_path == "res://assets/levels/mirror_lake/audio/墨中见月.mp3", "explore BGM path")
+	check(MirrorLakeMusic.PANDA_FIGHT.resource_path == "res://assets/levels/mirror_lake/audio/一子惊湖.mp3", "panda fight BGM path")
 	var scene := load("res://scenes/levels/mirror_lake/mirror_lake.tscn").instantiate() as MirrorLake
 	root.add_child(scene)
 	current_scene = scene

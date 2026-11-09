@@ -30,8 +30,6 @@ func run() -> void:
 			failed = true
 	if CombatTuning.LAN_SWORD_WAVE_DAMAGE != 35 \
 		or CombatTuning.LAN_HEAVY_SWORD_WAVE_DAMAGE != 65 \
-		or CombatTuning.LAN_SPECIAL_DAMAGE != 45 \
-		or CombatTuning.LAN_SPECIAL_CHARGED_DAMAGE != 110 \
 		or CombatTuning.LAN_SPECIAL_MAX_DAMAGE != 200 \
 		or CombatTuning.DEER_VINE_ULTIMATE_DAMAGE != 200 \
 		or CombatTuning.LAN_ULTIMATE_HIT_DAMAGE * 16 \

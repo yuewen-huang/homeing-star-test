@@ -39,20 +39,20 @@ func run() -> void:
 
 ## Player's winning first moves: some black line captures a white group within `moves` stones, with the
 ## panda answering by its rule (or not answering when `responds` is false).
-func winning_firsts(board: GoEndgameBoard, moves: int, responds: bool) -> Array[Vector2i]:
+func winning_firsts(board: GoEndgameBoard, moves: int, responds: bool, require_move := false) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
 	for m in board.legal_moves(B):
-		if first_wins(board, m, moves, responds): out.append(m)
+		if first_wins(board, m, moves, responds, require_move): out.append(m)
 	return out
 
-func first_wins(board: GoEndgameBoard, m: Vector2i, moves: int, responds: bool) -> bool:
+func first_wins(board: GoEndgameBoard, m: Vector2i, moves: int, responds: bool, require_move := false) -> bool:
 	var result := board.would_play(B, m.x, m.y)
 	if int(result.captured_groups) > 0: return true
 	if moves <= 1: return false
 	var next: GoEndgameBoard = result.board
-	if responds: GoEndgameOpponent.play_reply(next)
+	if responds: GoEndgameOpponent.play_reply(next, require_move)
 	for n in next.legal_moves(B):
-		if first_wins(next, n, moves - 1, responds): return true
+		if first_wins(next, n, moves - 1, responds, require_move): return true
 	return false
 
 ## True when black still wins within `moves` stones whatever white does (any legal reply, or none) after m.
@@ -182,6 +182,8 @@ func test_puzzle_bank() -> void:
 		check(board.is_legal(B, solution.x, solution.y), "%s: the designed first move %s is legal" % [puzzle.id, GoEndgamePuzzles.point_label(solution)])
 		var wins := winning_firsts(board, int(puzzle.max_moves), bool(puzzle.panda_responds))
 		check(wins == [solution], "%s: brute force finds exactly one winning first move, the designed %s (found %s)" % [puzzle.id, GoEndgamePuzzles.point_label(solution), wins])
+		var arena_wins := winning_firsts(board, int(puzzle.max_moves), true, true)
+		check(arena_wins == [solution], "%s: visible white replies preserve the intended solution (%s)" % [puzzle.id, arena_wins])
 		if int(puzzle.max_moves) > 1:
 			check(winning_firsts(board, int(puzzle.max_moves) - 1, bool(puzzle.panda_responds)).is_empty(), "%s: one move fewer is not enough (the move budget is tight)" % puzzle.id)
 		var hint: Vector2i = puzzle.hint

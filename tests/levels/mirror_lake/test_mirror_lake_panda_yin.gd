@@ -28,6 +28,15 @@ func side(value: int) -> void:
 func enter_yin(n: int) -> void:
 	arena.round_index = n
 	arena._enter_yin()
+
+func prepare_gold() -> void:
+	enter_yin(0)
+	player.reset_after_map_fall(Vector2(PandaGoArena.PANDA_X - 320.0, MirrorLake.STAND_Y))
+	arena.skills.start(0)
+	arena.skill_started = true
+	for i in 4: arena.skills.strikes[i].state = 2
+	arena.skills.clock = float(arena.skills.strikes[4].t) - 0.12
+	arena.tick(0.02)
 func run() -> void:
 	var old := root.get_node_or_null("SaveProgress")
 	if old != null: old.name = "SaveProgressOld"
@@ -129,7 +138,7 @@ func run() -> void:
 		var nxt := INF
 		for s in arena.skills.strikes:
 			if s.state == 1: nxt = minf(nxt, float(s.t) - arena.skills.clock)
-		if player.parry_cue.source == arena.skills and player.parry_cue.time_to_contact <= ParryCueVisual.APPEAR_LEAD: cue = true
+		if player.parry_cue.source == arena.panda and player.parry_cue.time_to_contact <= ParryCueVisual.APPEAR_LEAD: cue = true
 		if parried.size() < want and nxt < 0.06 and player.defense_state == LanPlayer.DefenseState.NONE:
 			player.start_parry()
 		arena.tick(0.05)
@@ -182,5 +191,43 @@ func run() -> void:
 	check(absf(arena.ink_tone - 0.5) < 0.01, "switch tweens: half-way at 0.1 s")
 	arena.tick(0.11)
 	check(is_equal_approx(arena.ink_tone, 1.0) and is_equal_approx(float(mat.get_shader_parameter("tone")), 1.0), "player yin: ink white (tone 1) after 0.2 s")
+	side(MirrorLake.Side.YANG)
+	player.combat_stats.refill_health_on_depletion = false
+	player.combat_stats.restore_health()
+	prepare_gold()
+	var gold := CombatAttackData.DangerType.UNPARRYABLE_DANGER
+	check(arena.skills.strikes[4].danger == gold and arena._danger_flash.visible and arena._danger_flash.kind == &"gold",
+		"committed gold stroke shows the shared gold flash")
+	check(arena.panda.blocks_boss_throw(), "gold windup locks the shared throw without spending it")
+	player.start_parry()
+	var health := player.combat_stats.health
+	arena.tick(0.12)
+	check(player.combat_stats.health < health and arena.skills.parries == 0, "standing in gold with an active guard takes damage")
+	prepare_gold()
+	arena.panda.set_counter_progress(4)
+	player.combat_stats.health = 1
+	arena.tick(0.12)
+	await process_frame
+	check(not arena.active and player.combat_stats.health == player.combat_stats.max_health \
+		and player.position.x < PandaGoArena.TRIGGER_X and arena.panda.defense_credit == 0,
+		"lethal gold clears the fight and resets Lan and the seals outside the arena")
+	arena.start_encounter()
+	side(MirrorLake.Side.YIN)
+	arena.panda.receive_hit(PandaBoss.MAX_HEALTH, player.global_position)
+	check(arena.panda.combat_stats.health == PandaBoss.MAX_HEALTH, "unsolved Yang stance protects the real health pool")
+	arena._set_state(PandaGoArena.STATE_BROKEN)
+	arena.panda.receive_hit(PandaBoss.MAX_HEALTH, player.global_position)
+	await process_frame
+	check(arena.defeated and memory.has_completed(PandaGoArena.VICTORY_FACT) and not arena.panda.health_hud.visible,
+		"depletion during a real opening settles the encounter and saves victory")
+	scene.queue_free()
+	await process_frame
+	scene = load("res://scenes/levels/mirror_lake/mirror_lake.tscn").instantiate()
+	root.add_child(scene)
+	current_scene = scene
+	arena = scene.panda_arena
+	arena.start_encounter()
+	check(arena.defeated and not arena.active and scene.player.world_max_x > PandaGoArena.PLAYER_MAX_X,
+		"reloading a won encounter leaves the lake freely passable")
 	print("\n结果：%d 项检查，%d 项失败" % [checks, failures])
 	quit(1 if failures > 0 else 0)

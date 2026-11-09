@@ -94,7 +94,7 @@ func run() -> void:
 	check(current_scene.scene_file_path == TOWN, "Completed dialogue returns to town")
 	check(absf(current_scene.player.position.x - 3682.0) < 2.0, "Original town return position preserved")
 	var transition := root.get_node("SceneTransition") as SceneTransitionService
-	check(transition.current_music_path.ends_with("homeward_town_day.mp3"), "Town day music resumes")
+	check(transition.current_music_path.ends_with("晨光入港.mp3"), "Town day music resumes")
 	check(current_scene._right_gate_visual.active, "Existing victory still opens town gate")
 	await capture("master_sendoff_town")
 

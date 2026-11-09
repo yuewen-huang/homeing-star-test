@@ -68,14 +68,16 @@ func run() -> void:
 	for charge: float in [0.0, 0.5, 1.0]:
 		master.combat_stats.restore_health()
 		master.combat_stats.restore_poise()
-		player.sword_wave_cooldown_remaining = 0.0
-		player.perform_special_attack(1.0, charge)
-		var effect: Node = player.active_attack_effects.back()
-		var hit := effect.skill_hit_context as SkillHitContext
-		master.receive_skill_hit(hit, player.global_position)
-		check(master.combat_stats.health == master.combat_stats.max_health - roundi(lerpf(CombatTuning.LAN_SPECIAL_DAMAGE, CombatTuning.LAN_SPECIAL_CHARGED_DAMAGE, charge)), "I charge %.1f settles health damage" % charge)
+		player.start_sword_wave(1.0, true)
+		player.sword_wave_charge_elapsed = charge * LanPlayer.SWORD_WAVE_CHARGE_TIME
+		player.release_sword_wave()
+		player.animated_sprite.frame = 7
+		var wave := player.sword_wave_fx.projectiles.back() as LanSwordWaveProjectile
+		master.receive_skill_hit(wave.context, player.global_position)
+		check(master.combat_stats.health == master.combat_stats.max_health - wave.context.damage, "I charge %.1f settles health damage" % charge)
 		check(master.combat_stats.poise == master.combat_stats.max_poise, "I charge %.1f cannot trigger default break" % charge)
-		player.cancel_uncommitted_attack_effects()
+		player.sword_wave_fx.cancel()
+		player.finish_ground_attack()
 	check(player.ultimate_hit_context.damage == CombatTuning.LAN_ULTIMATE_HIT_DAMAGE, "Ultimate uses shared tuning")
 	check(LanPlayer.SPECIAL_ATTACK_MAX_DAMAGE == CombatTuning.LAN_SPECIAL_MAX_DAMAGE, "Explicit counter rewards keep their damage")
 	for danger in [CombatAttackData.DangerType.NORMAL, CombatAttackData.DangerType.COUNTERABLE_DANGER, CombatAttackData.DangerType.UNPARRYABLE_DANGER]:
