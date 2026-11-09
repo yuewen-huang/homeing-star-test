@@ -33,7 +33,7 @@ func run() -> void:
 	assist.set_player_invincible(true)
 	assist.set_player_invincible(false)
 	player.combat_stats.apply_health_damage(maximum)
-	check(player.combat_stats.health==maximum and deaths.is_empty(),"F12 toggles and direct damage preserve the practice refill contract")
+	check(player.combat_stats.health==maximum and deaths.is_empty(),"Difficulty protection overrides preserve the practice refill contract")
 	check(master.is_processing()==false,"Health refill does not rebuild or restart the boss")
 	player.reset_after_map_fall(room.PLAYER_START)
 	player.defense_state=LanPlayer.DefenseState.PARRY_ACTIVE

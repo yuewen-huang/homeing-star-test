@@ -66,16 +66,16 @@ func run() -> void:
 	if dialogue == null:
 		quit(1)
 		return
-	check(dialogue.get_line_progress() == Vector2i(0, 9), "Full M01 contains nine lines")
-	check(dialogue._label.text == "行了，过去吧。" and dialogue._cutout == TutorialDialogue.CUTOUT_RIGHT, "Rein opens on right")
+	check(dialogue.get_line_progress() == Vector2i(0, 6), "Approved sendoff has no comic-style action cutscene")
+	check(dialogue._label.text == "风往哪边走了？" and dialogue._cutout == TutorialDialogue.CUTOUT_LEFT, "Lan asks on left")
 	await capture("master_sendoff_right")
 	room._on_boss_defeated()
 	check(room._sendoff_dialogue == dialogue, "Repeated victory signal does not open duplicate UI")
 	dialogue.advance()
-	check(dialogue._label.text == "往哪边？" and dialogue._cutout == TutorialDialogue.CUTOUT_LEFT, "Lan answers on left")
+	check(dialogue._label.text == "旧航路。他也刚走不久。" and dialogue._cutout == TutorialDialogue.CUTOUT_RIGHT, "Rein answers on right")
 	await capture("master_sendoff_left")
 	check(not save.has_completed(SaveProgressService.STORY_C1_MASTER_SENDOFF_SEEN), "Sendoff not marked while reading")
-	for i in 8: dialogue.advance()
+	for i in range(dialogue.get_line_progress().x, dialogue.get_line_progress().y): dialogue.advance()
 	check(save.has_completed(SaveProgressService.STORY_C1_MASTER_SENDOFF_SEEN), "Completing all lines saves separate sendoff flag")
 	var gift: MasterCoreGift = room._core_gift
 	check(gift != null and gift.dialogue != null and player.input_frozen, "Sendoff continues into master's item handover")
@@ -83,7 +83,7 @@ func run() -> void:
 	gift.dialogue.advance()
 	await capture("master_gift_left")
 	var gift_dialogue := gift.dialogue
-	for i in 4: gift_dialogue.advance()
+	for i in range(gift_dialogue.get_line_progress().x, gift_dialogue.get_line_progress().y): gift_dialogue.advance()
 	check(save.get_item_count(ItemCatalog.SPIRIT_PENDANT) == 1 and gift.reveal != null, "Handover grants one pendant before its reveal")
 	check(not save.has_completed(ForestCoreRelic.PRESENTED_ID), "Ownership does not imply completed presentation")
 	await capture("master_gift_reveal")
@@ -124,7 +124,7 @@ func run() -> void:
 	check(gift != null, "Old victory can recover the unclaimed gift from the town master")
 	if gift != null:
 		gift_dialogue = gift.dialogue
-		for i in 5: gift_dialogue.advance()
+		for i in range(gift_dialogue.get_line_progress().x, gift_dialogue.get_line_progress().y): gift_dialogue.advance()
 		gift.reveal._finish_reveal()
 	check(save.get_item_count(ItemCatalog.SPIRIT_PENDANT) == 1, "Recovery grants exactly one pendant")
 	await process_frame
@@ -138,7 +138,12 @@ func run() -> void:
 	check(save.has_completed(SaveProgressService.STORY_C1_MASTER_SENDOFF_SEEN), "Short reminder completes missing sendoff record")
 	await process_frame
 	check(town.player.input_frozen and master.dialogue_open, "Town reminder keeps player locked for choices")
-	check(master._rematch_choices.options == ["再战？", "离开"], "Town NPC offers rematch and leave after original dialogue")
+	check(master._rematch_choices.options == ["再战？", "离开", "问问他为什么帮风"], "Town NPC offers rematch and leave after original dialogue")
+	master._rematch_choices.choose(2)
+	check(master._dialogue != null and town.player.input_frozen, "Optional question keeps the conversation session")
+	for i in 4: master._dialogue.advance()
+	await process_frame
+	check(master._rematch_choices != null and town.player.input_frozen, "Optional question returns to choices without launching combat")
 	master._rematch_choices.choose(1)
 	check(not town.player.input_frozen and not master.dialogue_open, "Leave restores movement and interaction")
 	master._unhandled_input(key)
@@ -171,6 +176,8 @@ func run() -> void:
 	await create_timer(3.0).timeout
 	room = current_scene
 	check(room.is_rematch, "Town NPC supports repeated rematches")
+	# The development default refills empty health; disable it for a real loss.
+	root.get_node("BattleAssist").set_player_invincible(false)
 	room.player.combat_stats.apply_health_damage(room.player.combat_stats.max_health)
 	await create_timer(3.0).timeout
 	check(current_scene.scene_file_path == TOWN, "Losing rematch returns to town without trapping player")

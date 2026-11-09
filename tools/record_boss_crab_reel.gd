@@ -88,8 +88,6 @@ func setup() -> void:
 	var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	assist.set_player_invincible(false)
-	assist._invincibility_label.hide()
-	assist._difficulty_label.hide()
 	load("D:/HomingStar/homeing-star-test/tools/recording_audio_mix.gd").apply(self)
 	var field = load("res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn").instantiate()
 	root.add_child(field)

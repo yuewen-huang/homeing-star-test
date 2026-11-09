@@ -139,7 +139,7 @@ func run() -> void:
 	await talk()
 	key(KEY_3)
 	await process_frame
-	check(npc.dialogue != null and npc.dialogue.get_line_progress().y == 4, "East-winch gossip is optional and limited")
+	check(npc.dialogue != null and npc.dialogue.get_line_progress().y == 1, "East-winch gossip is optional and limited")
 	finish_lines()
 	await talk()
 	key(KEY_1)
@@ -177,7 +177,7 @@ func run() -> void:
 	var before_inventory := save.get_inventory_items().duplicate(true)
 	var before_level := room.water.level
 	await talk()
-	check(npc.dialogue != null and npc.dialogue._label.text == "没卡住，扣环磨亮了。", "Returning after inspection starts actual report")
+	check(npc.dialogue != null and npc.dialogue._label.text == "扣环没坏。底下有根缠着绳子。", "Returning after inspection starts actual report")
 	if npc.dialogue != null:
 		for i in 3: npc.dialogue.advance()
 		await capture("ali_report_relief")
@@ -189,7 +189,7 @@ func run() -> void:
 	await talk()
 	key(KEY_1)
 	await process_frame
-	check(npc.dialogue != null and npc.dialogue._label.text == "我还没下去呢，别急。", "Repeat talk does not falsely claim repairs finished")
+	check(npc.dialogue != null and npc.dialogue._label.text == "我找根新桩来，这根不能用了。", "Repeat talk does not falsely claim repairs finished")
 	finish_lines()
 	check(save.get_inventory_items() == before_inventory, "Repeating completion cannot issue duplicate rewards")
 	await stand_at(Vector2(640, 640))
@@ -213,7 +213,7 @@ func run() -> void:
 	save.load_progress()
 	await enter_root()
 	await talk()
-	check(npc.dialogue != null and npc.dialogue._label.text == "下面那个扣环磨亮了。", "Saved prior inspection allows direct report on first meeting")
+	check(npc.dialogue != null and npc.dialogue._label.text == "我在西岸下面看见根缠住了绳子，扣环倒没坏。", "Saved prior inspection allows direct report on first meeting")
 	finish_lines()
 	check(save.has_completed(SaveProgressService.QUEST_C1_WEST_ROPE_REPORTED) \
 		and not save.has_completed(SaveProgressService.QUEST_C1_WEST_ROPE_ACCEPTED), "Direct report does not fabricate earlier acceptance")
@@ -281,14 +281,14 @@ func run() -> void:
 	finish_lines()
 	key(KEY_1)
 	await process_frame
-	for i in 4: npc.dialogue.advance()
-	check(npc.dialogue._label.text == "西岸下面，靠岸那根，绳上有个旧扣环。", "Upper-gallery request points to west shore instead of nearest log")
+	npc.dialogue.advance()
+	check(npc.dialogue._label.text == "西岸下面，靠岸的那根绳。", "Upper-gallery request points to west shore instead of nearest log")
 	await capture("ali_upper_request")
 	finish_lines()
 	await talk()
 	key(KEY_3)
 	await process_frame
-	check(npc.dialogue._label.text == "你也管这边？", "Upper-gallery winch topic reflects present location")
+	check(npc.dialogue._label.text == "我平时看西岸这台，今天过来听听这边的响动。", "Upper-gallery winch topic reflects present location")
 	finish_lines()
 	clear_scene()
 	print("ALI STORY: %d checks, %d failures" % [checks, failures])

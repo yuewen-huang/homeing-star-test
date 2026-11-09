@@ -105,11 +105,13 @@ func run() -> void:
 	press_e()
 	await process_frame
 	var master_dialogue: TutorialDialogue = master.get("_dialogue")
-	check(master_dialogue != null and master_dialogue.get_line_progress().y == 4, "Master uses four-line T02 after M01")
+	check(master_dialogue != null and master_dialogue.get_line_progress().y == 3, "Master uses revised three-line reminder after M01")
 	if master_dialogue != null:
-		for i in 3: master_dialogue.advance()
+		for i in 2: master_dialogue.advance()
 		await capture("departure_master_long_line")
 		master_dialogue.advance()
+	await process_frame
+	master._rematch_choices.choose(1)
 	check(save.has_completed(SaveProgressService.STORY_C1_TOWN_MASTER), "Master departure talk has its own completion record")
 
 	town.player.position = town.eating_guests.position + Vector2(-20, 24)

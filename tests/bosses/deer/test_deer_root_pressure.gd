@@ -99,13 +99,31 @@ func run() -> void:
 			pressed=true
 			key(KEY_K,true)
 		await physics_frame
+		# This section isolates post-parry scheduling, not whole-phrase survival.
+		if parries>0: lan.combat_stats.restore_health()
 		if parries>0 and deer.move==&"rush": crossed=crossed or deer.position.x<lan.position.x
 		if not deer.pressure.projectiles.is_empty() and deer.move!=&"leaf": overlap=true
 		if deer.pressure.completed>0: break
 	check(parries>=1 and not parry_openings.is_empty() and parry_openings[0]==0,"Real ordinary parry awards no recovery on the summit")
 	check(crossed and not deer.contest_recoil,"Parried rush completes its summit crossing without artificial yield")
-	check(moves.size()>=3 and overlap,"Summit phrase continues while its detached leaf is flying")
+	check(moves.size()>=3,"Summit phrase continues after a real parry")
 	key(KEY_K,false)
+	# Knockback can legitimately replace the next leaf with a landing. Isolate the
+	# leaf-first phrase at a fixed spacing to verify detached lifetime separately.
+	reset_pair()
+	lan.set_physics_process(false)
+	phrase(2)
+	deer._starting_pressure_move=true
+	deer.start_move(3,lan.position.x)
+	deer._starting_pressure_move=false
+	overlap=false
+	for f in 200:
+		deer._physics_process(1.0/60)
+		lan.combat_stats.restore_health()
+		if not deer.pressure.projectiles.is_empty() and deer.move==&"drop":
+			overlap=true
+			break
+	check(overlap,"A committed leaf remains live while the next summit drop starts")
 	# Occupation keeps its drawn footprint, warns fully, allows the other half and expires.
 	reset_pair()
 	lan.set_physics_process(false)
@@ -164,8 +182,8 @@ func run() -> void:
 	var leaf: Node2D=deer.pressure.projectiles.back()
 	check(leaf.start.y<415 and leaf.start.y>350,"Detached leaf uses the elevated launch lane")
 	deer.combat_stats.apply_poise_damage(deer.combat_stats.poise)
-	check(deer.poise_broken and not deer.pressure.active and deer.pressure.projectiles.is_empty() and not claim.running,"True break clears body, leaves and summit roots for the reward window")
-	check(deer.stagger_remaining>=4.9,"Phase two retains the accepted five-second break release")
+	check(not deer.combat_stats.poise_damage_enabled and not deer.poise_broken and deer.pressure.active and not deer.pressure.projectiles.is_empty(),"Retired poise damage cannot cancel the phrase or detached leaves")
+	check(deer.stagger_remaining<=0,"Phase two does not restore the removed five-second weakness")
 	# Lowland danger is real, applies to either side and keeps one contact per pulse.
 	reset_pair()
 	lan.set_physics_process(false)

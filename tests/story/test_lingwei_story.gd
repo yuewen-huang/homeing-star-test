@@ -105,7 +105,7 @@ func run() -> void:
 	if npc.dialogue == null:
 		quit(1)
 		return
-	check(npc.dialogue.get_line_progress() == Vector2i(0, 6), "Greeting bubble is not duplicated in intro")
+	check(npc.dialogue.get_line_progress() == Vector2i(0, 2), "Greeting bubble is not duplicated in intro")
 	await capture("lingwei_intro_left")
 	npc.dialogue.advance()
 	await capture("lingwei_intro_right")
@@ -125,26 +125,26 @@ func run() -> void:
 	await talk()
 	key(KEY_2)
 	await process_frame
-	check(npc.dialogue.get_line_progress().y == 4, "Friend question gives no direction or invented encounter")
+	check(npc.dialogue.get_line_progress().y == 2, "Friend question gives no direction or invented encounter")
 	finish_lines()
 	await talk()
 	key(KEY_3)
 	await process_frame
-	check(npc.dialogue.get_line_progress().y == 4, "Unknown road stays unknown without proof of traversal")
+	check(npc.dialogue.get_line_progress().y == 2, "Unknown road stays unknown without proof of traversal")
 	finish_lines()
 	await talk()
 	key(KEY_4)
 	await process_frame
 	npc.dialogue.advance()
-	check(npc.dialogue._label.text == "没。我刚把信弄丢，哪还有心思。", "No minigame instructions or invented stele knowledge")
+	check(npc.dialogue._label.text == "还没，得先把包找回来。", "No minigame instructions or invented stele knowledge")
 	finish_lines()
 	await talk()
 	key(KEY_1)
 	await process_frame
 	key(KEY_1)
 	await process_frame
-	check(npc.dialogue.get_line_progress().y == 5 and not save.has_completed(SaveProgressService.QUEST_C1_LETTER_BAG_ACCEPTED), "Acceptance waits until all five lines finish")
-	for i in 4: npc.dialogue.advance()
+	check(npc.dialogue.get_line_progress().y == 2 and not save.has_completed(SaveProgressService.QUEST_C1_LETTER_BAG_ACCEPTED), "Acceptance waits until the reply finishes")
+	for i in range(npc.dialogue.get_line_progress().x, npc.dialogue.get_line_progress().y-1): npc.dialogue.advance()
 	await capture("lingwei_request")
 	finish_lines()
 	check(save.has_completed(SaveProgressService.QUEST_C1_LETTER_BAG_ACCEPTED) and not paused, "Acceptance saved independently")
@@ -168,12 +168,12 @@ func run() -> void:
 	await enter_wind()
 	check(not room.letter_bag.visible, "Re-entering cannot respawn a picked bag")
 	await talk()
-	check(npc.dialogue._label.text == "对，就是这个。让我数数。", "Accepted route goes directly to handover")
+	check(npc.dialogue._label.text == "找到了，谢谢！", "Accepted route goes directly to handover")
 	key(KEY_ESCAPE)
 	await process_frame
 	check(not save.has_completed(SaveProgressService.QUEST_C1_LETTER_BAG_RETURNED), "Cancelled handover retains pending quest")
 	await talk()
-	for i in 4: npc.dialogue.advance()
+	for i in range(npc.dialogue.get_line_progress().x, npc.dialogue.get_line_progress().y-1): npc.dialogue.advance()
 	await capture("lingwei_handover_relief")
 	finish_lines()
 	check(save.has_completed(SaveProgressService.QUEST_C1_LETTER_BAG_RETURNED) and quests.get_track_view().is_empty(), "Finished handover completes sidequest")
@@ -182,13 +182,13 @@ func run() -> void:
 	await talk()
 	key(KEY_1)
 	await process_frame
-	check(npc.dialogue._label.text.begins_with("都齐了，我数完了。"), "Repeat thanks does not send player for another bag")
+	check(npc.dialogue._label.text == "外面这些纸条也是信？", "Repeat thanks does not send player for another bag")
 	finish_lines()
 	await talk()
 	key(KEY_4)
 	await process_frame
 	npc.dialogue.advance()
-	check(npc.dialogue._label.text == "没。刚才光顾着数信了。", "Post-return gossip does not claim bag is still lost")
+	check(npc.dialogue._label.text == "还没，得先把这些信送出去。", "Post-return gossip does not claim bag is still lost")
 	finish_lines()
 	clear_scene()
 
@@ -196,10 +196,10 @@ func run() -> void:
 	seed_progress()
 	await enter_wind()
 	await pickup()
-	check(npc.dialogue._label.text == "一个小包，角上补过。", "Unprompted pickup does not pretend player already knows whose bag it is")
+	check(npc.dialogue._label.text == "这儿挂着个信包。", "Unprompted pickup does not pretend player already knows whose bag it is")
 	finish_lines()
 	await talk()
-	check(npc.dialogue._label.text == "底下捡的，是你的？", "First encounter can hand over previously found bag")
+	check(npc.dialogue._label.text == "下面捡的包，是你的吧？", "First encounter can hand over previously found bag")
 	finish_lines()
 	check(save.has_completed(SaveProgressService.QUEST_C1_LETTER_BAG_RETURNED) \
 		and not save.has_completed(SaveProgressService.QUEST_C1_LETTER_BAG_ACCEPTED) \
@@ -217,7 +217,7 @@ func run() -> void:
 	await talk()
 	key(KEY_3)
 	await process_frame
-	check(npc.dialogue._label.text == "我从那边过来的，能走。", "Player may report only a route actually traversed")
+	check(npc.dialogue._label.text == "我从藤架那边过来的，能走。", "Player may report only a route actually traversed")
 	finish_lines()
 
 	# Failure rollback: the bag must remain until its fact has been saved.

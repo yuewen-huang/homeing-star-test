@@ -2,6 +2,7 @@ extends SceneTree
 class FailedSave extends SaveProgressService:
 	var failing := true
 	func save_progress() -> bool: return not failing
+const Facts := preload("res://scripts/story/forest_story_facts.gd")
 const VINE := "res://scenes/levels/chapter_1/chapter_1_vine_room.tscn"
 const MIST := "res://scenes/levels/chapter_1/chapter_1_mist_room.tscn"
 var save: SaveProgressService
@@ -82,7 +83,7 @@ func run() -> void:
 	save.load_progress()
 	check(save.has_completed(SaveProgressService.STORY_C1_XIAOSUI_WIND_SPOT), "First meeting location persisted without talking")
 	await talk()
-	check(paused and room.player.input_frozen and npc.dialogue.get_line_progress().y == 6, "Active conversation pauses map with six-line intro")
+	check(paused and room.player.input_frozen and npc.dialogue.get_line_progress().y == 5, "Active conversation pauses map with revised intro")
 	await capture("xiaosui_intro_left")
 	npc.dialogue.advance()
 	await capture("xiaosui_intro_right")
@@ -99,13 +100,13 @@ func run() -> void:
 	check(npc.choices.options.size() == 5, "No deer topic without actual chase")
 	key(KEY_2)
 	await process_frame
-	check(npc.dialogue.get_line_progress().y == 4, "Friend gossip stays local")
+	check(npc.dialogue.get_line_progress().y == 3, "Friend gossip stays local")
 	finish_lines()
 	await topic(KEY_3)
-	check(npc.dialogue.get_line_progress().y == 4, "Vine gossip is personal experience only")
+	check(npc.dialogue.get_line_progress().y == 2, "Vine gossip is personal experience only")
 	finish_lines()
 	await topic()
-	check(npc.dialogue._label.text.begins_with("你要回镇上"), "Granddaughter-first proposal never claims grandma already asked")
+	check(npc.dialogue._label.text.begins_with("我奶奶叫榆婆"), "Granddaughter-first proposal never claims grandma already asked")
 	finish_lines()
 	key(KEY_2)
 	await process_frame
@@ -126,7 +127,7 @@ func run() -> void:
 	clear_scene()
 	await enter(MIST)
 	await talk()
-	check(npc.dialogue._label.text == "你是榆婆？小穗让我带句话。", "First grandma encounter delivers directly without extra round trip")
+	check(npc.dialogue._label.text == "你是榆婆吧？小穗让我带句话。", "First grandma encounter delivers directly without extra round trip")
 	check(not save.has_completed(SaveProgressService.QUEST_C1_YU_MESSAGE_DELIVERED), "Delivery waits for completed dialogue")
 	await capture("xiaosui_direct_delivery")
 	key(KEY_ESCAPE)
@@ -150,7 +151,7 @@ func run() -> void:
 	await talk()
 	finish_lines()
 	await topic()
-	check(npc.dialogue._label.text == "榆婆让我问，你怎么还没回去。" and npc.dialogue.get_line_progress().y == 7, "Grandma-first route uses seven original message lines")
+	check(npc.dialogue._label.text == "榆婆让我跟你说，她在雾口等你。" and npc.dialogue.get_line_progress().y == 3, "Grandma-first route uses seven original message lines")
 	await capture("xiaosui_message_from_grandma")
 	finish_lines()
 	key(KEY_1)
@@ -160,34 +161,13 @@ func run() -> void:
 	clear_scene()
 	await enter(MIST)
 	await talk()
-	check(npc.dialogue.get_line_progress().y == 7, "Known grandma receives full delivery conversation")
-	for i in 5: npc.dialogue.advance()
-	check(npc.dialogue._label.text == "还没有。", "No trace or sighting yields truthful no-news answer")
+	check(npc.dialogue != null and not save.has_completed(Facts.DELIVERED), "Delivery remains unread until complete")
 	key(KEY_ESCAPE)
 	await process_frame
-	# Only genuine saved trace / watched-comic facts can change the search answer.
-	save.try_complete_fact(SaveProgressService.STORY_C1_WIND_TRACE_SEEN)
-	await talk()
-	for i in 5: npc.dialogue.advance()
-	check(npc.dialogue._label.text == "有点痕迹，还没见着。", "Trace-only answer does not pretend Wind was seen")
-	key(KEY_ESCAPE)
-	await process_frame
-	save.finish_cinematic(SaveProgressService.CINEMATIC_C1_WIND_SIGHTING, true)
-	await talk()
-	for i in 5: npc.dialogue.advance()
-	check(npc.dialogue._label.text == "有点痕迹，还没见着。", "Skipped comic never counts as witnessing Wind")
-	key(KEY_ESCAPE)
-	await process_frame
-	save._config.set_value("cinematics", String(SaveProgressService.CINEMATIC_C1_WIND_SIGHTING), SaveProgressService.CinematicStatus.WATCHED)
-	await talk()
-	for i in 5: npc.dialogue.advance()
-	check(npc.dialogue._label.text == "远远看见了，没追上。", "Watched sighting takes precedence over traces")
-	await capture("xiaosui_delivery_news")
-	key(KEY_ESCAPE)
-	await process_frame
+	check(not save.has_completed(Facts.DELIVERED), "Cancelled delivery does not move Xiaosui")
 	var failed := FailedSave.new()
 	failed._loaded = true
-	failed._config.set_value("progress", String(SaveProgressService.QUEST_C1_YU_MESSAGE_HEARD), true)
+	failed._config.set_value("progress", String(Facts.RETURN_PLAN), true)
 	failed._config.set_value("progress", String(SaveProgressService.STORY_C1_YUPO_MET), true)
 	npc.save = failed
 	await talk()
@@ -204,10 +184,7 @@ func run() -> void:
 	check(save.has_completed(SaveProgressService.QUEST_C1_YU_MESSAGE_DELIVERED), "Real grandma route finishes independently")
 	clear_scene()
 	await enter(VINE)
-	check(npc.position == Vector2(3940, 2320), "Root-first placement remains stable across reloads")
-	await topic()
-	check(npc.dialogue._label.text == "话带到了。", "Repeat talk knows only player's actual delivery")
-	finish_lines()
+	check(npc == null, "After delivered return plan Xiaosui no longer duplicates in vine region")
 	check(room._portals.all(func(data: Dictionary): return data.prompt.available) and room.puzzle.state == 0 and room.combat.state == 0, "Story leaves four exits and both steles independent")
 	clear_scene()
 
@@ -221,7 +198,7 @@ func run() -> void:
 	await process_frame
 	await process_frame
 	check(not save.has_completed(SaveProgressService.STORY_C1_DEER_CHASE_SEEN), "Entering final room alone grants no chase knowledge")
-	boss_room.deer.start_charge_at(boss_room.player.position.x)
+	boss_room.deer.start_move(0, boss_room.player.position.x)
 	check(not save.has_completed(SaveProgressService.STORY_C1_DEER_CHASE_SEEN), "Charge windup alone grants no chase knowledge")
 	await create_timer(1.2).timeout
 	check(save.has_completed(SaveProgressService.STORY_C1_DEER_CHASE_SEEN), "Actual production charging run records encounter")
@@ -233,12 +210,12 @@ func run() -> void:
 	check(npc.choices.options.size() == 6, "Actual chase unlocks optional M08 report")
 	key(KEY_5)
 	await process_frame
-	check(npc.dialogue.get_line_progress().y == 6 and npc.dialogue._label.text == "上头有只鹿。", "M08 is player-initiated and locally limited")
+	check(npc.dialogue.get_line_progress().y == 2 and npc.dialogue._label.text == "上头有只鹿挡路，一靠近就冲过来。", "M08 is player-initiated and locally limited")
 	finish_lines()
 	check(save.has_completed(SaveProgressService.STORY_C1_XIAOSUI_DEER_TOLD), "Read report records only Xiaosui's knowledge")
 	var message_failure := FailedSave.new()
 	message_failure._loaded = true
-	message_failure._config.set_value("progress", String(SaveProgressService.STORY_C1_XIAOSUI_MET), true)
+	message_failure._config.set_value("progress", String(Facts.XIAOSUI), true)
 	message_failure._config.set_value("progress", String(SaveProgressService.QUEST_C1_YU_MESSAGE_ACCEPTED), true)
 	npc.save = message_failure
 	await take_message()

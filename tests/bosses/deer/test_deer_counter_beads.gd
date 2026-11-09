@@ -21,7 +21,7 @@ func run() -> void:
 		room.encounter._spawn_phase(phase,1420)
 		room.encounter.start()
 		var boss := room.deer
-		boss.manual_control = true
+		boss.manual_control = false
 		boss.set_physics_process(false)
 		boss.invulnerable = false
 		boss.opening = 0
@@ -29,12 +29,13 @@ func run() -> void:
 		player.reset_after_map_fall(Vector2(1320,555))
 		player.facing_direction = 1
 		player.combat_stats.restore_health()
+		await wait_frames(2) # Boss HUD is attached deferred by production setup.
 		var hud: Node
 		for child in boss.get_children():
-			if child is CanvasLayer and "counter_prompt" in child: hud = child
+			if child is CanvasLayer and "prompt" in child: hud = child
 		await wait_frames(2)
-		check(hud != null and hud.counter_prompt.broken == 0, "Phase %d starts with six solid beads" % phase)
-		check(hud.counter_prompt.get_child_count() == 0, "Counter contains no text labels or extra keycaps")
+		check(hud != null and hud.prompt.broken == 0, "Phase %d starts with six solid beads" % phase)
+		check(hud.prompt.get_child_count() == 0, "Counter contains no text labels or extra keycaps")
 		if phase == 1: await snap("counter_6_left")
 		var last_attack: CombatAttackData
 		for i in DeerDuelBoss.COUNTER_PARRIES:
@@ -42,7 +43,7 @@ func run() -> void:
 			boss.on_attack_parried(last_attack,boss.global_position)
 			check(boss.defense_credit == i+1, "Phase %d parry %d immediately breaks one bead" % [phase,i+1])
 			if i == 0:
-				boss._on_counter_parry(boss,last_attack,Vector2.ZERO,false)
+				boss._on_boss_counter_parry(boss,last_attack,Vector2.ZERO,false)
 				check(boss.defense_credit == 1, "One settled attack cannot count twice")
 				player.combat_stats.apply_health_damage(5)
 				check(boss.defense_credit == 1, "Taking damage does not restore broken beads")
@@ -50,16 +51,16 @@ func run() -> void:
 				if phase == 1: await snap("counter_5_left")
 		boss.opening = 0
 		await wait_frames(2)
-		check(boss.counter_ready and not boss.poise_broken and not hud.counter_prompt.available, "Stored E does not interrupt the BOSS or light an unavailable key")
+		check(boss.counter_ready and not boss.poise_broken and not hud.prompt.available, "Stored E does not interrupt the BOSS or light an unavailable key")
 		if phase == 1: await snap("counter_wait_opening")
 		boss.opening = 1
 		player.position.x = 900
 		await wait_frames(2)
-		check(not hud.counter_prompt.available and player.get_ready_throw_target() == null, "Far target does not show a usable E")
+		check(not hud.prompt.available and player.get_ready_throw_target() == null, "Far target does not show a usable E")
 		player.position.x = 1320
 		player.facing_direction = 1
 		await wait_frames(3)
-		check(hud.counter_prompt.available and player.get_ready_throw_target() == boss, "HUD availability matches the actual E input query")
+		check(hud.prompt.available and player.get_ready_throw_target() == boss, "HUD availability matches the actual E input query")
 		if phase == 1: await snap("counter_E_ready")
 		var event := InputEventKey.new()
 		event.keycode = KEY_E
@@ -71,7 +72,7 @@ func run() -> void:
 		Input.parse_input_event(event)
 		check(not boss.counter_ready and boss.defense_credit == 0, "Actual E consumes the charge and restores all six beads")
 		for f in 70: await physics_frame
-		boss._on_counter_parry(boss,last_attack,Vector2.ZERO,false)
+		boss._on_boss_counter_parry(boss,last_attack,Vector2.ZERO,false)
 		check(boss.defense_credit == 0, "Already counted hit cannot recharge after E")
 		boss.set_counter_progress(2)
 		boss.restart_duel()

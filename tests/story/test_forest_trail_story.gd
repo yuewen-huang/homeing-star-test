@@ -4,6 +4,7 @@ class FailedSave extends SaveProgressService:
 	func save_progress() -> bool: return not failing
 const MIST := "res://scenes/levels/chapter_1/chapter_1_mist_room.tscn"
 const VINE := "res://scenes/levels/chapter_1/chapter_1_vine_room.tscn"
+const Facts := preload("res://scripts/story/forest_story_facts.gd")
 var save: SaveProgressService
 var room: Node2D
 var point: Node2D
@@ -100,19 +101,20 @@ func run() -> void:
 	await capture("wind_trace_after")
 	check(save.get_cinematic_status(SaveProgressService.CINEMATIC_C1_WIND_SIGHTING) == SaveProgressService.CinematicStatus.UNHANDLED, "Recognizing trace never invents a Wind sighting")
 	check((root.get_node("QuestLog") as QuestLogService).get_track_view().is_empty(), "Trace creates no main guidance or automatic sidequest")
-	# The actual new inspection feeds the existing message-delivery conversation.
+	# Returning news stays focused on Xiaosui; it does not invent a Wind sighting.
 	save.try_complete_fact(SaveProgressService.STORY_C1_YUPO_MET)
 	save.try_complete_fact(SaveProgressService.QUEST_C1_YU_MESSAGE_ACCEPTED)
 	save.try_complete_fact(SaveProgressService.QUEST_C1_YU_MESSAGE_HEARD)
+	save.try_complete_fact(Facts.RETURN_PLAN)
 	room.player.position = room.yupo.position + Vector2(-45, 0)
 	await create_timer(0.15).timeout
 	key()
 	await process_frame
-	for i in 3: room.yupo.dialogue.advance()
+	check(room.yupo.dialogue._label.text == "小穗没事。她说等风小点，从下面回来。", "Delivery reports the actual return plan")
+	room.yupo.dialogue.advance()
 	await capture("wind_trace_yupo_right")
-	for i in 2: room.yupo.dialogue.advance()
-	check(room.yupo.dialogue._label.text == "有点痕迹，还没见着。", "Actual M03 inspection supplies truthful trace-only answer at grandma")
-	for i in 2: room.yupo.dialogue.advance()
+	for i in 4: room.yupo.dialogue.advance()
+	check(save.has_completed(Facts.DELIVERED) and save.get_cinematic_status(SaveProgressService.CINEMATIC_C1_WIND_SIGHTING) == SaveProgressService.CinematicStatus.UNHANDLED, "Delivery settles only witnessed news, never an unseen Wind movie")
 	clear_scene()
 	await enter(MIST)
 	await approach()

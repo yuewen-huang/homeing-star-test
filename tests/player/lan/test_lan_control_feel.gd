@@ -14,15 +14,21 @@ func reset() -> void:
 	player.reset_after_map_fall(Vector2(0,1000))
 	await step(3)
 
-func jump_height(hold_frames: int) -> float:
+func jump_height(hold_frames: int, second_jump: bool = false) -> float:
 	await reset()
+	if second_jump:
+		Input.action_press(&"jump")
+		await step(20)
+		Input.action_release(&"jump")
+		await step(2)
+	var start_y := player.position.y
 	Input.action_press(&"jump")
 	var top := player.position.y
 	for i in 90:
 		if i==hold_frames: Input.action_release(&"jump")
 		await step(1)
 		top=minf(top,player.position.y)
-	return 1000.0-top
+	return start_y-top
 
 func run() -> void:
 	var progress := use_memory_progress()
@@ -39,8 +45,13 @@ func run() -> void:
 	var short_height:=await jump_height(3)
 	var full_height:=await jump_height(65)
 	print("JUMP HEIGHTS short=",short_height," full=",full_height)
-	check(short_height>20 and short_height<full_height*0.65,"Tap produces a useful low jump")
+	check(absf(short_height-full_height)<0.1,"Tap and held jump reach the same height")
 	check(full_height>95 and full_height<105,"Held jump preserves existing maximum reach")
+	var short_double:=await jump_height(3,true)
+	var full_double:=await jump_height(65,true)
+	print("DOUBLE JUMP HEIGHTS tap=",short_double," held=",full_double)
+	check(absf(short_double-full_double)<0.1,"Tap and held second jump reach the same height")
+	check(full_double>95 and full_double<105,"Second jump preserves existing maximum reach")
 	await reset()
 	Input.action_press(&"jump")
 	await step(12)
@@ -92,10 +103,12 @@ func run() -> void:
 	await step(2)
 	Input.action_release(&"jump")
 	var buffered_peak:=1000.0
-	for i in 30:
+	# Include the remaining fall and the full ascent before sampling the apex.
+	for i in 60:
 		await step(1)
 		buffered_peak=minf(buffered_peak,player.position.y)
-	check(buffered_peak>950 and buffered_peak<990,"A buffered tap released before landing stays a short jump")
+	print("BUFFERED JUMP HEIGHT=",1000.0-buffered_peak)
+	check(absf((1000.0-buffered_peak)-full_height)<0.1,"A buffered tap released before landing reaches full jump height")
 	await reset()
 	player.position.y=988
 	player.air_state=LanPlayer.AirState.FALLING

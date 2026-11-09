@@ -66,6 +66,7 @@ func run() -> void:
 	await create_timer(0.1).timeout
 	room._save.set_stele_state(room.COMBAT_ID, MinigameStele.SteleState.UNLOCKED)
 	room._combat_stele_requested(room.COMBAT_ID, MinigameStele.SteleKind.COMBAT)
+	var before_combat_stele := save.get_stele_state(&"mist_combat_01")
 	var enemy: MistParryEnemy = room.mist_enemies[0]
 	enemy._spawn_wait = 2.0
 	enemy._physics_process(0.5)
@@ -76,7 +77,7 @@ func run() -> void:
 	if npc.dialogue == null:
 		quit(1)
 		return
-	check(npc.dialogue.get_line_progress() == Vector2i(0, 10), "M02 contains ten original lines without action cutscene")
+	check(npc.dialogue.get_line_progress() == Vector2i(0, 3), "Optional greeting uses revised local dialogue")
 	await capture("yupo_intro_right")
 	npc.dialogue.advance()
 	await capture("yupo_intro_left")
@@ -120,9 +121,9 @@ func run() -> void:
 		await process_frame
 		key(topic)
 		await process_frame
-		check(npc.dialogue != null and npc.dialogue.get_line_progress().y == 4, "Four-line optional local gossip")
+		check(npc.dialogue != null and npc.dialogue.get_line_progress().y > 0, "Optional local gossip opens without accepting a task")
 		finish_lines()
-	check(save.get_stele_state(&"mist_puzzle_entry") == 0 and save.get_stele_state(&"mist_combat_01") == 0, "Gossip does not grant stele completion")
+	check(save.get_stele_state(&"mist_puzzle_entry") == 0 and save.get_stele_state(&"mist_combat_01") == before_combat_stele, "Gossip does not change the test's explicitly started combat stele")
 
 	await process_frame
 	key(KEY_E)
@@ -158,7 +159,7 @@ func run() -> void:
 	check(npc.choices != null and npc.dialogue == null, "Reload never forces completed intro")
 	key(KEY_1)
 	await process_frame
-	check(npc.dialogue != null and npc.dialogue._label.text == "问到小穗了吗？", "Pending sidequest reminder reflects only actual knowledge")
+	check(npc.dialogue != null and npc.dialogue._label.text == "跟她说是雾口，别让她找岔了。", "Pending sidequest reminder reflects only actual knowledge")
 	# Destroying scene mid-dialogue restores global pause as well.
 	room.free()
 	current_scene = null

@@ -26,12 +26,6 @@ func check(ok: bool, label: String) -> void:
 	if not ok: failures += 1
 	print("OK " if ok else "FAIL ", label)
 
-func press_f11() -> void:
-	var key := InputEventKey.new()
-	key.physical_keycode = KEY_F11
-	key.pressed = true
-	assist._input(key)
-
 func run() -> void:
 	var saved := FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) if FileAccess.file_exists(SaveProgressService.SAVE_PATH) else PackedByteArray()
 	assist = root.get_node("BattleAssist") as BattleAssistSettingsService
@@ -39,29 +33,24 @@ func run() -> void:
 	test_chain_rules()
 	await test_lan_chain_parry()
 	await test_telegraph_gate()
-	await test_wind_cue()
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.NORMAL)
 	check((FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) if FileAccess.file_exists(SaveProgressService.SAVE_PATH) else PackedByteArray()) == saved, "difficulty changes never write story progress")
 	print("COMBAT_DIFFICULTY: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures else 0)
 
 func test_difficulty_switch() -> void:
-	check(assist.difficulty == BattleAssistSettingsService.Difficulty.NORMAL, "normal is the default difficulty")
-	check(assist.uses_parry_chain_assist() and assist.shows_attack_telegraphs(), "normal: chain assist and range warnings")
-	check(assist._difficulty_label.text == "难度：普通 · F11 切换", "HUD names the difficulty")
+	var modes := BattleAssistSettingsService.Difficulty
+	assist.set_difficulty(modes.EASY)
+	check(assist.player_invincible and assist.uses_parry_chain_assist() and assist.shows_attack_telegraphs(), "easy preserves normal combat cues and enables lethal refill")
 	var changes: Array = []
 	assist.difficulty_changed.connect(func(d: int) -> void: changes.append(d))
-	press_f11()
-	check(assist.difficulty == BattleAssistSettingsService.Difficulty.HARD and not assist.uses_parry_chain_assist() and assist.shows_attack_telegraphs(), "F11: hard keeps warnings, every parry manual")
-	press_f11()
-	check(assist.difficulty == BattleAssistSettingsService.Difficulty.NIGHTMARE and not assist.uses_parry_chain_assist() and not assist.shows_attack_telegraphs(), "F11: nightmare hides range warnings")
-	check(assist._difficulty_label.text.contains("噩梦"), "HUD follows the switch")
-	press_f11()
-	check(assist.difficulty == BattleAssistSettingsService.Difficulty.NORMAL and changes == [1, 2, 0], "F11 cycles back to normal and reports each change")
-	var held := InputEventKey.new(); held.physical_keycode = KEY_F11; held.pressed = true; held.echo = true
-	assist._input(held)
-	check(assist.difficulty == BattleAssistSettingsService.Difficulty.NORMAL, "held-key repeat does not switch")
-	assist.set_difficulty(BattleAssistSettingsService.Difficulty.NORMAL)
+	assist.set_difficulty(modes.HARD)
+	check(not assist.player_invincible and not assist.uses_parry_chain_assist() and assist.shows_attack_telegraphs(), "hard keeps warnings and manual parries")
+	assist.set_difficulty(modes.NIGHTMARE)
+	check(not assist.player_invincible and not assist.uses_parry_chain_assist() and not assist.shows_attack_telegraphs(), "nightmare hides range warnings")
+	assist.set_difficulty(modes.NORMAL)
+	check(not assist.player_invincible and assist.uses_parry_chain_assist() and assist.shows_attack_telegraphs(), "normal keeps the parry assist without lethal refill")
+	check(changes == [modes.HARD, modes.NIGHTMARE, modes.NORMAL], "difficulty changes report each selected mode")
 
 func test_chain_rules() -> void:
 	var chain := ParryChainAssist.new()
@@ -92,6 +81,7 @@ func test_lan_chain_parry() -> void:
 	var room: Chapter1DeerBossRoom = load("res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn").instantiate()
 	root.add_child(room); current_scene = room
 	await process_frame; await process_frame
+	if is_instance_valid(room.story.comic): room.story._close_intro()
 	room.deer.set_physics_process(false)
 	room.player.set_physics_process(false)
 	room.deer.manual_control = true
@@ -104,7 +94,7 @@ func test_lan_chain_parry() -> void:
 		lan.defense_state = LanPlayer.DefenseState.NONE
 	var hit := func(danger: CombatAttackData.DangerType) -> CombatAttackData:
 		return CombatAttackData.new(&"chain_hit", room.deer, 20, 12, 180, 0, danger)
-	check(room.deer.get_parry_chain_key() == &"", "deer outside the wind clash uses the close-succession fallback")
+	check(room.deer.get_parry_chain_key() != &"", "production deer groups attacks by its current combo key")
 
 	reset.call()
 	check(lan.receive_combat_hit(hit.call(CombatAttackData.DangerType.NORMAL)) == CombatHitResult.Type.NORMAL_HIT, "normal: the first hit still needs a manual parry")
@@ -143,8 +133,8 @@ func test_lan_chain_parry() -> void:
 	lan.defense_state = LanPlayer.DefenseState.PARRY_ACTIVE
 	lan.receive_combat_hit(hit.call(CombatAttackData.DangerType.NORMAL))
 	lan.defense_state = LanPlayer.DefenseState.NONE
-	lan.combat_clock += ParryChainAssist.FALLBACK_GAP + 0.1
-	check(lan.receive_combat_hit(hit.call(CombatAttackData.DangerType.NORMAL)) == CombatHitResult.Type.NORMAL_HIT, "normal: a long pause between hits ends the fallback chain")
+	lan.combat_clock += ParryChainAssist.KEYED_GAP + 0.1
+	check(lan.receive_combat_hit(hit.call(CombatAttackData.DangerType.NORMAL)) == CombatHitResult.Type.NORMAL_HIT, "normal: a long pause between hits ends the keyed chain")
 
 	for d in [BattleAssistSettingsService.Difficulty.HARD, BattleAssistSettingsService.Difficulty.NIGHTMARE]:
 		assist.set_difficulty(d)
@@ -163,6 +153,7 @@ func test_lan_chain_parry() -> void:
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	check(lan.receive_combat_hit(hit.call(CombatAttackData.DangerType.NORMAL)) == CombatHitResult.Type.NORMAL_HIT, "switching to hard ends an open chain")
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.NORMAL)
+	await test_deer_cue(room)
 	assist.set_player_invincible(true)
 	room.queue_free()
 	await process_frame; await process_frame
@@ -190,34 +181,20 @@ func test_telegraph_gate() -> void:
 	owner.queue_free()
 	await process_frame
 
-func test_wind_cue() -> void:
-	var room = load("res://scenes/dev/boss_development_room.tscn").instantiate()
-	root.add_child(room); current_scene = room
-	await process_frame; await process_frame
-	room.set_physics_process(false); room.player.set_physics_process(false)
-	room.select_combo(2)
-	var deer: DeerBoss = room.adapter.deer
-	var lan: LanPlayer = deer.combat_target
-	deer.set_physics_process(false); deer.vfx.set_process(false)
-	var tick := func(count: int) -> void:
-		for i in count: deer._physics_process(1.0 / 60.0)
+func test_deer_cue(room: Chapter1DeerBossRoom) -> void:
+	var deer := room.deer
+	var lan := room.player
+	deer.manual_control = false
+	lan.parry_chain.cancel()
 	deer.position.x = 820.0
-	lan.global_position.x = 820.0 - 165.0
-	var serial := deer.clash_phase.combo_serial
-	deer.start_clash(&"deer_phase3_forest_five", 820.0 - 165.0)
-	check(deer.clash_phase.combo_serial == serial + 1 and deer.get_parry_chain_key() == StringName("deer_clash_%d" % (serial + 1)), "each wind combo gets its own parry-chain key")
-	var first := -1.0
-	for i in 120:
-		first = deer.clash_phase.next_parry_contact_in()
-		if first >= 0.0 and first <= ParryCueVisual.APPEAR_LEAD: break
-		tick.call(1)
-	check(first >= 0.0 and first <= ParryCueVisual.APPEAR_LEAD, "a reaching thrust is predicted inside the cue lead (%.2f s)" % first)
-	tick.call(6)
-	var later := deer.clash_phase.next_parry_contact_in()
-	check(absf((first - later) - 0.1) < 0.02, "prediction counts down on the action clock (%.2f -> %.2f)" % [first, later])
-	check(lan.parry_cue.source == deer and absf(lan.parry_cue.time_to_contact - later) < 0.001 and lan.parry_cue.should_show(), "the deer reports the cue and it shows on normal")
+	lan.global_position.x = 600.0
+	deer.start_move(2, lan.position.x)
+	deer._report_duel_cue()
+	check(lan.parry_cue.source == deer and lan.parry_cue.should_show(), "the production sweep shows the cue on normal")
 	lan.parry_cue._process(0.0)
 	check(lan.parry_cue._display.is_visible_in_tree(), "the baked blue cue sprite is actually visible, not only its parent")
+	assist.set_difficulty(BattleAssistSettingsService.Difficulty.EASY)
+	check(lan.parry_cue.should_show(), "easy retains the normal blue cue")
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.HARD)
 	check(not lan.parry_cue.should_show(), "no blue cue on hard")
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.NORMAL)
@@ -228,16 +205,6 @@ func test_wind_cue() -> void:
 	check(not lan.parry_cue.should_show(), "the cue drops once the deer stops reporting")
 	lan.parry_cue.report(deer, ParryCueVisual.APPEAR_LEAD + 0.1)
 	check(not lan.parry_cue.should_show(), "hits further out than the lead are not cued")
-	# Out of reach: the same thrust aimed far away is not cued.
-	deer.clash_phase.cancel(); deer._recover(0.0); tick.call(30)
-	deer.position.x = 1400.0
-	deer.start_clash(&"deer_phase3_forest_five", 1400.0 - 165.0)
-	deer.clash_phase.aim_x = 400.0
-	lan.global_position.x = 400.0
-	var far := -1.0
-	for i in 60:
-		far = maxf(far, deer.clash_phase.next_parry_contact_in())
-		tick.call(1)
-	check(far < 0.0, "a strike that cannot reach the target gets no cue")
-	room.queue_free()
-	await process_frame; await process_frame
+	lan.global_position.x = deer.position.x - 480.0
+	deer._report_duel_cue()
+	check(not lan.parry_cue.should_show(), "a sweep that cannot reach the target gets no cue")

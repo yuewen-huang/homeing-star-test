@@ -38,8 +38,6 @@ func run() -> void:
 	var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.NORMAL)
 	assist.set_player_invincible(false)
-	assist._invincibility_label.hide()
-	assist._difficulty_label.hide()
 	room = load("res://scenes/levels/tutorial/tutorial_battle_room.tscn").instantiate()
 	room.get_node("MasterBoss").manual_control = true  # suppress AI during room boot
 	root.add_child(room)

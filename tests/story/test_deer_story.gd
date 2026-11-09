@@ -78,7 +78,20 @@ func kill_human() -> void:
 		room.encounter._physics_process(1.0/60)
 		if room.encounter.complete: break
 	await process_frame
+func dismiss_aftermath() -> void:
+	if story.comic != null:
+		story.comic._request_finish(true)
+		await process_frame
+
+func finish_resident() -> void:
+	if story.dialogue == null:
+		check(false, "Expected resident dialogue")
+		return
+	var count := story.dialogue.get_line_progress().y - story.dialogue.get_line_progress().x
+	for i in count: story.dialogue.advance()
+
 func dismiss_reward() -> void:
+	await dismiss_aftermath()
 	if story.reward_reveal != null:
 		story.reward_reveal._finish_reveal()
 		await process_frame
@@ -92,25 +105,19 @@ func run() -> void:
 	check(story.resident == null and not story.body_prompt.available and not story.trace_prompt.available, "No resident or post-battle interactions during live fight")
 	for phase in [1, 2, 3, 4]: room._on_phase_completed(phase)
 	check(not save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED), "Signals without actual final human completion cannot fake victory")
-	# M10 short reactions use only production facts and never pause combat.
 	boss.set_physics_process(false)
 	story.phase_completed(1)
 	story._process(.8)
-	check(story._said.has(&"rise") and not paused,"First phase completion queues only a nonblocking bubble")
-	story._pending_bubble = ""
-	story._queue_bubble(&"capture", "过去了！")
-	boss.warning_kind = &""
-	boss._change_state(DeerBoss.State.IDLE)
-	story._process(0.8)
-	await capture("deer_combat_bubble")
-	check(story._bubble != null and story._bubble.visible and not room.player.input_frozen, "Battle bubble leaves movement and fight clock alone")
+	check(story._pending_bubble.is_empty() and not paused, "Rewritten story does not interrupt phases with explanatory bubbles")
 	await prepare_human()
 	story._process(0)
-	check(story._said.has(&"human"), "Actual human transformation enables its single short reaction")
+	check(story._pending_bubble.is_empty(), "Human form needs no canned reaction")
 	var inventory := save.get_inventory_items().duplicate(true)
 	boss.start_spell(4)
 	await kill_human()
 	check(save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED) and not story.victory_pending, "Final production landing saves victory before any inspection")
+	check(story.comic != null and story.comic.panels.size() == 4 and paused, "New first-clear victory opens approved aftermath after saving victory")
+	await dismiss_aftermath()
 	check(story.reward_reveal != null and save.get_item_count(ItemCatalog.DEER_RELIC) == 1 and not story.chapter_gate.visible, "Final landing grants exactly one relic and presents it before unlocking portal")
 	await dismiss_reward()
 	check(story.chapter_gate.visible and not paused, "Closing reward presentation reveals chapter two portal and resumes play")
@@ -125,7 +132,7 @@ func run() -> void:
 	await stand(boss.position + Vector2(-70, 0))
 	key()
 	await process_frame
-	check(story.dialogue != null and story.dialogue._label.text == "……这回，听得清林子里的声音了。" and paused, "First resident conversation is voluntary and pauses the world")
+	check(story.dialogue != null and story.dialogue._label.text == "林子外面，还有人吗？" and paused, "First resident conversation is voluntary and pauses the world")
 	await capture("deer_npc_dialogue_right")
 	story.dialogue.advance()
 	await capture("deer_npc_dialogue_left")
@@ -139,7 +146,7 @@ func run() -> void:
 	await stand(story.trace.position + Vector2(-45, 0))
 	key()
 	await process_frame
-	check(story.dialogue != null and story.dialogue._label.text == "从这里过去了？", "M12 optional trace works even without M07 or M11")
+	check(story.dialogue != null and story.dialogue._label.text == "还在前面。", "M12 optional trace works even without M07 or M11")
 	await capture("deer_forecourt_trace")
 	story.dialogue.advance()
 	check(save.has_completed(SaveProgressService.STORY_C1_FORECOURT_TRACE_SEEN) and not save.has_completed(SaveProgressService.STORY_C1_DEER_BODY_INSPECTED), "Forecourt and corpse inspections settle independently")
@@ -147,9 +154,7 @@ func run() -> void:
 	await stand(boss.position + Vector2(-70, 0))
 	key()
 	await process_frame
-	story.dialogue.advance()
-	story.dialogue.advance()
-	story.dialogue.advance()
+	finish_resident()
 	check(save.has_completed(SaveProgressService.STORY_C1_DEER_BODY_INSPECTED), "M11 may complete after M12")
 	check(story.choices != null and story.choices.options == ["再战？", "离开"] and paused, "First resident dialogue ends with rematch choices")
 	story.choices.choose(1)
@@ -158,24 +163,19 @@ func run() -> void:
 	await process_frame
 	key()
 	await process_frame
-	check(story.choices != null and paused, "Repeat interaction offers optional conversation topics")
-	key(KEY_2)
-	await process_frame
-	check(story.dialogue != null and story.dialogue._label.text.contains("根还活着"), "Forest topic uses resident dialogue")
-	story.dialogue.advance()
-	check(story.choices != null and story.choices.options == ["再战？", "离开"], "Existing topic reply ends with rematch choices")
+	check(story.dialogue != null and story.dialogue._label.text == "路上小心。", "Repeat dialogue does not claim complete cure")
+	finish_resident()
+	check(story.choices != null and story.choices.options == ["再战？", "离开"], "Rematch stays a separate menu")
 	story.choices.choose(1)
-	await process_frame
 	await process_frame
 	key()
 	await process_frame
 	key(KEY_ESCAPE)
 	await process_frame
-	check(story.choices == null and not paused and not room.player.input_frozen, "Escape exits topic menu and restores control")
-	check(room._return_prompt.available and not paused, "All investigations leave return passage available")
+	check(story.choices == null and not paused and not room.player.input_frozen, "Escape restores control")
+	check(room._return_prompt.available and not paused, "Investigations leave return passage available")
 	story._talk_to_resident()
-	story.choices.choose(0)
-	story.dialogue.advance()
+	finish_resident()
 	story.choices.choose(0)
 	await create_timer(3.0).timeout
 	room = current_scene as Chapter1DeerBossRoom
@@ -192,8 +192,7 @@ func run() -> void:
 	check(story._settled and story.resident != null and not boss.visible, "Rematch final defeat restores resident NPC")
 	check(story.reward_reveal == null and save.get_item_count(ItemCatalog.DEER_RELIC) == 1, "Rematch does not replay or duplicate first-clear reward")
 	story._talk_to_resident()
-	story.choices.choose(1)
-	story.dialogue.advance()
+	finish_resident()
 	check(story.choices != null and story.choices.options == ["再战？", "离开"], "Resident can offer another rematch after victory")
 	story.choices.choose(1)
 	clear_scene()
@@ -212,6 +211,7 @@ func run() -> void:
 	await stand(boss.position + Vector2(-70, 0))
 	key()
 	await process_frame
+	await dismiss_aftermath()
 	check(failed.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED) and story.reward_reveal != null, "Body E retries victory first, then presents its reward")
 	await dismiss_reward()
 	await process_frame
@@ -219,9 +219,7 @@ func run() -> void:
 	key()
 	await process_frame
 	failed.failing = true
-	story.dialogue.advance()
-	story.dialogue.advance()
-	story.dialogue.advance()
+	finish_resident()
 	check(story.choices != null and not failed.has_completed(SaveProgressService.STORY_C1_DEER_BODY_INSPECTED), "Failed M11 save never rolls back battle victory")
 	key(KEY_2)
 	await process_frame

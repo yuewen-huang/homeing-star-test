@@ -36,8 +36,6 @@ func run() -> void:
 	var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.NORMAL)
 	assist.set_player_invincible(false)
-	assist._invincibility_label.hide()
-	assist._difficulty_label.hide()
 	load("D:/HomingStar/homeing-star-test/tools/recording_audio_mix.gd").apply(self)
 	native_map = "res://scenes/levels/chapter_1/chapter_1_deer_boss_room.tscn"
 	if kind == "core":

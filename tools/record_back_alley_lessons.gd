@@ -13,8 +13,6 @@ func run() -> void:
 	if quest_log._tracker != null: quest_log._tracker.hide()
 	var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
 	assist.set_player_invincible(false)
-	assist._invincibility_label.hide()
-	assist._difficulty_label.hide()
 	var ids := [&"normal_attack", &"instant_dash", &"jump_attack", &"dodge_combo", &"charged_attack", &"poise_throw"]
 	for index in ids.size():
 		var id: StringName = ids[index]

@@ -47,7 +47,10 @@ func run() -> void:
 			check(room.encounter.get_child_count()==1,"Only one phase owns active combat nodes")
 		else:
 			check(room.encounter.complete and room.story._settled,"Only fourth-phase final presentation completes the encounter")
-	check(save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED) and save.get_item_count(ItemCatalog.DEER_RELIC)==1,"Actual full progression settles victory and exactly one relic")
+	if room.story.comic!=null:
+		room.story.comic.playback_finished.emit(true)
+		await wait_frames(2)
+	check(save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED) and save.get_item_count(ItemCatalog.DEER_RELIC)==1,"Actual full progression settles victory and exactly one relic after the aftermath")
 	check(room.story.resident!=null and not room.deer.visible and room._return_prompt.available,"Victory replaces combat actor with resident and opens return passage")
 	if room.story.reward_reveal!=null: room.story.reward_reveal._finish_reveal()
 	await wait_frames(2)
