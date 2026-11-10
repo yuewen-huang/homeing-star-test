@@ -8,6 +8,12 @@ func run() -> void:
 	var level := (load(SCENE) as PackedScene).instantiate() as Node2D
 	root.add_child(level)
 	current_scene = level
+	if "--toad" in OS.get_cmdline_user_args():
+		level.player.reset_after_map_fall(level.bronze_toad.RETRY_AT)
+		level.snap_camera()
+		root.title = "归航星 · A25 青铜金蟾试玩"
+		print("A25_PLAYTEST_READY")
+		return
 	if "--edges" in OS.get_cmdline_user_args():
 		await capture_edges(level)
 		await close_capture(level)

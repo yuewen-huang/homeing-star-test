@@ -66,7 +66,7 @@ func run() -> void:
 		await end_test()
 		return
 	nav_at = "e53"
-	check(level.resonance.seal_open(), "A17's echo clears the physical altar seal")
+	check(level.resonance.has_map_item(), "A17's echo completes the map item collection")
 	if await drop_to(Vector2(7968, 3902)) and await drop_to(Vector2(8024, 4222)) \
 			and await descend_to_altar() and await navigate("boss"):
 		check(level.drowned_count == 0, "A6 to A27 completed without resets or drowning")

@@ -19,6 +19,8 @@ func run() -> void:
 	current_scene = level
 	await physics_frame
 	var puzzle := level.resonance
+	check(not puzzle.has_node("AltarEchoSeal") and not puzzle.has_map_item(),
+		"the altar route is open before any echo, while its map item is still locked")
 	level.player.set_physics_process(false)
 	level.stone_lion.set_physics_process(false)
 	level.tide.set_physics_process(false)
@@ -47,12 +49,12 @@ func run() -> void:
 	for i in ceili((puzzle.RETURN_INTERVAL + 2.0) * 60.0):
 		await physics_frame
 		if puzzle.echo_available("archive") and puzzle._retry_left > 0.0: break
-	check(puzzle.echo_available("archive") and not puzzle.seal_open(), "failed save leaves the echo and gate intact")
+	check(puzzle.echo_available("archive") and not puzzle.has_map_item(), "failed save leaves the echo and map reward unclaimed")
 	save.refuse = false
 	puzzle._physics_process(0.71)
 	level.player.position = puzzle.echoes.vault + Vector2(0, 32)
 	for i in 10: await physics_frame
-	check(puzzle.collected.size() == 2 and not puzzle.seal_open(), "two distinct echoes keep the altar blocked")
+	check(puzzle.collected.size() == 2 and not puzzle.has_map_item(), "two distinct echoes leave the map reward unclaimed")
 	await check_lion_intro(level, save)
 	await check_lion(level, save)
 	level.player.position = puzzle.echoes.sealed_street + Vector2(0, 32)
@@ -60,16 +62,16 @@ func run() -> void:
 	check(not puzzle.collected.has("sealed_street"), "breaking A17 does not create a pickup window by itself")
 	for i in ceili((puzzle.RETURN_INTERVAL + 2.0) * 60.0):
 		await physics_frame
-		if puzzle.seal_open(): break
+		if puzzle.has_map_item(): break
 	await process_frame
-	check(puzzle.seal_open() and puzzle._seal_shape.disabled, "third echo opens the physical seal")
+	check(puzzle.has_map_item() and puzzle.collected.size() == 3, "third echo awards the map item")
 	level.queue_free()
 	await process_frame
 	level = SCENE.instantiate() as SunkenCavern
 	root.add_child(level)
 	current_scene = level
-	check(level.resonance.awake and level.resonance.seal_open() and level.resonance._seal_shape.disabled,
-		"reentry restores the bell and the derived seal")
+	check(level.resonance.awake and level.resonance.has_map_item() and not level.resonance.has_node("AltarEchoSeal"),
+		"reentry restores the bell and map item while the altar route stays open")
 	check(level.stone_lion.broken and level.stone_lion._wall_shape.disabled, "reentry restores the open A17 wall")
 	check(is_zero_approx(level.tide.time), "a loaded tide starts calm rather than restoring an old countdown")
 	await check_tide(level)
