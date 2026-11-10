@@ -35,7 +35,7 @@ func run() -> void:
 	check(not player.is_in_deep_water(), "Main entry is dry")
 	check(level.layout.spaces.size() == 33, "The whole map includes the west loft and east ruined-street return")
 	check(level.open_doors.values().count(false) == 2, "Both far-side shortcuts start closed")
-	check(level.layout.ladders.size() == 10, "Ten authored interior ladders replace the 48 automatic shaft segments")
+	check(level.layout.ladders.size() == 8, "Eight ladders remain after A11 gets a lift and A22 gains a service return")
 	var helper_count := 0
 	for label in level.find_children("*", "Label", true, false):
 		if not player.is_ancestor_of(label): helper_count += 1
@@ -245,6 +245,8 @@ func navigate(goal: String) -> bool:
 	while not queue.is_empty() and not previous.has(goal):
 		var current: String = queue.pop_front()
 		for link in nav_links:
+			# Lift entries describe the authored water route; the driver must board it explicitly.
+			if link.mode == "lift": continue
 			if link.has("door") and not level.open_doors[link.door]: continue
 			var neighbor: String = link.b if link.a == current else link.a if link.b == current and not link.get("one_way", false) else ""
 			if neighbor.is_empty() or previous.has(neighbor): continue
@@ -383,6 +385,29 @@ func descend(target: Vector2, chute_x: float = NAN) -> bool:
 	return false
 
 
+## Hold through a narrow opening and brake once there is room to fall.
+func drop_to(landing: Vector2) -> bool:
+	release()
+	for i in 90:
+		if player.air_state == LanPlayer.AirState.GROUNDED: break
+		await step(1)
+	var direction := signf(landing.x - player.position.x)
+	Input.action_press(&"ui_right" if direction > 0 else &"ui_left")
+	for i in 600:
+		var braking := maxf(8.0, player.velocity.x * player.velocity.x / (2.0 * LanPlayer.GROUND_DECELERATION))
+		if (landing.x - player.position.x) * direction <= braking: break
+		await step(1)
+	release()
+	for i in 600:
+		if standing() and absf(player.position.y - landing.y) < 5:
+			await step(6)
+			return true
+		await step(1)
+	check(false, "Deliberate drop stuck at %s toward %s" % [player.position, landing])
+	await capture("stuck_deliberate_drop")
+	return false
+
+
 func water_journey(id: String) -> bool:
 	for item in level.layout.water_itineraries[id]:
 		var target := Vector2(float(item[0]), float(item[1]))
@@ -432,7 +457,7 @@ func swim_to(target: Vector2, mode: String) -> bool:
 			else:
 				Input.action_release(&"ui_left")
 				Input.action_release(&"ui_right")
-			if i % 30 < 2: Input.action_press(&"jump")
+			if player.is_in_deep_water() and i % 30 < 2: Input.action_press(&"jump")
 			else: Input.action_release(&"jump")
 		else:
 			if mode == "breathe" and absf(dx) < 22 and level.oxygen.mode == UnderwaterOxygen.Mode.BREATHING and level.oxygen.fraction() > 0.99:

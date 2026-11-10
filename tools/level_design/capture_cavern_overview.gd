@@ -64,7 +64,7 @@ func run() -> void:
 	file.close()
 	if "--regions" in OS.get_cmdline_user_args():
 		var reference := load("res://../homeing-star-test/tools/level_design/cavern_region_reference.gd").new() as Node2D
-		reference.setup(picture,level.bounds,zoom)
+		reference.setup(picture,level.bounds,zoom,level.layout.mechanisms.echoes)
 		var reference_layer := CanvasLayer.new()
 		reference_layer.layer = 100
 		reference_layer.add_child(reference)

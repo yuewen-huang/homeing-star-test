@@ -68,28 +68,6 @@ func descend(target: Vector2,chute_x: float=NAN) -> bool:
 	return await super.descend(target,chute_x)
 
 
-func drop_to(landing: Vector2) -> bool:
-	release()
-	for i in 90:
-		if player.air_state==LanPlayer.AirState.GROUNDED: break
-		await step(1)
-	var direction:=signf(landing.x-player.position.x)
-	Input.action_press(&"ui_right" if direction>0 else &"ui_left")
-	for i in 600:
-		var braking:=maxf(8.0,player.velocity.x*player.velocity.x/(2.0*LanPlayer.GROUND_DECELERATION))
-		if (landing.x-player.position.x)*direction<=braking: break
-		await step(1)
-	release()
-	for i in 600:
-		if standing() and absf(player.position.y-landing.y)<5:
-			await step(6)
-			return true
-		await step(1)
-	check(false,"Deliberate drop stuck at %s toward %s" % [player.position,landing])
-	await capture("stuck_deliberate_drop")
-	return false
-
-
 func end_east_crypt_test(continuous: bool) -> void:
 	release()
 	var report={"checks":checks,"failures":failures,"game_seconds":frames/60.0,

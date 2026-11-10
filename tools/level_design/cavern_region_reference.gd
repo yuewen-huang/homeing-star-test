@@ -3,18 +3,21 @@ extends Node2D
 const SOURCE := "res://../homeing-star-doc/docs/design/sunken_cavern/regions_a1_a27.json"
 const OUTLINE := "res://../homeing-star-doc/docs/design/sunken_cavern/outline.json"
 const OFFSET := Vector2(40,160)
+const ECHO_COLOR := Color("a9ffee")
 var picture: Texture2D
 var bounds: Rect2
 var zoom: float
 var regions: Array
 var spaces: Dictionary = {}
+var echoes: Dictionary
 var font := SystemFont.new()
 
 
-func setup(image: Image,map_bounds: Rect2,map_zoom: float) -> void:
+func setup(image: Image,map_bounds: Rect2,map_zoom: float,echo_points: Dictionary) -> void:
 	picture = ImageTexture.create_from_image(image)
 	bounds = map_bounds
 	zoom = map_zoom
+	echoes = echo_points
 	font.font_names = PackedStringArray(["Microsoft YaHei"])
 	regions = JSON.parse_string(FileAccess.get_file_as_string(SOURCE)).regions
 	for space in JSON.parse_string(FileAccess.get_file_as_string(OUTLINE)).spaces:
@@ -41,7 +44,7 @@ func _draw() -> void:
 	draw_rect(Rect2(0,0,4800,2560),Color("0b141c"))
 	draw_texture(picture,OFFSET)
 	draw_string(font,Vector2(70,79),"沉没古城 · 区域参照图",HORIZONTAL_ALIGNMENT_LEFT,-1,48,Color("edf4f5"))
-	draw_string(font,Vector2(72,126),"当前实机全局图  /  A1–A27 固定编号  /  2026-11-02 · 木质地面优化",HORIZONTAL_ALIGNMENT_LEFT,-1,25,Color("a3b7c3"))
+	draw_string(font,Vector2(72,126),"当前实机布局  /  A1–A27 固定编号  /  机关初始状态",HORIZONTAL_ALIGNMENT_LEFT,-1,25,Color("a3b7c3"))
 	for region in regions:
 		var color := tint(region.group)
 		var cells: Dictionary = {}
@@ -63,7 +66,17 @@ func _draw() -> void:
 		var row_y := 235+index*77
 		badge(Vector2(4020,row_y-10),region.id,color)
 		draw_string(font,Vector2(4082,row_y),region.name,HORIZONTAL_ALIGNMENT_LEFT,-1,30,Color("e0eaed"))
+	for echo: Array in echoes.values():
+		_echo_mark(point(Vector2(echo[0],echo[1])))
 	draw_line(Vector2(3940,180),Vector2(3940,2350),Color("344956"),2)
 	draw_string(font,Vector2(3978,166),"区域编号 / 后续设计沟通用",HORIZONTAL_ALIGNMENT_LEFT,-1,29,Color("a3b7c3"))
 	draw_string(font,Vector2(3978,2390),"W1、W2 保留原水路名称",HORIZONTAL_ALIGNMENT_LEFT,-1,25,Color("a3b7c3"))
+	_echo_mark(Vector2(3991,2444))
+	draw_string(font,Vector2(4020,2454),"余音位置",HORIZONTAL_ALIGNMENT_LEFT,-1,25,ECHO_COLOR)
 	draw_string(font,Vector2(70,2517),"细线沿现有空间轮廓标示范围；编号仅用于此参照图。深层远景使用总览专用投影。",HORIZONTAL_ALIGNMENT_LEFT,-1,26,Color("a3b7c3"))
+
+
+func _echo_mark(at: Vector2) -> void:
+	draw_circle(at, 15, Color("0b141c"), true, -1.0, true)
+	draw_circle(at, 11, ECHO_COLOR, false, 3, true)
+	draw_circle(at, 4, ECHO_COLOR, true, -1.0, true)
