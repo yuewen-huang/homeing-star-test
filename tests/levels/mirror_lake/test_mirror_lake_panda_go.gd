@@ -105,7 +105,7 @@ func run() -> void:
 	check(arena.prompt.visible and arena.prompt.text == "需切阴", "need-yin prompt shown")
 	check(arena.session.board.to_rows() == before, "board unchanged when blocked")
 	side(MirrorLake.Side.YIN)
-	# --- 破局：破字 + 虚弱 5 秒 -> 字消失 -> 切阴
+	# --- 破局：破字立即出现，拉回结束才开始算虚弱时间
 	var won := []
 	arena.game_won.connect(func(i: int) -> void: won.append(i))
 	var lost := []
@@ -121,8 +121,10 @@ func run() -> void:
 	check(not arena.game_on and arena.pulling and player.input_frozen, "board starts fading, Lan pulled back")
 	arena.tick(PandaGoArena.PULL_TIME * 0.5)
 	check(player.position.y < on_board_y and player.position.y > MirrorLake.STAND_Y and arena.board_alpha < 1.0, "mid-pull, board fading")
+	check(is_zero_approx(arena.state_clock) and not arena.has_damage_window(), "pullback leaves the solved damage timer untouched")
 	arena.tick(PandaGoArena.PULL_TIME)
 	check(not arena.planar and is_equal_approx(player.position.y, MirrorLake.STAND_Y) and not player.input_frozen and player.is_physics_processing(), "Lan back on the baseline, side view restored")
+	check(is_zero_approx(arena.state_clock) and arena.has_damage_window(), "regaining control opens the full solved damage window")
 	check(not arena.is_board_present() and not arena.board_view.visible, "board gone")
 	for code in [KEY_S, KEY_W, KEY_DOWN, KEY_UP]: held0[code] = true
 	arena.tick(0.016)
@@ -141,7 +143,7 @@ func run() -> void:
 	arena.tick(PandaGoArena.WEAK_SECONDS - arena.state_clock - 0.05)
 	check(arena.state == PandaGoArena.STATE_BROKEN and arena.glyph.visible and not arena.panda_yin, "破 and weakness last WEAK_SECONDS")
 	arena.tick(0.1)
-	check(arena.state == PandaGoArena.STATE_YIN and arena.glyph.kind == &"moqi" and arena.panda_yin and arena.panda.action == &"yang_to_yin", "after 5 s: 破 gone (yin skill glyph instead), panda yang_to_yin")
+	check(arena.state == PandaGoArena.STATE_YIN and arena.glyph.kind == &"moqi" and arena.panda_yin and arena.panda.action == &"yang_to_yin", "after the damage window: 破 gone, panda yang_to_yin")
 	# --- 阴：一招（墨起云生），0 次弹反 -> 直接回阳，换更难的题
 	check(arena.yin_skill == 0 and arena.glyph.visible and arena.glyph.kind == &"moqi", "first yin: 墨起云生 glyph being written")
 	run_yin()

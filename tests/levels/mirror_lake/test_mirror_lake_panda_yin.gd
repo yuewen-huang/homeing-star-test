@@ -1,5 +1,5 @@
 extends SceneTree
-## 镜湖熊猫阴阶段招式：顺序 1234 后 34 循环 / 先写字后出招 / 每击先预警 / 弹反计数 -> yang_weak N 秒 / 0 次直接回阳 / 一笔山河=千里江山 5 次全屏攻击 / 字每字与弈同大 / 出招挥笔 / 墨色预警。
+## 镜湖熊猫阴阶段招式：顺序 1234 后 34 循环 / 先写字后出招 / 每击先预警 / 震刀获得有上限的虚弱窗口 / 0 次直接回阳 / 一笔山河=千里江山 5 次全屏攻击 / 字每字与弈同大 / 出招挥笔 / 墨色预警。
 ## 用法：homeing-star-test/run-tests.ps1 -Test test_mirror_lake_panda_yin
 class MemoryProgress extends SaveProgressService:
 	func _ready() -> void:
@@ -148,11 +148,19 @@ func run() -> void:
 	check(n >= 1 and n == parried.size(), "parries counted during the skill (%d)" % n)
 	check(cue, "yang player gets the parry cue before strikes")
 	check(arena.state == PandaGoArena.STATE_YIN_WEAK and arena.panda.action == &"yin_weak" and not arena.glyph.visible, "skill over with parries -> yin_weak, glyph gone")
-	check(is_equal_approx(arena.yin_weak_seconds, n * PandaGoArena.WEAK_PER_PARRY), "weak lasts N = parries seconds")
+	check(is_equal_approx(arena.yin_weak_seconds, 1.5 + (n - 1) * 0.5), "first parry opens 1.5 s, each extra parry adds 0.5 s")
 	arena.tick(arena.yin_weak_seconds - arena.state_clock - 0.05)
 	check(arena.state == PandaGoArena.STATE_YIN_WEAK, "still weak just before N s")
 	arena.tick(0.1)
 	check(arena.state == PandaGoArena.STATE_WRITING and arena.panda.action == &"yin_to_yang", "after N s -> yang")
+	enter_yin(1)
+	arena.skills.parries = PandaYinSkills.STROKE_TIMES.size()
+	arena._settle_yin()
+	check(is_equal_approx(arena.yin_weak_seconds, 3.5), "parrying every 笔走龙蛇 strike still gives at most 3.5 s")
+	enter_yin(0)
+	arena.interrupt_for_throw()
+	check(arena.state == PandaGoArena.STATE_YIN_WEAK and is_equal_approx(arena.yin_weak_seconds, 0.8),
+		"throwing during a skill leaves only a short recovery after the throw")
 	# --- 泼墨惊鸿 / 一笔山河
 	side(MirrorLake.Side.YIN)
 	enter_yin(2)
