@@ -514,9 +514,9 @@ func steer_to_spear(spears: Array[ATTACK], target: ATTACK, lead: float) -> void:
 
 
 func downslash_spear(spears: Array[ATTACK]) -> void:
-	Input.action_press(&"ui_down")
+	Input.action_press(&"fast_fall")
 	await step_stakes(spears, 2)
-	Input.action_release(&"ui_down")
+	Input.action_release(&"fast_fall")
 	for i in 25:
 		await step_stakes(spears, 1)
 		if player.fast_fall.last_contacts == 1 and player.velocity.y < 0.0: break

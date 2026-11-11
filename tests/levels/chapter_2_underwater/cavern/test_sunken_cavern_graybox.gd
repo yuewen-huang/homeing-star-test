@@ -304,9 +304,7 @@ func spring_ascent(target: Vector2) -> bool:
 	var pressed := false
 	for i in ceili(shaft.CYCLE * 2.0 * 60.0):
 		if shaft.stomp_cue_active():
-			Input.action_press(&"ui_down")
-			await step(1)
-			Input.action_release(&"ui_down")
+			await slash_down()
 			pressed = true
 			break
 		await step(1)
@@ -317,6 +315,20 @@ func spring_ascent(target: Vector2) -> bool:
 		await step(1)
 	check(false, "Spring ascent ended at %s instead of %s" % [player.position, target])
 	return false
+
+
+func slash_down() -> void:
+	Input.action_press(&"ui_down")
+	var attack := InputEventKey.new()
+	attack.physical_keycode = KEY_J
+	attack.pressed = true
+	Input.parse_input_event(attack)
+	Input.flush_buffered_events()
+	await step(1)
+	attack.pressed = false
+	Input.parse_input_event(attack)
+	Input.flush_buffered_events()
+	Input.action_release(&"ui_down")
 
 
 func descend_west_shaft(target: Vector2) -> bool:
