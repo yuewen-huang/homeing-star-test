@@ -66,7 +66,10 @@ func run() -> void:
 		var prior: Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://../homeing-star-test/tests/player/lan/fixtures/attack_rhythm_baseline.json"))
 		for key: String in records:
 			check(PackedInt32Array(records[key].active_ticks)==PackedInt32Array(prior[key].active_ticks),"%s preserves every active damage tick" % key)
-			check(records[key].next_state==prior[key].next_state or key=="start_attack_1x_queued","%s preserves the combo destination" % key)
+			# The old snapshot stores enum ordinals; the finisher's ordinal has since changed.
+			var destination: int = LanPlayer.AttackState.ATTACK_3X \
+				if key == "start_attack_2x_queued" else int(prior[key].next_state)
+			check(records[key].next_state==destination or key=="start_attack_1x_queued","%s preserves the combo destination" % key)
 		for action in ["start_attack_1x","start_attack_2x_2","start_attack_2x"]:
 			var key: String=action+"_queued"
 			check(records[key].end_tick<prior[key].end_tick,"%s chains earlier after the live effect" % action)

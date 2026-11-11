@@ -1,6 +1,9 @@
 param(
     [string]$Godot,
-    [switch]$Toad
+    [switch]$Toad,
+    [switch]$StakeChain,
+    [switch]$WestShafts,
+    [switch]$WestShaftReturn
 )
 $ErrorActionPreference = 'Stop'
 if (-not $Godot) {
@@ -19,7 +22,12 @@ $cavernArtifacts = Join-Path $cavernWorkspace 'homeing-star-test/artifacts/sunke
 New-Item -ItemType Directory -Path $cavernArtifacts -Force | Out-Null
 $cavernLog = Join-Path $cavernArtifacts ('preview-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.log')
 $cavernArgs = @('--path', ('"{0}"' -f $cavernGame), '--rendering-method', 'gl_compatibility', '--log-file', ('"{0}"' -f $cavernLog), '--position', '80,80', '--resolution', '1280x720', '--script', ('"{0}"' -f $cavernScript))
-if ($Toad) { $cavernArgs += @('--', '--toad') }
+if ($WestShaftReturn) { $cavernArgs += @('--', '--west-shaft-return') }
+elseif ($WestShafts) { $cavernArgs += @('--', '--west-shafts') }
+elseif ($Toad -or $StakeChain) {
+    $cavernArgs += @('--', '--toad')
+    if ($StakeChain) { $cavernArgs += '--stake-chain' }
+}
 $cavernProcess = Start-Process -FilePath $Godot -ArgumentList $cavernArgs -WindowStyle Normal -PassThru
 Write-Output ('Sunken cavern preview PID: ' + $cavernProcess.Id)
 $cavernProcess.WaitForExit()

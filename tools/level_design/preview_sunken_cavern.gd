@@ -8,7 +8,25 @@ func run() -> void:
 	var level := (load(SCENE) as PackedScene).instantiate() as Node2D
 	root.add_child(level)
 	current_scene = level
+	if "--west-shaft-return" in OS.get_cmdline_user_args():
+		level.player.reset_after_map_fall(level.marker("dry_base"))
+		level.snap_camera()
+		root.title = "归航星 · A22 正式美术试玩"
+		print("WEST_SHAFT_RETURN_PLAYTEST_READY")
+		return
+	if "--west-shafts" in OS.get_cmdline_user_args():
+		level.player.reset_after_map_fall(level.marker("w60"))
+		level.snap_camera()
+		root.title = "归航星 · A4–A19 / A22 西井试玩"
+		print("WEST_SHAFTS_PLAYTEST_READY")
+		return
 	if "--toad" in OS.get_cmdline_user_args():
+		if "--stake-chain" in OS.get_cmdline_user_args():
+			level.bronze_toad.engagement_changed.connect(func(active: bool) -> void:
+				if active:
+					# Pop order: throw, fracture slam, then the other two normal combinations.
+					level.bronze_toad._bag.assign([1, 2, 3, 0])
+					level.bronze_toad._fracture_next = true)
 		level.player.reset_after_map_fall(level.bronze_toad.RETRY_AT)
 		level.snap_camera()
 		root.title = "归航星 · A25 青铜金蟾试玩"

@@ -190,6 +190,8 @@ func prepare_charge(level: SunkenCavern) -> void:
 func check_tide(level: SunkenCavern) -> void:
 	var player := level.player
 	var tide := level.tide
+	# Keep the automatic tide running while the fixture puts Lan inside A25's engagement range.
+	level.bronze_toad.set_physics_process(false)
 	await physics_frame
 	player.reset_after_map_fall(level.start)
 	tide.time = tide.CALM + 0.25

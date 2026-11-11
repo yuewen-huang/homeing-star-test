@@ -35,7 +35,7 @@ func run() -> void:
 	check(not player.is_in_deep_water(), "Main entry is dry")
 	check(level.layout.spaces.size() == 33, "The whole map includes the west loft and east ruined-street return")
 	check(level.open_doors.values().count(false) == 2, "Both far-side shortcuts start closed")
-	check(level.layout.ladders.size() == 8, "Eight ladders remain after A11 gets a lift and A22 gains a service return")
+	check(level.layout.ladders.size() == 7, "A22's spring replaces its service ladder")
 	var helper_count := 0
 	for label in level.find_children("*", "Label", true, false):
 		if not player.is_ancestor_of(label): helper_count += 1
@@ -267,7 +267,13 @@ func navigate(goal: String) -> bool:
 		match used[name].mode:
 			"climb": ok = await climb(target)
 			"jump": ok = await hop(target)
-			"drop": ok = await descend(target, float(used[name].get("chute_x", NAN)))
+			"wall_jump": ok = await wall_jump_ascent(target)
+			"spring": ok = await spring_ascent(target)
+			"drop":
+				if nav_at == "dry_turn" and name == "dry_base":
+					ok = await descend_west_shaft(target)
+				else:
+					ok = await descend(target, float(used[name].get("chute_x", NAN)))
 			_: ok = await walk(target)
 		if not ok:
 			print("NAV FAILURE goal=%s edge=%s -> %s" % [goal, nav_at, name])
@@ -278,6 +284,90 @@ func navigate(goal: String) -> bool:
 	print("ARRIVED %s %s" % [goal, player.position])
 	tour.append({"at":goal,"frame":frames,"position":[player.position.x,player.position.y]})
 	return true
+
+
+func step_onto_west_spring() -> bool:
+	var spring: Node2D = level.west_shaft.pad
+	var center: float = spring.position.x + spring.length * 0.5
+	release()
+	Input.action_press(&"ui_left" if player.position.x > center else &"ui_right")
+	for i in 70:
+		if absf(player.position.x - center) < 6.0: break
+		await step(1)
+	release()
+	return absf(player.position.x - center) < 10.0
+
+
+func spring_ascent(target: Vector2) -> bool:
+	var shaft: Node2D = level.west_shaft
+	if not await step_onto_west_spring(): return false
+	var pressed := false
+	for i in ceili(shaft.CYCLE * 2.0 * 60.0):
+		if shaft.stomp_cue_active():
+			Input.action_press(&"ui_down")
+			await step(1)
+			Input.action_release(&"ui_down")
+			pressed = true
+			break
+		await step(1)
+	if not pressed: return false
+	for i in 195:
+		if standing() and absf(player.position.y - target.y) < 4.0:
+			return await walk_plain(target)
+		await step(1)
+	check(false, "Spring ascent ended at %s instead of %s" % [player.position, target])
+	return false
+
+
+func descend_west_shaft(target: Vector2) -> bool:
+	var shaft: Node2D = level.west_shaft
+	var upper_y: float = level.marker("dry_turn").y
+	if not await walk_plain(Vector2(2442.0, upper_y)): return false
+	var drop_at: float = shaft.OPEN_AT - 1.05
+	for i in ceili(shaft.CYCLE * 60.0) + 4:
+		if shaft.clock >= drop_at and shaft.clock < drop_at + 0.05: break
+		await step(1)
+	Input.action_press(&"ui_left")
+	for i in 40:
+		if player.position.x < 2409.0: break
+		await step(1)
+	release()
+	for i in 180:
+		if standing() and absf(player.position.y - target.y) < 4.0:
+			return await hop(target)
+		await step(1)
+	check(false, "West shaft descent ended at %s instead of %s" % [player.position, target])
+	return false
+
+
+func wall_jump_ascent(target: Vector2, kicks: Array[float] = []) -> bool:
+	release()
+	var direction := 1.0
+	for i in 540:
+		if standing() and absf(player.position.y - target.y) < 4.0:
+			release()
+			return await walk_plain(target)
+		if player.position.y < target.y - 5.0:
+			direction = signf(target.x - player.position.x) if absf(target.x - player.position.x) > 7.0 else 0.0
+		elif standing() and player.position.y < target.y + 75.0:
+			direction = signf(target.x - player.position.x)
+		Input.action_release(&"ui_left")
+		Input.action_release(&"ui_right")
+		if direction != 0.0:
+			Input.action_press(&"ui_right" if direction > 0.0 else &"ui_left")
+		var wall := player.air_state == LanPlayer.AirState.WALL_SLIDING
+		if wall or player.air_state == LanPlayer.AirState.GROUNDED:
+			Input.action_press(&"jump")
+			await step(1)
+			Input.action_release(&"jump")
+			if wall and player.air_state == LanPlayer.AirState.RISING:
+				direction = player.wall_jump_direction
+				kicks.append(direction)
+		else:
+			await step(1)
+	release()
+	check(false, "Wall-jump route stuck at %s toward %s after %s" % [player.position, target, kicks])
+	return false
 
 
 func hop(target: Vector2) -> bool:

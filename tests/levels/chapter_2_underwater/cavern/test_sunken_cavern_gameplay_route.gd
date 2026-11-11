@@ -14,8 +14,8 @@ func run() -> void:
 	nav_points = level.layout.navigation.points
 	nav_links = level.layout.navigation.links.filter(func(link: Dictionary): return link.mode != "lift")
 	await step(20)
-	check(level.layout.ladders.size() == 8 and level.layout.water.size() == 2,
-		"A11 sheds its three old ladders, retains two pools and has one dry service return")
+	check(level.layout.ladders.size() == 7 and level.layout.water.size() == 2,
+		"The west shaft spring replaces the service ladder and both pools remain")
 	if not await navigate("w18") or not await navigate("bell_top"):
 		await end_test()
 		return
