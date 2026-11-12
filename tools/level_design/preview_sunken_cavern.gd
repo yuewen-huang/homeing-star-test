@@ -8,6 +8,12 @@ func run() -> void:
 	var level := (load(SCENE) as PackedScene).instantiate() as Node2D
 	root.add_child(level)
 	current_scene = level
+	if "--hidden-door" in OS.get_cmdline_user_args():
+		level.player.reset_after_map_fall(level.marker("pool_bank"))
+		level.snap_camera()
+		root.title = "归航星 · A18 水下隐藏入口试玩"
+		print("A18_HIDDEN_DOOR_PLAYTEST_READY")
+		return
 	if "--west-shaft-return" in OS.get_cmdline_user_args():
 		level.player.reset_after_map_fall(level.marker("dry_base"))
 		level.snap_camera()

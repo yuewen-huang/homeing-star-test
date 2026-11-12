@@ -28,13 +28,25 @@ func run() -> void:
 	room.play_action(0)
 	check(await _until(func(): return general.waves.size() == 1), "First swing produces one detached sword wave")
 	var wave := general.waves[0]
-	check(is_equal_approx(absf(wave.velocity.x), 96.0), "Phase-one wave moves slowly")
+	check(absf(wave.velocity.x) > 300.0, "Phase-one blade snaps forward on release")
+	check(wave._soul_art != null and is_zero_approx(wave.velocity.y)
+		and is_equal_approx(wave.launch_position.y, BossDevelopmentRoom.FLOOR_Y - 68.0),
+		"Phase-one soul sweep flies level from the measured blade tip")
+	check(is_equal_approx(wave._edge(1.0).y - wave._edge(0.0).y, 404.0),
+		"The whole tall crescent is active on its release frame")
+	await _check_planted_pose(General.WAVE_MOVE, 12, "Extended wave finish")
+	check(is_equal_approx(absf(wave.velocity.x), 96.0), "Phase-one wave settles into its slow travel")
 	check(await _until(func(): return room.dummy.contacts.size() == 1, 200), "Detached wave hits the real dummy shape once")
 
 	room.dummy_x.value = 688
 	room.play_action(1)
+	await _check_planted_pose(General.REVERSE, 4, "Loaded horizontal slash")
 	check(await _until(func(): return room.dummy.contacts.size() == 1), "Near reverse slash uses its horizontal contact")
 	check(room.player.combat_stats.health == room.player.combat_stats.max_health, "Manual mode keeps Lan safe")
+	await _check_planted_pose(General.REVERSE, 15, "Low horizontal slash finish")
+	check(await _until(func(): return general.animated_sprite.animation == General.RECOVER),
+		"Reverse slash uses the archived closing poses")
+	check(general.attack_hitbox.attack == null, "Reverse recovery stays non-damaging")
 
 	room.play_action(2)
 	var dash_start := general.global_position.x
@@ -43,21 +55,30 @@ func run() -> void:
 	check(await _until(func(): return general.move == General.DASH and general.action_frame == 6), "Dash completes six grounded charge poses")
 	check(not general._dust.is_empty(), "The sprint leaves a floor-anchored dust wake")
 	room.dummy_x.value = 540
+	check(await _until(func(): return general.move == General.DASH and general.action_frame == 15),
+		"Dash reaches its braking pose")
+	check(general.facing == -1.0, "Dash braking retains the sprint direction before turning")
+	await _check_planted_pose(General.DASH, 15, "Dash braking")
 	check(await _until(func(): return general.move == General.CHOPS), "Dash reaches its separate chop chain")
 	check(absf(general.global_position.x - 588.0) < 2.0 and general.facing == 1.0, "Dash commits to its locked endpoint, then faces back")
-	check(await _until(func(): return general.waves.size() == 3, 145), "Three chop contacts launch exactly three waves")
-	var heights: Array[float] = []
-	for projectile in general.waves:
-		heights.append(projectile._blade.height)
-	check(heights.size() == 3 and heights[0] < heights[1] and heights[1] < heights[2], "Chop wave heights increase at each release")
-	check(await _until(func(): return general.move == General.IDLE), "Three jumps land and return to idle")
+	await _check_chop_landings()
 	check(is_equal_approx(general.global_position.y, BossDevelopmentRoom.FLOOR_Y), "Last landing restores the floor line")
 
 	room.dummy_x.value = 688
 	room.play_action(3)
-	check(await _until(func(): return is_instance_valid(general._uppercut_vfx)), "Uppercut has a separate rising crescent")
+	var uppercut_duration := general._clock[-1]
+	var uppercut_origin := general.global_position
+	await _check_planted_pose(General.UPPERCUT, 6, "Uppercut draw with both feet down")
+	check(await _until(func(): return not general._soul_effects.is_empty()),
+		"Phase-one uppercut releases its baked rising cut")
 	check(general.attack_hitbox.attack != null, "Uppercut contact and effect share a release")
 	check(await _until(func(): return room.dummy.contacts.size() == 1), "Slow uppercut reaches the standing target")
+	await _check_planted_pose(General.UPPERCUT, General.UPPERCUT_PLANT, "Uppercut front-foot landing")
+	var uppercut_landing := general.global_position
+	check(is_equal_approx(uppercut_landing.x, uppercut_origin.x + general.facing * General.UPPERCUT_SLIDE),
+		"Uppercut completes one short slide by the front-foot landing")
+	await _check_planted_pose(General.UPPERCUT, General.UPPERCUT_FINISH, "High-blade uppercut finish")
+	check(general.global_position.is_equal_approx(uppercut_landing), "Uppercut holds its landing position through the finish")
 
 	room.play_action(4)
 	check(await _until(func(): return general._weapon_fire.visible), "Kindling visibly wraps the weapon during the stance")
@@ -70,11 +91,19 @@ func run() -> void:
 	check(await _until(func(): return is_instance_valid(wave) and not wave.is_queued_for_deletion() and absf(wave.velocity.x) >= 600.0),
 		"The same fire wave accelerates beyond 600 px/s")
 	check(wave._warned and wave._blade.fire, "Fire wave emits its pre-surge cue")
+	check(wave._soul_art == null, "Phase two keeps its separate burning wave")
 	check(wave.attack.health_damage > 16 and wave._blade.height > 260.0, "Fire phase increases damage and visible cutting height")
+
+	room.play_action(3)
+	check(await _until(func(): return general.animated_sprite.animation == General.RECOVER, 165),
+		"Flaming uppercut uses the archived closing poses")
+	check(general.attack_hitbox.attack == null and general._weapon_fire.visible
+		and is_equal_approx(general._clock[-1], uppercut_duration), "Flaming uppercut keeps fire and the same heavy body timing")
+	check(await _until(func(): return general.move == General.IDLE), "Uppercut recovery reaches the standing pose")
 
 	room.dummy_x.value = 1244
 	room.play_action(2)
-	check(await _until(func(): return general.move == General.CHOPS), "A wall-limited dash still reaches its follow-up")
+	check(await _until(func(): return general.move == General.CHOPS, 135), "A wall-limited dash still reaches its follow-up")
 	check(is_equal_approx(general.global_position.x, general.world_max_x) and general.facing == 1.0,
 		"A dash that cannot pass the target stops inside the boundary and keeps facing it")
 
@@ -89,12 +118,47 @@ func run() -> void:
 	await wait_frames(5)
 	general.begin_action(General.DASH)
 	check(await _until(func(): return general.age >= general._dash_contact_at - 0.18), "Red dash reaches its manual K window")
-	_send_parry(true)
+	_send_action(&"parry", true)
 	await physics_frame
 	await process_frame
-	_send_parry(false)
+	_send_action(&"parry", false)
 	check(await _until(func(): return general.red_parry_hold, 25), "Real K input triggers Lan's shared red counter")
 	check(general.move == General.IDLE and general.waves.is_empty(), "Red counter cancels the three-chop follow-up")
+
+	room.set_combat_simulation(false)
+	room.set_combat_simulation(true)
+	room.player.reset_after_map_fall(Vector2(688.0, BossDevelopmentRoom.FLOOR_Y))
+	general.begin_action(General.REVERSE)
+	check(await _until(func(): return room.player.combat_stats.health < room.player.combat_stats.max_health),
+		"Waiting in range takes the heavy horizontal slash")
+
+	room.set_combat_simulation(false)
+	room.set_combat_simulation(true)
+	room.player.reset_after_map_fall(Vector2(688.0, BossDevelopmentRoom.FLOOR_Y))
+	general.begin_action(General.REVERSE)
+	check(await _until(func(): return general.action_frame == 2), "Lan can read the early draw before retreating")
+	_send_action(&"ui_left", true)
+	check(await _until(func(): return general.action_frame == 8), "Lan can retreat before the blade settles")
+	_send_action(&"ui_left", false)
+	check(room.player.global_position.x < 600.0 and room.player.combat_stats.health == room.player.combat_stats.max_health,
+		"Actual movement input clears the heavy cut without taking damage")
+
+	room.set_combat_simulation(false)
+	room.set_combat_simulation(true)
+	room.player.reset_after_map_fall(Vector2(688.0, BossDevelopmentRoom.FLOOR_Y))
+	general.begin_action(General.UPPERCUT)
+	check(await _until(func(): return room.player.combat_stats.health < room.player.combat_stats.max_health, 120),
+		"The short-slide uppercut hits Lan at close range")
+
+	room.set_combat_simulation(false)
+	room.set_combat_simulation(true)
+	room.player.reset_after_map_fall(Vector2(600.0, BossDevelopmentRoom.FLOOR_Y))
+	general.begin_action(General.UPPERCUT)
+	check(await _until(func(): return general.move == General.IDLE, 175), "Uppercut recovers while Lan stands outside the sweep")
+	check(room.player.combat_stats.health == room.player.combat_stats.max_health,
+		"The short slide leaves Lan safe outside the sweep")
+
+	await _check_soul_sweep_defenses()
 
 	room.set_combat_simulation(false)
 	room.set_combat_simulation(true)
@@ -122,8 +186,86 @@ func _until(predicate: Callable, limit := 105) -> bool:
 	return predicate.call()
 
 
-func _send_parry(pressed: bool) -> void:
+func _check_soul_sweep_defenses() -> void:
+	var target_x := 530.0
+	for response in ["stand", "parry", "jump"]:
+		room.set_combat_simulation(false)
+		room.set_combat_simulation(true)
+		room.player.reset_after_map_fall(Vector2(target_x, BossDevelopmentRoom.FLOOR_Y))
+		general.begin_action(General.WAVE_MOVE)
+		if response == "jump":
+			await _until(func(): return general.action_frame == 8)
+			await _tap_action(&"jump")
+			for tick in 23:
+				await physics_frame
+			await _tap_action(&"jump")
+			check(room.player.global_position.y < BossDevelopmentRoom.FLOOR_Y - 70.0,
+				"Lan is already in the air as the tall crescent releases")
+		var launched := await _until(func(): return not general.waves.is_empty())
+		check(launched, "Soul sweep launches for " + response)
+		if not launched:
+			continue
+		var wave := general.waves[0]
+		if response == "stand":
+			check(await _until(func(): return room.player.combat_stats.health < room.player.combat_stats.max_health, 160),
+				"Standing in the horizontal blade band takes damage")
+		elif response == "parry":
+			check(await _until(func(): return wave.contact_in(room.player.global_position) <= 0.10, 160),
+				"Lan can wait for the travelling blade")
+			await _tap_action(&"parry")
+			check(await _until(func(): return general.waves.is_empty(), 25)
+				and room.player.combat_stats.health == room.player.combat_stats.max_health,
+				"Grounded K parries the soul sweep")
+		else:
+			var hit := await _until(func(): return room.player.combat_stats.health < room.player.combat_stats.max_health, 65)
+			check(hit and room.player.global_position.y < BossDevelopmentRoom.FLOOR_Y - 70.0,
+				"The tall edge catches Lan above the old blade band")
+
+
+func _tap_action(action: StringName) -> void:
+	_send_action(action, true)
+	await physics_frame
+	await process_frame
+	_send_action(action, false)
+
+
+func _check_planted_pose(action: StringName, frame: int, label: String) -> void:
+	var reached := await _until(func(): return general.move == action and general.action_frame == frame, 180)
+	check(reached, label + " reaches the chosen pose")
+	if not reached:
+		return
+	var origin := general.global_position
+	var direction := general.facing
+	var drift := 0.0
+	var turned := false
+	while general.move == action and general.action_frame == frame:
+		drift = maxf(drift, general.global_position.distance_to(origin))
+		turned = turned or general.facing != direction
+		await physics_frame
+	check(drift < 0.1 and not turned, label + " holds its footprint and facing")
+
+
+func _check_chop_landings() -> void:
+	var emitted := {}
+	for _tick in 240:
+		if general.move != General.CHOPS:
+			break
+		for projectile in general.waves:
+			var id := projectile.get_instance_id()
+			if emitted.has(id):
+				continue
+			emitted[id] = projectile._blade.height
+			check(is_equal_approx(general.global_position.y, BossDevelopmentRoom.FLOOR_Y),
+				"Chop wave is released on the grounded pose")
+		await physics_frame
+	var heights := emitted.values()
+	check(heights.size() == 3 and heights[0] < heights[1] and heights[1] < heights[2],
+		"Three separate landings emit three progressively larger waves")
+	check(general.move == General.IDLE, "Three jumps land and return to idle")
+
+
+func _send_action(action: StringName, pressed: bool) -> void:
 	var event := InputEventAction.new()
-	event.action = &"parry"
+	event.action = action
 	event.pressed = pressed
 	Input.parse_input_event(event)

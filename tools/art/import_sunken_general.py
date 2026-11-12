@@ -1,4 +1,4 @@
-"""Cut the two user-edited sheets and register the five combat clips at the feet."""
+"""Cut the user-edited sheets and register the existing combat poses at the feet."""
 
 import argparse
 import hashlib
@@ -44,14 +44,16 @@ MARKS = {
         (277,214,40,410,91), (292,221,53,413,106), (302,217,53,405,100),
         (310,204,45,403,102),
     ],
+    # Register the rear sole at atlas x=186 through F13. From the F14
+    # touchdown onward, the front sole holds x=300 as the torso turns over it.
     "uppercut": [
-        (239,124,147,341,207), (234,151,149,338,229), (228,152,128,332,244),
-        (219,258,120,190,282), (225,281,130,151,269), (222,300,128,129,256),
-        (234,333,126,111,255), (239,327,123,118,250), (242,311,125,123,248),
-        (226,275,118,198,284), (219,257,100,217,277), (229,270,94,253,282),
-        (245,205,100,391,238), (290,265,124,423,205), (299,234,219,441,154),
-        (307,233,218,430,130), (314,245,220,431,117), (323,250,221,439,118),
-        (321,248,220,435,121), (317,236,227,462,126),
+        (228,124,147,341,207), (236,151,149,338,229), (238,152,128,332,244),
+        (241,258,120,190,282), (243,281,130,151,269), (239,300,128,129,256),
+        (236,333,126,111,255), (234,327,123,118,250), (234,311,125,123,248),
+        (234,275,118,198,284), (234,257,100,217,277), (234,270,94,253,282),
+        (246,205,100,391,238), (278,265,124,423,205), (276,234,219,441,154),
+        (277,233,218,430,130), (287,245,220,431,117), (325,250,221,439,118),
+        (324,248,220,435,121), (324,236,227,462,126),
     ],
     "three_chops": [
         (235,160,184,368,263), (235,266,71,134,247), (254,308,55,159,200),
@@ -74,6 +76,26 @@ MARKS = {
         (282,304,263,322,64), (282,319,276,337,55), (282,330,279,329,55),
         (282,332,282,330,51),
     ],
+    # Existing step-in sweep poses 16 and 17, before the weapon comes to rest.
+    "recover": [
+        (258,219,228,402,107), (271,314,278,356,70),
+    ],
+}
+
+# Horizontal registration corrections measured on the existing cells, in source pixels.
+# Keep the supporting boot in place until it releases. In the jump clip, correct
+# the last airborne pose and the landing together; keep the authored airborne pivots.
+BOOT_REGISTRATION_X = {
+    "atak1": (
+        0, 0, 14, -5, -2, 4, -23, 0, -2, -1, 5, 0, 6, 13, 6, 0, 0,
+    ),
+    "atak2": (
+        0, 7, 7, 6, 11, -6, -6, 3, 0, 0, 0, 0, -2, 1, 0, 5,
+    ),
+    "three_chops": (
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -11, 10, 11, 0, 0, 0, 0,
+        0, 0, 0, 0, -8, 8, 8, 0, 0, 0, 0, 0, 0, 0, -5, 4,
+    ),
 }
 
 
@@ -102,12 +124,14 @@ def read_manual(path):
 
 def export_clip(name, frames, source):
     marks = MARKS[name]
+    offsets = BOOT_REGISTRATION_X.get(name, (0,) * len(marks))
     width, height = FRAME_SIZE
     atlas = Image.new("RGBA", (width * COLUMNS, height * ((len(marks) + 3) // 4)))
     weapons = []
-    for index, (frame, mark) in enumerate(zip(frames, marks, strict=True)):
+    for index, (frame, mark, offset_x) in enumerate(zip(frames, marks, offsets, strict=True)):
         left, top, right, sole = frame.getbbox()
         origin_x, butt_x, butt_y, tip_x, tip_y = mark
+        origin_x -= offset_x
         dx, dy = PIVOT[0] - origin_x, PIVOT[1] - sole
         assert 0 < left + dx < right + dx < width, (name, index, frame.getbbox())
         assert 0 < top + dy < sole + dy < height, (name, index)
@@ -139,7 +163,11 @@ def main():
         source = STANCES / rel
         with Image.open(source) as atlas:
             manifest["clips"][name] = export_clip(name, cells(atlas.convert("RGBA"), FRAME_SIZE, len(MARKS[name])), source)
-    (DEST / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf8")
+    source = STANCES / "two_handed_sweep/motion/recovery/step_in_sweep_520x350_19f.png"
+    with Image.open(source) as atlas:
+        poses = list(cells(atlas.convert("RGBA"), FRAME_SIZE, 19))
+        manifest["clips"]["recover"] = export_clip("recover", poses[15:17], source)
+    (DEST / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf8", newline="\n")
 
 
 if __name__ == "__main__":

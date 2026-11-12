@@ -3,7 +3,10 @@ param(
     [switch]$Toad,
     [switch]$StakeChain,
     [switch]$WestShafts,
-    [switch]$WestShaftReturn
+    [switch]$WestShaftReturn,
+    [switch]$HiddenDoor,
+    [switch]$HiddenLayout,
+    [switch]$HiddenGateArt
 )
 $ErrorActionPreference = 'Stop'
 if (-not $Godot) {
@@ -17,12 +20,14 @@ if (-not $Godot -or -not (Test-Path -LiteralPath $Godot -PathType Leaf)) {
 }
 $cavernWorkspace = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $cavernGame = Join-Path $cavernWorkspace 'homeing-star-game'
-$cavernScript = Join-Path $PSScriptRoot 'preview_sunken_cavern.gd'
+$cavernScript = Join-Path $PSScriptRoot $(if ($HiddenLayout -or $HiddenGateArt) { 'preview_zhenxi_layout.gd' } else { 'preview_sunken_cavern.gd' })
 $cavernArtifacts = Join-Path $cavernWorkspace 'homeing-star-test/artifacts/sunken_cavern_graybox_20261101'
 New-Item -ItemType Directory -Path $cavernArtifacts -Force | Out-Null
 $cavernLog = Join-Path $cavernArtifacts ('preview-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.log')
 $cavernArgs = @('--path', ('"{0}"' -f $cavernGame), '--rendering-method', 'gl_compatibility', '--log-file', ('"{0}"' -f $cavernLog), '--position', '80,80', '--resolution', '1280x720', '--script', ('"{0}"' -f $cavernScript))
-if ($WestShaftReturn) { $cavernArgs += @('--', '--west-shaft-return') }
+if ($HiddenGateArt) { $cavernArgs += @('--', '--gate-art') }
+elseif ($HiddenDoor) { $cavernArgs += @('--', '--hidden-door') }
+elseif ($WestShaftReturn) { $cavernArgs += @('--', '--west-shaft-return') }
 elseif ($WestShafts) { $cavernArgs += @('--', '--west-shafts') }
 elseif ($Toad -or $StakeChain) {
     $cavernArgs += @('--', '--toad')
