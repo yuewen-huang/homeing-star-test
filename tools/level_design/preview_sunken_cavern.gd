@@ -39,6 +39,8 @@ func run() -> void:
 	if "--routes" in OS.get_cmdline_user_args():
 		await capture_routes(level)
 	if not "--overview" in OS.get_cmdline_user_args() and not "--routes" in OS.get_cmdline_user_args():
+		root.title = "归航星 · 沉没古城 · 全图试玩"
+		print("SUNKEN_CAVERN_PLAYTEST_READY")
 		return
 	for i in 12: await physics_frame
 	level.set_process(false)
