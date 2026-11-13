@@ -3,7 +3,7 @@ extends SceneTree
 
 const SWEEP = preload("res://combos/sunken_general_soul_sweep/soul_sweep.gdshader")
 const MOVES = preload("res://combos/sunken_general_soul_sweep/soul_moves.gdshader")
-const MOVE_NAMES := ["reverse", "uppercut", "dash", "chop", "chop_wave"]
+const LEGACY_MOVES := {0: "reverse", 1: "uppercut", 3: "chop", 4: "chop_wave"}
 
 
 func _initialize() -> void:
@@ -15,8 +15,8 @@ func bake() -> void:
 	if args.size() == 1:
 		quit(await _render_atlas(SWEEP, Vector2i(480, 256), 7, 42, args[0]))
 	elif args.size() == 2 and args[0] == "--moves":
-		for index in MOVE_NAMES.size():
-			var output := args[1].path_join("soul_%s_288x192_24f.png" % MOVE_NAMES[index])
+		for index: int in LEGACY_MOVES:
+			var output := args[1].path_join("soul_%s_288x192_24f.png" % LEGACY_MOVES[index])
 			var error := await _render_atlas(MOVES, Vector2i(288, 192), 6, 24, output, index)
 			if error != OK:
 				quit(error)

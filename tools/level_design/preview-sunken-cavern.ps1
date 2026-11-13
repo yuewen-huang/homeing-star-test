@@ -20,7 +20,7 @@ if (-not $Godot -or -not (Test-Path -LiteralPath $Godot -PathType Leaf)) {
 }
 $cavernWorkspace = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $cavernGame = Join-Path $cavernWorkspace 'homeing-star-game'
-$cavernScript = Join-Path $PSScriptRoot $(if ($HiddenLayout -or $HiddenGateArt) { 'preview_zhenxi_layout.gd' } else { 'preview_sunken_cavern.gd' })
+$cavernScript = Join-Path $PSScriptRoot $(if ($HiddenLayout -and -not $HiddenGateArt) { 'preview_zhenxi_layout.gd' } else { 'preview_sunken_cavern.gd' })
 $cavernArtifacts = Join-Path $cavernWorkspace 'homeing-star-test/artifacts/sunken_cavern_graybox_20261101'
 New-Item -ItemType Directory -Path $cavernArtifacts -Force | Out-Null
 $cavernLog = Join-Path $cavernArtifacts ('preview-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.log')

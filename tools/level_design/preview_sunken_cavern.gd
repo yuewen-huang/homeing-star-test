@@ -8,6 +8,11 @@ func run() -> void:
 	var level := (load(SCENE) as PackedScene).instantiate() as Node2D
 	root.add_child(level)
 	current_scene = level
+	if "--gate-art" in OS.get_cmdline_user_args():
+		await level._cross_hidden_door()
+		root.title = "归航星 · 镇西门美术试玩"
+		print("ZHENXI_ART_PLAYTEST_READY")
+		return
 	if "--hidden-door" in OS.get_cmdline_user_args():
 		level.player.reset_after_map_fall(level.marker("pool_bank"))
 		level.snap_camera()

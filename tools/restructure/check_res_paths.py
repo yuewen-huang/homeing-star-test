@@ -27,6 +27,9 @@ LEGACY_TEST_FILES = {"tests/autoload/test_save_path_migration.gd"}
 # Importers contain literal paths belonging to their source Godot project.
 # Resolve only these exact references there; all production paths still use the game.
 STUDIO_REFERENCES = {
+    "tools/art/bake_sunken_general_kindling.gd": {"combos/sunken_general_kindling/combo.json", "vfx/kindling_fire.gd"},
+    "tools/art/bake_sunken_general_red_dash.gd": {"combos/sunken_general_red_dash/", "vfx/soul_dash.gd", "vfx/flow_stage.gd"},
+    "tools/art/bake_sunken_general_uppercut.gd": {"combos/sunken_general_uppercut/", "vfx/flow_stage.gd"},
     "tools/art/import_deer_wind.py": {"vfx/", "vfx/magic/shaders/%s.gdshader"},
     "tools/verify_deer_wind_editor.gd": {"node_editor.tscn", "combos/deer_wind_%s/combo.json"},
     "tools/art/import_master_phase2_arrangements.py": {"combos/", "vfx/combo_player.gd"},

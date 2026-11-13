@@ -4,8 +4,6 @@ extends "../../tests/support/harness.gd"
 const LAN := preload("res://scenes/player/lan/lan_player.tscn")
 const OUTER := Rect2(0, 0, 3456, 720)
 const INNER := Rect2(4800, 0, 3840, 720)
-const GATE_ART_VIEW := Rect2(2176, 0, 1280, 720)
-const GATE_ART_SCENE := "res://scenes/levels/chapter_2_underwater/cavern/cavern_zhenxi_gate_art.tscn"
 const ARRIVAL := Vector2(310, 590)
 const GATE_FRONT := Vector2(2860, 502)
 const GATE_BACK := Vector2(4970, 548)
@@ -27,8 +25,6 @@ var _player: LanPlayer
 var _camera := Camera2D.new()
 var _prompt := Label.new()
 var _camera_area := OUTER
-var _gate_art: Node2D
-var _contact_shadow: Sprite2D
 
 
 func run() -> void:
@@ -49,15 +45,7 @@ func run() -> void:
 	_prompt.add_theme_font_size_override(&"font_size", 22)
 	_prompt.add_theme_constant_override(&"outline_size", 5)
 	_world.add_child(_prompt)
-	if "--gate-art" in OS.get_cmdline_user_args():
-		root.title = "归航星 · 镇西门战坪美术"
-		_gate_art = (load(GATE_ART_SCENE) as PackedScene).instantiate() as Node2D
-		_gate_art.position = GATE_ART_VIEW.position
-		_world.add_child(_gate_art)
-		_contact_shadow = _gate_art.get_node("ContactShadow")
-		_move_to(Vector2(2470, GATE_FRONT.y), GATE_ART_VIEW)
-	else:
-		_move_to(ARRIVAL, OUTER)
+	_move_to(ARRIVAL, OUTER)
 	physics_frame.connect(_update_controls)
 	process_frame.connect(_update_view)
 	print("ZHENXI_LAYOUT_READY")
@@ -136,9 +124,6 @@ func _label(value: String, center: Vector2) -> void:
 
 func _move_to(at: Vector2, area: Rect2) -> void:
 	_camera_area = area
-	_guides.visible = area != GATE_ART_VIEW
-	if _gate_art:
-		_gate_art.visible = area == GATE_ART_VIEW
 	_player.world_min_x = area.position.x + 20
 	_player.world_max_x = area.end.x - 20
 	_player.reset_after_map_fall(at)
@@ -151,10 +136,6 @@ func _move_to(at: Vector2, area: Rect2) -> void:
 func _update_view() -> void:
 	var target_x := clampf(_player.position.x, _camera_area.position.x + 640, _camera_area.end.x - 640)
 	_camera.position = Vector2(target_x, 360)
-	if _gate_art and _gate_art.visible:
-		_contact_shadow.position = Vector2(_player.position.x - GATE_ART_VIEW.position.x, GATE_FRONT.y + 1.0)
-		var lift := clampf((GATE_FRONT.y - _player.position.y) / 120.0, 0.0, 1.0)
-		_contact_shadow.modulate.a = lerpf(0.72, 0.12, lift)
 	var portal := _near_portal()
 	_prompt.visible = not portal.is_empty()
 	if _prompt.visible:
@@ -164,14 +145,13 @@ func _update_view() -> void:
 
 
 func _near_portal() -> Array:
-	var court := GATE_ART_VIEW if _gate_art else OUTER
-	if _camera_area == court and _player.position.distance_to(GATE_FRONT) < 104:
+	if _camera_area == OUTER and _player.position.distance_to(GATE_FRONT) < 104:
 		return [GATE_BACK + Vector2(135, 0), INNER, "穿过镇西门"]
 	if _camera_area == INNER:
 		if _player.position.distance_to(GATE_BACK) < 104:
-			return [GATE_FRONT - Vector2(130, 0), court, "回门前"]
+			return [GATE_FRONT - Vector2(130, 0), OUTER, "回门前"]
 		if _player.position.distance_to(SIDE_DOOR) < 104:
-			return [SIDE_DOOR_LANDING, court, "从侧门回到战坪"]
+			return [SIDE_DOOR_LANDING, OUTER, "从侧门回到战坪"]
 	return []
 
 
