@@ -29,15 +29,15 @@ func run() -> void:
 	room.play_action(0)
 	check(await _until(func(): return general.waves.size() == 1), "First swing produces one detached sword wave")
 	var wave := general.waves[0]
-	check(absf(wave.velocity.x) > 300.0, "Phase-one blade snaps forward on release")
+	check(is_equal_approx(absf(wave.velocity.x), General.SLOW_WAVE_SPEED), "Phase-one blade starts at the slow travel speed")
 	check(wave._soul_art != null and is_zero_approx(wave.velocity.y)
 		and is_equal_approx(wave.launch_position.y, BossDevelopmentRoom.FLOOR_Y - 68.0),
 		"Phase-one soul sweep flies level from the measured blade tip")
 	check(is_equal_approx(wave._edge(1.0).y - wave._edge(0.0).y, 404.0),
 		"The whole tall crescent is active on its release frame")
 	await _check_planted_pose(General.WAVE_MOVE, 12, "Extended wave finish")
-	check(is_equal_approx(absf(wave.velocity.x), 96.0), "Phase-one wave settles into its slow travel")
-	check(await _until(func(): return room.dummy.contacts.size() == 1, 200), "Detached wave hits the real dummy shape once")
+	check(is_equal_approx(absf(wave.velocity.x), General.SLOW_WAVE_SPEED), "Phase-one wave keeps its slow travel")
+	check(await _until(func(): return room.dummy.contacts.size() == 1, 720), "Detached wave hits the real dummy shape once")
 
 	room.dummy_x.value = 688
 	room.play_action(1)
@@ -79,9 +79,12 @@ func run() -> void:
 	check(general.facing == -1.0, "Dash braking retains the sprint direction before turning")
 	check(not general._soul_effects.is_empty(), "The dash smoke continues into the braking pose")
 	await _check_planted_pose(General.DASH, 15, "Dash braking")
-	check(await _until(func(): return general.move == General.CHOPS), "Dash reaches its separate chop chain")
-	check(general._soul_effects.is_empty(), "The old dash effects clear at the turn into the chops")
-	check(absf(general.global_position.x - 588.0) < 2.0 and general.facing == 1.0, "Dash commits to its locked endpoint, then faces back")
+	check(await _until(func(): return general._dash_leg == General.DashLeg.RETURN), "Dash begins a separate return leg")
+	check(general._soul_effects.all(func(art): return art._age <= art.duration), "Dash effects keep their own playback lifetime at the turn")
+	check(absf(general.global_position.x - 588.0) < 2.0, "The outward dash commits to its locked endpoint")
+	check(await _until(func(): return general.move == General.IDLE, 145)
+		and is_equal_approx(general.global_position.x, general._guard_x), "The second dash restores the preview post")
+	room.play_action(5)
 	await _check_chop_landings()
 	check(is_equal_approx(general.global_position.y, BossDevelopmentRoom.FLOOR_Y), "Last landing restores the floor line")
 
@@ -128,11 +131,11 @@ func run() -> void:
 	room.play_action(0)
 	check(await _until(func(): return general.waves.size() == 1), "Phase two launches the fire wave")
 	wave = general.waves[0]
-	check(is_equal_approx(absf(wave.velocity.x), 96.0), "Fire wave starts with the slow drift")
-	check(await _until(func(): return is_instance_valid(wave) and not wave.is_queued_for_deletion() and absf(wave.velocity.x) >= 600.0),
-		"The same fire wave accelerates beyond 600 px/s")
-	check(wave._warned and wave._soul_art.material is ShaderMaterial and wave._continuous_wake,
-		"Fire wave emits its pre-surge cue with the continuous wake")
+	check(is_equal_approx(absf(wave.velocity.x), General.SLOW_WAVE_SPEED), "Fire wave opens with the same slow drift")
+	check(await _until(func(): return is_equal_approx(absf(wave.velocity.x), General.Wave.SURGE_SPEED), 90),
+		"Fire wave accelerates to its original travel speed")
+	check(wave._soul_art.material is ShaderMaterial and wave._continuous_wake,
+		"Fire wave retains its material and continuous wake")
 	check(wave._heat_tail.is_visible_in_tree(), "Traveling fire wave carries localized heat haze")
 	check(wave.attack.health_damage > 16 and is_equal_approx(wave._edge(1.0).y - wave._edge(0.0).y, 312.0)
 		and wave._soul_art.texture == wave.SOUL_SHEET, "Fire wave keeps its hit geometry and uses the first-phase atlas")
@@ -158,16 +161,17 @@ func run() -> void:
 			and reverse_art.scale == reverse_scale and reverse_art.offset == reverse_offset,
 			"Both phases use the same reverse slash atlas, geometry and action timing")
 		check(reverse_art.material.shader.resource_path.ends_with("reverse_fire.gdshader")
-			and is_equal_approx(reverse_art._haze_strength, 0.27),
-			"The reverse slash uses the Studio flame palette and subtle heat haze")
+			and reverse_art.z_index == SideviewLayers.EFFECT
+			and reverse_art._haze_strength > 0.0 and reverse_art._haze_strength < 0.27,
+			"The foreground reverse slash keeps its fire palette with weaker heat haze")
 	room.dummy_x.value = 1244
 	room.play_action(2)
 	check(await _until(func(): return _has_fire("dash") and _has_fire("dash_wake")),
 		"Phase-two dash releases the moving fire blade and floor wake")
-	check(await _until(func(): return general.move == General.CHOPS, 135), "A wall-limited dash still reaches its follow-up")
-	check(not _has_fire("dash") and not _has_fire("dash_wake"), "Dash flames clear before the boss turns")
-	check(is_equal_approx(general.global_position.x, general.world_max_x) and general.facing == 1.0,
-		"A dash that cannot pass the target stops inside the boundary and keeps facing it")
+	check(await _until(func(): return general._dash_leg == General.DashLeg.RETURN, 135), "A wall-limited dash still turns back")
+	check(is_equal_approx(general.global_position.x, general.world_max_x), "The outbound dash respects the wall")
+	check(await _until(func(): return general.move == General.IDLE, 145), "Phase two finishes the return dash")
+	room.play_action(5)
 	var last_size := 0.0
 	for index in General.CHOP_ARCS.size():
 		var land: int = General.CHOP_ARCS[index].land
@@ -193,18 +197,27 @@ func run() -> void:
 	general.begin_action(General.DASH)
 	check(await _until(func(): return room.player.combat_stats.health < room.player.combat_stats.max_health),
 		"Real duel uses swept dash contact against Lan")
+	check(await _until(func(): return absf(general.global_position.x - general._guard_x) > 60.0),
+		"Outbound dash leaves the guard post")
+	var control := Node2D.new()
+	room.add_child(control)
+	general.begin_boss_throw_control(control)
+	for tick in 20:
+		await physics_frame
+	check(general.move == General.IDLE and general.is_throw_controlled(), "Throw control holds the interrupted general")
+	control.queue_free()
+	check(await _until(func(): return general._dash_leg == General.DashLeg.FORCED_RETURN, 25),
+		"Releasing control orders a forced return")
+	check(await _until(func(): return general.move == General.IDLE and absf(general.global_position.x - general._guard_x) < 1.0, 145),
+		"The forced dash restores the post")
+	await _check_return_dash()
+	await _check_hit_armor()
 	room.set_combat_simulation(false)
 	room.set_combat_simulation(true)
 	await wait_frames(5)
-	general.begin_action(General.DASH)
-	check(await _until(func(): return general.age >= general._dash_contact_at - 0.18), "Red dash reaches its manual K window")
-	_send_action(&"parry", true)
-	await physics_frame
-	await process_frame
-	_send_action(&"parry", false)
-	check(await _until(func(): return general.red_parry_hold, 25), "Real K input triggers Lan's shared red counter")
-	check(general.move == General.IDLE and general.waves.is_empty(), "Red counter cancels the three-chop follow-up")
-	check(general._soul_effects.is_empty(), "Red counter clears both sprint layers immediately")
+	general.begin_action(General.CHOPS)
+	check(await _until(func(): return general.move == General.CHOPS and general._danger.visible, 170),
+		"Only the third chop shows the red danger cue")
 
 	room.set_combat_simulation(false)
 	room.set_combat_simulation(true)
@@ -245,10 +258,56 @@ func run() -> void:
 	room.select_combo(0)
 	room.set_combat_simulation(false)
 	room.set_combat_simulation(true)
-	general.combat_stats.apply_health_damage(360)
-	check(await _until(func(): return general.move == General.KINDLE), "Half health automatically begins the transformation")
+	general.combat_stats.set_health_ratio(0.61)
+	check(general._orders.is_empty(), "First threshold stays quiet above sixty percent")
+	general.combat_stats.set_health_ratio(0.60)
+	check(await _until(func(): return is_instance_valid(general._reinforcements)), "Phase one sixty percent calls soldiers")
+	var first_order := general._reinforcements
+	check(first_order != null and first_order._infantry.size() == 6 and first_order._archers.is_empty(), "First call spawns only infantry")
+	check(first_order._infantry[0].position.y == first_order._infantry[1].position.y
+		and first_order._infantry[2].position.y == BossDevelopmentRoom.FLOOR_Y
+		and first_order._infantry[0].position.y < BossDevelopmentRoom.FLOOR_Y
+		and first_order._infantry[4].position.y > BossDevelopmentRoom.FLOOR_Y,
+		"The middle infantry rank follows Lan's floor line between the two outer ranks")
+	general.combat_stats.set_health_ratio(0.30)
+	general.combat_stats.set_health_ratio(0.30)
+	check(general._orders == [General.Reinforcements.ARCHERS], "Phase one thirty percent queues archer volley once")
+	general.combat_stats.set_health_ratio(0.0)
+	check(await _until(func(): return is_instance_valid(general._reinforcements) and not general._reinforcements._archers.is_empty(), 325),
+		"Queued archers still fire before phase transition")
+	check(await _until(func(): return general.move == General.KINDLE, 300), "An empty first bar begins the transformation")
 	check(await _until(func(): return general.phase == 2, 270), "Actual duel reaches flaming phase")
-	check(general.combat_stats.health == 360 and not general.invulnerable, "Transformation resumes combat on the same health bar")
+	check(general.combat_stats.health == 880 and general.combat_stats.max_health == 880 and not general.invulnerable,
+		"Phase two opens at full health on a new bar")
+	general.combat_stats.set_health_ratio(0.60)
+	general.combat_stats.set_health_ratio(0.30)
+	check(general._orders == [General.Reinforcements.BOTH, General.Reinforcements.BOTH], "Both phase two thresholds queue both formations")
+	check(await _until(func(): return is_instance_valid(general._reinforcements)), "Phase two deploys the first joint formation")
+	check(general._reinforcements != null and general._reinforcements._infantry.size() == 6
+		and general._reinforcements._archers.size() == 4, "Both companies appear together")
+	var archers := general._reinforcements._archers
+	check(archers[0].position.x > general.global_position.x
+		and archers[0].position.y < general._reinforcements._infantry[0].position.y
+		and archers[3].position.x > archers[0].position.x and archers[3].position.y > archers[0].position.y
+		and archers[3].z_index > archers[0].z_index
+		and (archers[3].position - archers[0].position).is_equal_approx(General.Reinforcements.ARCHER_LINE_STEP * 3.0),
+		"Archers extend downstage to the right of the general")
+	check(await _until(func(): return general._reinforcements._infantry_flash.visible), "Infantry flashes gold before charging")
+	check(await _until(func(): return general._reinforcements._archer_flash.visible \
+		and not general._reinforcements._infantry_flash.visible), "Archers have a separate gold release cue")
+	var first_volley := general._reinforcements
+	check(await _until(func(): return first_volley._rain_centers.size() == 3), "Archer volley locks three successive bands")
+	var first_band := first_volley._rain_band(0)
+	var second_band := first_volley._rain_band(1)
+	check(first_band.has_point(Vector2(first_band.get_center().x, BossDevelopmentRoom.FLOOR_Y - 125.0))
+		and first_volley._arrow.size == first_band.size, "The visible rain band also hits airborne targets")
+	check(first_band.intersects(second_band) and not second_band.has_point(first_band.get_center())
+		and first_volley._wave_release(1) > first_volley._wave_release(0), "Successive bands sweep across adjacent space on distinct beats")
+	var first_joint := general._reinforcements.get_instance_id()
+	check(await _until(func(): return is_instance_valid(general._reinforcements) and general._reinforcements.get_instance_id() != first_joint, 420),
+		"The second joint formation plays after the first one")
+	check(general._orders.is_empty() and general._reinforcements._infantry.size() == 6
+		and general._reinforcements._archers.size() == 4, "The second threshold also summons both companies")
 
 	room.set_combat_simulation(false)
 	room.play_action(4)
@@ -278,12 +337,82 @@ func _until(predicate: Callable, limit := 105) -> bool:
 	return predicate.call()
 
 
-func _check_soul_sweep_defenses() -> void:
-	var target_x := 530.0
-	for response in ["stand", "parry", "jump"]:
+func _check_return_dash() -> void:
+	var player := room.player
+	for response in ["hit", "parry", "dodge"]:
 		room.set_combat_simulation(false)
 		room.set_combat_simulation(true)
-		room.player.reset_after_map_fall(Vector2(target_x, BossDevelopmentRoom.FLOOR_Y))
+		player.reset_after_map_fall(Vector2(380, BossDevelopmentRoom.FLOOR_Y))
+		general.begin_action(General.DASH)
+		var turning := await _until(func(): return general._dash_leg == General.DashLeg.RETURN, 150)
+		check(turning and general._return_carry_from == Vector2.INF, "The outbound hit never starts a carry")
+		if not turning:
+			continue
+		# Isolate the return sweep at the same player position for each defense.
+		player.reset_after_map_fall(Vector2(470, BossDevelopmentRoom.FLOOR_Y))
+		player.combat_stats.restore_health()
+		if response != "hit":
+			await _until(func(): return general.global_position.x >= 380.0, 130)
+			if response == "parry":
+				await _tap_action(&"parry")
+			else:
+				player.start_back_dodge(-1.0)
+		check(await _until(func(): return general.move == General.IDLE, 150), "The return dash completes (%s)" % response)
+		var gap := absf(player.global_position.x - general._guard_x)
+		if response == "hit":
+			check(absf(gap - General.RETURN_CARRY_GAP) < 8.0 and player.combat_stats.health < player.combat_stats.max_health,
+				"A return hit carries Lan into melee range")
+			check(general._next_action_in > 0.0, "The return keeps its recovery window")
+		else:
+			check(gap > 220.0 and player.combat_stats.health == player.combat_stats.max_health,
+				"Successful %s avoids both damage and carry" % response)
+
+	room.set_combat_simulation(false)
+	room.set_combat_simulation(true)
+	general.begin_action(General.WAVE_MOVE)
+	if await _until(func(): return not general.waves.is_empty()):
+		general._idle()
+		for gap in [130.0, 195.0]:
+			player.reset_after_map_fall(Vector2(general.global_position.x - gap, BossDevelopmentRoom.FLOOR_Y))
+			general._support_index = 0
+			general._choose_move()
+			check(general.move in [General.UPPERCUT, General.REVERSE], "Melee reach overrides the pending dash at %d px" % gap)
+			general._idle()
+		player.reset_after_map_fall(Vector2(380, BossDevelopmentRoom.FLOOR_Y))
+		general._support_index = 0
+		general._choose_move()
+		check(general.move == General.DASH, "The pending dash starts outside melee reach")
+
+
+func _check_hit_armor() -> void:
+	room.set_combat_simulation(false)
+	room.set_combat_simulation(true)
+	room.player.reset_after_map_fall(Vector2(320, BossDevelopmentRoom.FLOOR_Y))
+	general.begin_action(General.CHOPS)
+	if not await _until(func(): return general._danger.visible, 190):
+		check(false, "The third chop reaches its red cue")
+		return
+	general.enter_stagger(1.0)
+	general.apply_break_pressure_hit()
+	check(general.poise_broken and general.move == General.CHOPS and not general.can_be_interrupted_by_special(),
+		"Poise break and pressure keep the move intact")
+	var red := CombatAttackData.new(&"red_test", general, 12, 0, 0.0, 0.0, CombatAttackData.DangerType.COUNTERABLE_DANGER)
+	general.on_attack_parried(red, room.player.global_position)
+	check(not general.red_parry_hold and is_zero_approx(general.short_stun_remaining) and general.move == General.CHOPS,
+		"Red parry registers without stopping the generalized chop")
+	check(await _until(func(): return general.action_frame == General.CHOP_ARCS[2].land, 120),
+		"The armored third chop reaches its landing")
+
+
+func _check_soul_sweep_defenses() -> void:
+	var target_x := 530.0
+	for response in ["stand", "point blank", "parry", "jump", "fire parry"]:
+		room.set_combat_simulation(false)
+		room.set_combat_simulation(true)
+		var at_x := general.global_position.x - 125.0 if response == "point blank" else target_x
+		room.player.reset_after_map_fall(Vector2(at_x, BossDevelopmentRoom.FLOOR_Y))
+		if response == "fire parry":
+			general.reset_fight(general.global_position, 2, false)
 		general.begin_action(General.WAVE_MOVE)
 		if response == "jump":
 			await _until(func(): return general.action_frame == 8)
@@ -298,20 +427,79 @@ func _check_soul_sweep_defenses() -> void:
 		if not launched:
 			continue
 		var wave := general.waves[0]
-		if response == "stand":
-			check(await _until(func(): return room.player.combat_stats.health < room.player.combat_stats.max_health, 160),
-				"Standing in the horizontal blade band takes damage")
-		elif response == "parry":
-			check(await _until(func(): return wave.contact_in(room.player.global_position) <= 0.10, 160),
+		if response in ["stand", "point blank"]:
+			general.set_physics_process(false)
+			for tick in 720:
+				if not wave.has_live_contact():
+					break
+				general._physics_process(1.0 / 60.0)
+				await physics_frame
+			check(room.player.combat_stats.health < room.player.combat_stats.max_health,
+				"Horizontal blade deals damage (%s)" % response)
+			var contact_x: float = wave.global_position.x
+			wave.advance(0.20)
+			check(wave.visible and wave.modulate.a > 0.0 and wave.probes().is_empty()
+				and not is_equal_approx(wave.global_position.x, contact_x), "Spent wave still visibly travels without a second hit (%s)" % response)
+			wave.advance(0.80)
+			check(wave.visible and wave.age > 0.80, "Spent wave keeps playing beyond impact (%s)" % response)
+			wave.advance(60.0)
+			check(wave.is_queued_for_deletion() and not wave.visible, "Spent wave retires at the arena edge (%s)" % response)
+			general.set_physics_process(true)
+		elif response.ends_with("parry"):
+			var instance := wave.get_instance_id()
+			var extra_lead := 48.0 if response == "fire parry" else 0.0
+			var reached := await _until(func(): return is_instance_id_valid(instance) \
+				and _near_wave(instance_from_id(instance), extra_lead), 720)
+			check(reached,
 				"Lan can wait for the travelling blade")
+			if not reached:
+				continue
 			await _tap_action(&"parry")
-			check(await _until(func(): return general.waves.is_empty(), 25)
-				and room.player.combat_stats.health == room.player.combat_stats.max_health,
-				"Grounded K parries the soul sweep")
+			var parried := await _until(func(): return is_instance_id_valid(instance) \
+				and instance_from_id(instance)._rearm_at < INF, 25)
+			check(parried and is_instance_valid(wave) and room.player.combat_stats.health == room.player.combat_stats.max_health,
+				"Grounded K repels Lan while the same soul sweep stays live")
+			if not parried or not is_instance_valid(wave):
+				continue
+			var first_attack = wave.attack
+			var first_health := room.player.combat_stats.health
+			general.set_physics_process(false)
+			# Isolate the same projectile from the support attack scheduler.
+			for tick in 74:
+				wave.advance(1.0 / 60.0)
+				await physics_frame
+			check(await _until(func(): return wave.attack != first_attack, 120), "The same blade rearms with a fresh contact")
+			if response == "fire parry":
+				check(is_equal_approx(absf(wave.velocity.x), General.SLOW_WAVE_SPEED),
+					"A fire parry restores the slow drift during rearm")
+			var second := false
+			for tick in 180:
+				if not is_instance_valid(wave):
+					break
+				if _near_wave(wave, extra_lead if absf(wave.velocity.x) > 100.0 else 0.0):
+					await _tap_action(&"parry")
+					for contact_tick in 6:
+						wave.advance(1.0 / 60.0)
+						await physics_frame
+					second = wave._rearm_at < INF
+					break
+				wave.advance(1.0 / 60.0)
+				await physics_frame
+			general.set_physics_process(true)
+			check(second
+				and is_instance_valid(wave) and room.player.combat_stats.health == first_health,
+				"A second manual K parries the same travelling blade (%s)" % response)
 		else:
-			var hit := await _until(func(): return room.player.combat_stats.health < room.player.combat_stats.max_health, 65)
-			check(hit and room.player.global_position.y < BossDevelopmentRoom.FLOOR_Y - 70.0,
-				"The tall edge catches Lan above the old blade band")
+			check(is_instance_valid(wave) and wave._edge(1.0).y - wave._edge(0.0).y > 300.0,
+				"The slow blade retains its tall edge")
+
+
+func _near_wave(wave: General.Wave, extra_lead := 0.0) -> bool:
+	var body := room.player.hurtbox.get_node("CollisionShape2D") as CollisionShape2D
+	var guard := RectangleShape2D.new()
+	guard.size = body.shape.get_rect().size + Vector2(34 + extra_lead, 22)
+	return wave.probes().any(func(probe: Dictionary) -> bool:
+		return probe.shape.collide(probe.transform, guard, body.global_transform))
 
 
 func _tap_action(action: StringName) -> void:

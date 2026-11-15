@@ -8,6 +8,28 @@ func run() -> void:
 	var level := (load(SCENE) as PackedScene).instantiate() as Node2D
 	root.add_child(level)
 	current_scene = level
+	if "--flag-defense" in OS.get_cmdline_user_args():
+		await level._cross_hidden_door()
+		var gallery: Node2D = level._hidden_gallery
+		var guard := gallery.get_node("GeneralStart") as Marker2D
+		level.player.reset_after_map_fall(level.to_local(guard.global_position - Vector2(340, 0)))
+		gallery._start_battle()
+		gallery.general.reset_fight(guard.global_position, 2, false)
+		# The preview begins after the two volleys of the second phase.
+		gallery.general._threshold_index = 2
+		gallery.general.combat_stats.set_health_ratio(0.0)
+		level.snap_camera()
+		root.title = "归航星 · 镇西门守旗试玩"
+		print("ZHENXI_FLAG_DEFENSE_PLAYTEST_READY")
+		return
+	if "--hidden-general" in OS.get_cmdline_user_args():
+		await level._cross_hidden_door()
+		var retry := level._hidden_gallery.get_node("ArenaRetry") as Marker2D
+		level.player.reset_after_map_fall(level.to_local(retry.global_position))
+		level.snap_camera()
+		root.title = "归航星 · 镇西门残甲将军试玩"
+		print("ZHENXI_GENERAL_PLAYTEST_READY")
+		return
 	if "--gate-art" in OS.get_cmdline_user_args():
 		await level._cross_hidden_door()
 		root.title = "归航星 · 镇西门美术试玩"
