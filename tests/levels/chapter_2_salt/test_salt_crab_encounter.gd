@@ -1,4 +1,5 @@
 extends SceneTree
+const Revised := preload("res://scripts/story/chapter_2_dialogue.gd")
 class MemorySave extends SaveProgressService:
 	var fail_write := false
 	func load_progress() -> void:
@@ -61,6 +62,8 @@ func run() -> void:
 	check(crab.attack_hitbox.attack==null,"Entrance cannot damage Lan")
 	await capture("salt_crab_emergence")
 	advance(0.7)
+	check(encounter._warning.dialogue != null and paused, "The first entrance pauses for the prebattle warning")
+	encounter._warning.dialogue.advance()
 	check(not encounter.entering and player.is_physics_processing() and not player.input_frozen and not crab.manual_control,"Entrance enables actual autonomous fight and player physics")
 	check(player.hurtbox.monitorable and player.hurtbox.collision_layer==4,"Production damage receiver restored")
 	player.set_physics_process(false)
@@ -156,8 +159,8 @@ func run() -> void:
 	player.cast_shadow_claw_storm(crab)
 	var storm := crab.get_node("LanShadowClawStorm")
 	storm._physics_process(0.31)
-	await process_frame
-	check(field.has_node("BossFinisherEffect"),"Detached skill kills also play the finishing blow")
+	check(crab.combat_stats.health == 0 and field.has_node("BossFinisherEffect"),
+		"Detached skill kills start the finishing blow on contact")
 	await crab.wait_for_boss_finisher()
 	await process_frame
 	check(crab.combat_stats.health==0 and not encounter.active,"Detached enhanced E finishes encounter")
@@ -189,13 +192,9 @@ func run() -> void:
 	field._sync_view(0)
 	check(encounter.can_talk() and encounter.crab_prompt.can_interact(),"Peaceful crab offers the shared E prompt near old-save player")
 	check(encounter.interact() and encounter.session_active and paused and player.input_frozen,"Interaction pauses exploration and opens the common dialogue")
-	check(encounter.dialogue._lines.map(func(line): return line.text)==["kakakakakaka","啊？？？","qiaqiaqiaqia","啊？？？"],"All four authored dialogue lines remain exact and ordered")
-	check(encounter.dialogue._lines[0].slot==TutorialDialogue.Slot.LEFT and encounter.dialogue._lines[1].slot==TutorialDialogue.Slot.RIGHT,"Dialogue portraits follow the crab and Lan's actual left/right map positions")
-	await capture("salt_departure_crab_dialogue")
-	encounter.dialogue.advance()
+	check(encounter.dialogue._lines[0].text == Revised.CRAB_TRAVEL[0][1]
+		and encounter.dialogue._actors.has(&"岚"), "The new authored farewell uses Lan's staged dialogue")
 	await capture("salt_departure_lan_dialogue")
-	encounter.dialogue.advance()
-	encounter.dialogue.advance()
 	save.fail_write = true
 	encounter.dialogue.advance()
 	check(not save.has_completed(encounter.DIALOGUE_FACT) and encounter.dialogue.opened and encounter.comic==null,"Failed dialogue settlement keeps the last line retryable")
@@ -270,7 +269,9 @@ func run() -> void:
 	await capture("salt_departure_gate_ready")
 	check(encounter.interact(),"A fresh E interaction starts the real common scene transition")
 	check(not encounter.interact() and not save.has_completed(&"mirror_lake_entered"),"Transition locks duplicate entry and does not prewrite arrival")
-	check(encounter.session_active and encounter.comic is WindSightingComic and paused,"First cave entry opens the configured common scroll comic")
+	check(encounter.session_active and encounter.dialogue != null and paused, "Cave entry opens the line before the scroll")
+	encounter.dialogue.advance()
+	check(encounter.comic is WindSightingComic and paused, "The line hands off to the existing scroll comic")
 	check(encounter.comic.cinematic_id==encounter.SCROLL_ENTRY_ID and encounter.comic._frames.size()==6,"Scroll entry has six panels and an independent viewing record")
 	check((root.get_node("SceneTransition") as SceneTransitionService).current_music_path==Chapter2Music.SALT_FIELD.resource_path,"Cave comic keeps the salt-field music before the map boundary")
 	encounter.comic._show_panel(5,false)

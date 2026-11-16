@@ -55,6 +55,7 @@ func run() -> void:
 	check(GoBoardView.CELL_X == 110.0 and GoBoardView.STONE_RADIUS == 44.0, "110 px spacing, 44 px stones")
 	check(not arena.board_view.visible and not arena.game_on, "no board before the fight")
 	# --- trigger + lock
+	scene.chapter_story.save.try_complete_fact(scene.chapter_story.PANDA)
 	player.position = Vector2(PandaGoArena.TRIGGER_X - 300, MirrorLake.STAND_Y)
 	arena.tick(0.016)
 	check(not arena.active, "not triggered left of the arena")

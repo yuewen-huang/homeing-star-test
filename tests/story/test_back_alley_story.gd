@@ -8,6 +8,11 @@ const COMIC := "res://scenes/story/comics/back_alley_pill_comic.tscn"
 const TOWN := "res://scenes/levels/town/homeward_town.tscn"
 const PILL := ItemCatalog.HANGOVER_PILL
 
+class RetryProgress extends MemoryProgress:
+	var fail_writes := false
+	func save_progress() -> bool:
+		return not fail_writes
+
 func key_e() -> void:
 	var event := InputEventKey.new()
 	event.physical_keycode = KEY_E
@@ -64,7 +69,12 @@ func verify_dialogue(dialogue: TutorialDialogue, part: String) -> bool:
 
 
 func run() -> void:
-	var save := use_memory_progress()
+	var previous := use_memory_progress()
+	root.remove_child(previous)
+	previous.free()
+	var save := RetryProgress.new()
+	save.name = "SaveProgress"
+	root.add_child(save)
 	(root.get_node("QuestLog") as QuestLogService)._save = save
 	for fact: StringName in [SaveProgressService.TUTORIAL_MOVE, SaveProgressService.TUTORIAL_JUMP,
 			SaveProgressService.TUTORIAL_BREAKFAST, SaveProgressService.TUTORIAL_CLIMB,
@@ -101,8 +111,8 @@ func run() -> void:
 		"Progress waits until Lan finishes the handoff line")
 	dialogue.advance()
 	var transition := root.get_node("SceneTransition") as SceneTransitionService
-	await wait_for_route(transition)
-	check(current_scene.scene_file_path == COMIC, "Q hands off to the new comic")
+	check(current_scene == alley and alley.get_node_or_null("BackAlleyPillComic") is ComicPlayer,
+		"Q opens the comic in the current alley")
 	check(save.has_completed(SaveProgressService.STORY_HANGOVER_PILL_USED_ON_MASTER)
 		and not save.has_completed(SaveProgressService.QUEST_BACK_ALLEY_STEP),
 		"An unfinished comic still leaves the alley story pending")
@@ -112,10 +122,9 @@ func run() -> void:
 	var reopened_alley := await enter_scene(ALLEY)
 	walk_to_master(reopened_alley)
 	key_e()
-	await wait_for_route(transition)
-	check(current_scene.scene_file_path == COMIC,
-		"Restarting after the bead was used lets E return directly to the comic")
-	var comic := current_scene as ComicPlayer
+	var comic := reopened_alley.get_node_or_null("BackAlleyPillComic") as ComicPlayer
+	check(current_scene == reopened_alley and comic != null,
+		"Restarting after the bead was used lets E reopen the comic in the alley")
 	if comic == null:
 		finish("BACK ALLEY WAKE")
 		return
@@ -129,19 +138,31 @@ func run() -> void:
 		key_e()
 		if index < comic._frames.size() - 1:
 			await create_timer(0.26).timeout
-	dialogue = comic.get("_wake_dialogue") as TutorialDialogue
+	await process_frame
+	dialogue = reopened_alley.get("master_dialogue") as TutorialDialogue
 	if not verify_dialogue(dialogue, "alley_sober"):
 		finish("BACK ALLEY WAKE")
 		return
-	check(dialogue.layer > comic.layer and not comic.input_enabled,
-		"The sober dialogue sits above the comic and owns its input")
+	check(current_scene == reopened_alley and not is_instance_valid(comic)
+		and dialogue.get_parent() == reopened_alley and reopened_alley.player.input_frozen,
+		"The comic closes and the awake conversation belongs to the alley")
+	check(not reopened_alley.player.visible and not reopened_alley.sleeping_master.visible,
+		"The two dialogue portraits replace the alley world actors")
 	check(not save.has_completed(SaveProgressService.QUEST_BACK_ALLEY_STEP),
 		"The final comic panel does not settle unread dialogue")
 	dialogue._complete_line()
-	await create_timer(0.22).timeout
+	await create_timer(2.8 if DisplayServer.get_name() != "headless" else 0.22).timeout
 	await capture("09-rayne-sober")
+	save.fail_writes = true
 	while dialogue.opened:
 		dialogue.advance()
+	var retry := reopened_alley.get("master_dialogue") as TutorialDialogue
+	check(not transition.is_transitioning and retry != null and retry.opened
+		and not save.has_completed(SaveProgressService.QUEST_BACK_ALLEY_STEP)
+		and not save.has_completed(PROLOGUE.MASTER_WOKE_HEARD),
+		"Failed dialogue settlement retries in place before travel")
+	save.fail_writes = false
+	retry.advance()
 	check(save.has_completed(SaveProgressService.QUEST_BACK_ALLEY_STEP)
 		and save.has_completed(PROLOGUE.MASTER_WOKE_HEARD), "Both facts settle after the last spoken line")
 	await wait_for_route(transition)

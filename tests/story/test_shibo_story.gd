@@ -37,7 +37,10 @@ func enter() -> void:
 	field = load("res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn").instantiate()
 	root.add_child(field); current_scene = field
 	field.set_physics_process(false)
-	npc = field.shibo
+	# Historical NPC fixture. The revised chapter does not mount this scene.
+	npc = preload("res://scripts/story/npcs/shibo_npc.gd").new()
+	npc.setup(field)
+	field.add_child(npc)
 	await process_frame
 	field.feet = npc.POINT + Vector2(-55, 0)
 	field._sync_view(0)

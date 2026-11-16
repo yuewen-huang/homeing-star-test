@@ -90,6 +90,8 @@ func run() -> void:
 	save._config.set_value("progress", String(DeerStory.REWARD_PRESENTED_ID), true)
 	room.story._settle_victory()
 	check(save.has_completed(SaveProgressService.STORY_C1_DEER_DEFEATED), "Retry persists the separate victory fact")
+	check(room.story.dialogue != null and room.story.dialogue.get_line_progress().y == 3,
+		"An early winner gets the release without a reunion for an unrescued Xiaoya")
 	room = enter_deer()
 	await process_frame
 	check(room.story._settled and room.get_node("ReturnGate").visible and room._return_prompt.available, "Re-entering after victory restores the return portal")

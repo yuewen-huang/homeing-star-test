@@ -133,12 +133,7 @@ func run() -> void:
 	check(save.has_completed(SaveProgressService.STORY_C1_MASTER_SENDOFF_SEEN), "Short reminder completes missing sendoff record")
 	await process_frame
 	check(town.player.input_frozen and master.dialogue_open, "Town reminder keeps player locked for choices")
-	check(master._rematch_choices.options == ["再战？", "离开", "问问他为什么帮风"], "Town NPC offers rematch and leave after original dialogue")
-	master._rematch_choices.choose(2)
-	check(master._dialogue != null and town.player.input_frozen, "Optional question keeps the conversation session")
-	for i in 4: master._dialogue.advance()
-	await process_frame
-	check(master._rematch_choices != null and town.player.input_frozen, "Optional question returns to choices without launching combat")
+	check(master._rematch_choices.options == ["再战？", "离开"], "Town NPC offers rematch and leave")
 	master._rematch_choices.choose(1)
 	check(not town.player.input_frozen and not master.dialogue_open, "Leave restores movement and interaction")
 	master._unhandled_input(key)

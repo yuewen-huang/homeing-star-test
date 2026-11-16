@@ -1,21 +1,20 @@
-extends SceneTree
+extends "../tests/support/harness.gd"
 
 const MIST_PATH := "res://scenes/levels/chapter_1/chapter_1_mist_room.tscn"
 const STORY_PATH := "res://scripts/story/chapter_1_forest_dialogue.gd"
+const PROLOGUE := preload("res://scripts/story/prologue_dialogue.gd")
 
 
-func _initialize() -> void:
-	_show_preview.call_deferred()
-
-
-func _show_preview() -> void:
-	var save := root.get_node("SaveProgress") as SaveProgressService
-	save._config = ConfigFile.new()
-	save._loaded = true
-	save.set_process_unhandled_input(false)
+func run() -> void:
+	var save := use_memory_progress()
+	var walk := "--walk" in OS.get_cmdline_user_args()
+	if walk:
+		save.try_complete_facts([SaveProgressService.STORY_MASTER_PHASE_2_DEFEATED, PROLOGUE.MASTER_TRIAL_HEARD])
 	var room := (load(MIST_PATH) as PackedScene).instantiate()
 	root.add_child(room)
 	current_scene = room
+	if walk:
+		return
 	var player := room.get("player") as LanPlayer
 	var yupo := room.get("yupo") as Node2D
 	player.position = yupo.position + Vector2(-62, 0)

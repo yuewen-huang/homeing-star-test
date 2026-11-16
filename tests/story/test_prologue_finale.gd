@@ -169,21 +169,45 @@ func run() -> void:
 	if calls == null:
 		finish("PROLOGUE FINALE")
 		return
+	boss.voice.stop()
+	boss.state = MasterBoss.State.PHASE_1_ACTION
 	lan.combat_stats.apply_health_damage(1)
 	calls._process(0.01)
-	check(calls._bubble._label.text == PROLOGUE.FIGHT_CALLOUTS[0], "A real health loss triggers the first line")
+	check(not boss.voice.is_speaking(), "The first line waits through the active swing")
+	boss.state = MasterBoss.State.RECOVER
+	boss.play_idle()
+	calls._process(0.01)
+	check(boss.voice.is_speaking() and boss.voice.stream == MasterVoice.CALLOUTS[0], "The health loss line plays after recovery")
 	var feedback := root.get_node("CombatFeedback") as CombatFeedbackService
+	boss.voice.stop()
+	boss.state = MasterBoss.State.PHASE_1_ACTION
 	feedback.parry_landed.emit(boss, null, Vector2.ZERO, false)
 	calls._process(3.1)
-	check(calls._bubble._label.text == PROLOGUE.FIGHT_CALLOUTS[1], "A parry event triggers the defense line")
+	check(not boss.voice.is_speaking(), "The parry line waits through the rest of the attack")
+	boss.state = MasterBoss.State.RECOVER
+	boss.play_idle()
+	calls._process(0.01)
+	check(boss.voice.is_speaking() and boss.voice.stream == MasterVoice.CALLOUTS[1], "The parry line plays after recovery")
 	boss._enter_phase_2()
 	calls._process(0.01)
-	check(not calls._bubble.visible, "The phase declaration waits for the transformation")
-	boss.state = MasterBoss.State.PHASE_2_ATTACK
-	calls._process(0.01)
-	check(calls._bubble._label.text == PROLOGUE.FIGHT_CALLOUTS[2], "The second phase triggers Rayne's line")
-	calls._process(3.1)
-	check(calls._bubble._label.text == PROLOGUE.FIGHT_CALLOUTS[3], "Lan responds during second-phase pressure")
+	boss._process(0.01)
+	check(boss.phase == 1 and boss.animated_sprite.animation == &"idle" and lan.input_frozen
+		and boss.voice.is_speaking() and boss.voice.stream == MasterVoice.PHASE_TWO_INTRO,
+		"Rayne says the complete line before the transformation")
+	var health_before_intro := boss.combat_stats.health
+	boss.receive_hit(1, lan.global_position)
+	boss._process(0.01)
+	check(boss.phase == 1 and boss.combat_stats.health == health_before_intro and boss.attack_hitbox.attack == null,
+		"Combat stays suspended while the phase intro is speaking")
+	boss.voice.stop()
+	boss._process(0.01)
+	check(boss.phase == 2 and boss.animated_sprite.animation == &"phase_2_transform" and lan.input_frozen,
+		"An already-ended intro also advances to the transformation")
+	boss._on_body_animation_finished()
+	check(boss.state == MasterBoss.State.PHASE_2_IDLE and not lan.input_frozen,
+		"Player control returns after the transformation animation")
+	check(not boss.voice.is_speaking() and not room.has_node("PrologueMasterFightCallout"),
+		"Combat callouts only play voice and never create overhead dialogue")
 	boss.combat_stats.apply_health_damage(boss.combat_stats.max_health)
 	var deadline := Time.get_ticks_msec() + 9000
 	while room.get_node_or_null("MasterFinalSendoff") == null and Time.get_ticks_msec() < deadline:

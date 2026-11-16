@@ -30,6 +30,7 @@ func run() -> void:
 	check(mp.bus == &"Music" and is_equal_approx(mp.volume_db, SceneTransitionService.MUSIC_MIX_VOLUME_DB), "Music bus, mix volume")
 	check(mp.stream is AudioStreamMP3 and (mp.stream as AudioStreamMP3).loop, "explore BGM loops")
 	var player := scene.player as LanPlayer
+	scene.chapter_story.save.try_complete_fact(scene.chapter_story.PANDA)
 	player.position = Vector2(PandaGoArena.TRIGGER_X + 50, MirrorLake.STAND_Y)
 	scene.panda_arena.tick(0.016)
 	check(scene.panda_arena.active, "encounter started")

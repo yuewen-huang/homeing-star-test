@@ -157,16 +157,15 @@ func run() -> void:
 		press()
 		press()
 		if name == "back_alley_pill":
-			check(routing.destinations.size() == before and comic._wake_dialogue.opened,
-				"Pill comic shows sober dialogue before travel")
-			while comic._wake_dialogue != null:
-				comic._wake_dialogue.advance()
+			check(routing.destinations.size() == before and comic._finished
+				and not save.has_completed(SaveProgressService.QUEST_BACK_ALLEY_STEP),
+				"Pill comic ends without travel or dialogue progress")
+			comic.free()
+			continue
 		check(routing.destinations.size() == before + 1, name + " final panel routes exactly once")
 		check(routing.music_arguments[-1] == null, name + " preserves existing BGM")
 		if name == "back_alley_entry":
 			check(save.has_completed(SaveProgressService.STORY_BACK_ALLEY_ENTERED), "Back alley entry retains existing story mark")
-		elif name == "back_alley_pill":
-			check(save.has_completed(SaveProgressService.QUEST_BACK_ALLEY_STEP) and routing.town_return_x == 350.0, "Pill comic retains quest mark and return position")
 		elif name == "navigation_hall_exit":
 			check(save.has_completed(SaveProgressService.QUEST_LAN_AND_WIND_STEP), "Hall exit retains existing comic mark")
 		comic.free()

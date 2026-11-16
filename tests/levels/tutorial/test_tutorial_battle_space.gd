@@ -60,6 +60,7 @@ func run() -> void:
 	player.cancel_uncommitted_attack_effects()
 	check(master.has_node("BossStatusHUD") and master.animated_sprite.sprite_frames.get_frame_count(&"phase_2_idle") == 24, "HUD and second-phase presentation remain available")
 	for stack in range(1, master.CHARGED_POWER_MAX + 1):
+		master._start_drink()
 		master._finish_drink()
 		check(master.charged_power == stack, "Completed drink settles one charged-power stack")
 	check(master.phase == 1 and master.charged_power == 4, "Four drinks retain phase one")

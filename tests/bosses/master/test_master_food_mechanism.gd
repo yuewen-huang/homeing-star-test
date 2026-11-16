@@ -37,7 +37,9 @@ func run() -> void:
 	check(food.stage == MasterFoodMechanism.Stage.SEATING,"A stray animation-finished callback cannot skip seating or stand the master up")
 	food.advance(food._seating_time+0.01)
 	check(food.needed == 1 and food.rounds == 3 and food.pickups.size() == 3 and food.formation.swords.size() == 3,"After seating, each round requests one item and creates the patrol formation")
-	check(food.display.bubble.visible and food.display.food_icon.texture.resource_path.ends_with(String(MasterFoodMechanism.FOODS[food.wanted])+".png") and food.display.countdown.digits.text == "20","Current food appears as an icon bubble with a separate numeric countdown")
+	check(food.display.food_icon.is_visible_in_tree() and food.display.food_icon.get_parent() == food.display.countdown
+		and food.display.food_icon.texture.resource_path.ends_with(String(MasterFoodMechanism.FOODS[food.wanted])+".png")
+		and food.display.countdown.digits.text == "20", "Current food appears beside the numeric countdown")
 	var pads_safe := true
 	for item in food.pickups:
 		var local_pad := (boss.get_parent() as Node2D).to_local(item.node.global_position)
@@ -45,7 +47,7 @@ func run() -> void:
 	check(pads_safe, "Food and its full pickup zone spawn outside the maximum sword envelope")
 	for tick in 480: food.formation.advance(1.0 / 60.0)
 	check(food.formation.swords.all(func(sword: MasterFlyingSword) -> bool: return sword.state == MasterFlyingSword.State.ORBIT and sword.sweep_serial == 0), "Collection swords orbit without any autonomous pursuit or sweep")
-	check(food.speech.visible, "Seating has a brief character bubble alongside the request icon")
+	check(not boss.get_parent().has_node("MasterFoodSpeech"), "Collection creates no overhead dialogue")
 	var labels := food.find_children("*","Label",true,false)
 	check(labels.size() == 1 and (labels[0] as Label).text.is_valid_int(),"Food mechanism contains no text prompts, only countdown digits")
 	food.advance(0.31)
@@ -89,7 +91,7 @@ func run() -> void:
 			check(food.stage == MasterFoodMechanism.Stage.COLLECT and food.current_round == round_index+2 and food.wanted != old_wanted and food.selected == -1 and is_equal_approx(food.remaining,boss.food_time_limit),"Each automatic one-item delivery starts a fresh request and countdown")
 			check(food.display.countdown.digits.text == str(ceili(boss.food_time_limit)) and is_equal_approx(food.display.countdown.seconds,boss.food_time_limit),"Last-moment delivery refills the displayed timer to a full new round")
 	check(food.stage == MasterFoodMechanism.Stage.OPENING,"Only completing every round opens the stuffed-master window")
-	check(not food.display.bubble.visible and not food.display.countdown.visible,"Success hides both request icon and collection countdown without a text message")
+	check(not food.display.food_icon.is_visible_in_tree() and not food.display.countdown.visible,"Success hides the request icon and collection countdown")
 	food.advance(food.opening_time - 0.1)
 	check(not food.finished,"Success preserves the configured output window")
 	food.advance(0.11)
@@ -180,7 +182,7 @@ func run() -> void:
 	food = boss.food_mechanism
 	dev.reset_room()
 	await process_frame
-	check(not is_instance_valid(food),"Retry frees mechanism HUD, bubble, pickups and sword descendants")
+	check(not is_instance_valid(food),"Retry frees the collection HUD, pickups and sword descendants")
 	boss = dev.adapter.master
 	boss.set_process(false)
 	boss.start_food_mechanism()

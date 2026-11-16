@@ -26,6 +26,7 @@ func run() -> void:
 	current_scene = room
 	master = room.get_node("MasterBoss")
 	player = room.get_node("Lan")
+	master.voice.stop()
 	master.set_process(false)
 	player.set_physics_process(false)
 	master.flying_sword_enabled = false
@@ -121,7 +122,9 @@ func run() -> void:
 	master.receive_hit(1,player.global_position)
 	check(master.combat_stats.health < health and master.dodge_response == response, "Master remains damageable after the roll without losing the authored flick")
 	master._process(0.12)
-	check(response.stage == MasterDodgeResponse.Stage.LAUGH and not player.evaded_action_clock.is_slowed() and response.bubble.visible, "Full clip finishes before slowdown clears and the taunt appears")
+	check(response.stage == MasterDodgeResponse.Stage.LAUGH and not player.evaded_action_clock.is_slowed()
+		and master.voice.is_speaking() and master.voice.stream == MasterVoice.DODGE_TAUNT
+		and not room.has_node("MasterDodgeBubble"), "The taunt plays after slowdown clears without creating a bubble")
 	check(is_equal_approx(player.animated_sprite.speed_scale, player.body_base_speed) and is_equal_approx(player.combat_timeline.speed_scale,player.timeline_base_speed), "Normal animation speeds restore exactly")
 	master._process(0.61)
 	check(master.dodge_response == null and master.state == MasterBoss.State.CHASE, "Laugh ends in ordinary AI without repeating the response")

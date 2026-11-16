@@ -68,67 +68,21 @@ func run() -> void:
 	await wait_frames(35)
 	check(lake.side == MirrorLake.Side.YANG and not lake.story.guide.visible, "Switching back doesn't reopen the lesson")
 
-	# Jump to the east bridge landing to test the local beat with real movement.
-	player.reset_after_map_fall(Vector2(lake.story.ECHO_X - 142, MirrorLake.STAND_Y))
-	await walk_to(lake.story.ECHO_X + 24, KEY_D)
-	var echo := lake.story.echo
-	check(is_instance_valid(echo) and echo.visible and player.position.x - echo.position.x > 95,
-		"The reflection stays behind when Lan walks onward")
-	check(not player.input_frozen and lake.story.dialogue == null, "The reflection doesn't interrupt play")
-	await capture("03-reflection")
-	tap(KEY_E)
-	check(lake.story.dialogue != null and paused, "Nearby E opts into examining the reflection")
-	tap(KEY_ESCAPE)
-	check(not paused and not player.input_frozen and not memory.has_completed(lake.story.ECHO_READ), "Esc restores control without marking the reflection read")
-	await wait_frames(2)
-	tap(KEY_E)
-	tap(KEY_SPACE)
-	check(memory.has_completed(lake.story.ECHO_READ), "Finishing the reflection line records only that observation")
-
-	player.reset_after_map_fall(Vector2(MirrorLakeInkTrial.TURTLE_X - 80, MirrorLake.STAND_Y))
+	player.reset_after_map_fall(Vector2(MirrorLakeInkTrial.TURTLE_X - 65, MirrorLake.STAND_Y))
 	await wait_frames(12)
-	check(lake.story.dialogue == null and lake.story.choices == null and lake.ink_trial.state == MirrorLakeInkTrial.State.LOCKED,
-		"Walking past the turtle leaves the ink trial locked and opens no dialogue")
+	check(lake.story.dialogue == null and lake.ink_trial.state == MirrorLakeInkTrial.State.LOCKED,
+		"The optional ink trial waits for interaction")
 	tap(KEY_E)
-	await capture("04-turtle-topics")
-	tap(KEY_2)
-	await capture("05-lan-asks")
-	tap(KEY_SPACE)
-	await capture("06-turtle-answers")
-	for i in 3:
-		tap(KEY_SPACE)
-	check(memory.has_completed(lake.story.WIND_READ) and not memory.has_completed(lake.story.REFLECTION_READ),
-		"Wind's clue can be learned independently of the turtle's reflection topic")
+	check(lake.story.dialogue != null and paused, "E opens the ink trial instructions directly")
+	tap(KEY_ESCAPE)
 	check(not paused and not player.input_frozen and lake.ink_trial.state == MirrorLakeInkTrial.State.LOCKED,
-		"Reading the story does not open the trial or leave the controls frozen")
-	await wait_frames(2)
-	tap(KEY_E)
-	tap(KEY_1)
-	for i in 4:
-		tap(KEY_SPACE)
-	check(memory.has_completed(lake.story.REFLECTION_READ), "The second topic remains readable in a different order")
-	var faint_board := lake.story.board_reflection.modulate.a
-	await wait_frames(125)
-	tap(KEY_F)
-	await wait_frames(32)
-	check(lake.story.board_reflection.modulate.a > faint_board and not lake.panda_arena.active,
-		"Yin makes the abandoned board visible without starting a Go game")
-	await capture("07-unfinished-game")
-
-	current_scene = null
-	lake.queue_free()
-	await wait_frames(2)
-	memory._config = ConfigFile.new()
-	memory.try_complete_fact(MirrorLakeEntry.SEAL_FACT)
-	load_lake()
-	player.reset_after_map_fall(Vector2(lake.story.GUIDE_START_X + 60.0, MirrorLake.STAND_Y))
-	await wait_frames(3)
-	check(not lake.story.guide.visible, "An older completed entrance does not replay the first tutorial")
-	player.reset_after_map_fall(Vector2(MirrorLakeInkTrial.TURTLE_X - 160, MirrorLake.STAND_Y))
-	await walk_to(PandaGoArena.TRIGGER_X + 5.0, KEY_D)
-	check(lake.panda_arena.active and not paused and lake.story.choices == null and lake.story.dialogue == null,
-		"Walking past every optional topic still reaches the established Panda encounter")
-	check(not memory.has_completed(MirrorLakeInkTrial.INTRO_FACT) and not memory.has_completed(lake.story.WIND_READ),
-		"Skipping the story grants neither knowledge nor trial progress")
+		"Cancelling the lesson does not start the trial")
+	player.reset_after_map_fall(Vector2(PandaGoArena.TRIGGER_X - 140.0, MirrorLake.STAND_Y))
+	await walk_to(PandaGoArena.TRIGGER_X + 2.0, KEY_D)
+	check(not lake.panda_arena.active and lake.chapter_story.beat.dialogue != null and paused,
+		"Walking past the optional trial opens Xuanbai's prebattle dialogue")
+	for index in 6: tap(KEY_SPACE)
+	check(lake.panda_arena.active and not paused, "The original boss encounter follows the revised lines")
+	check(not memory.has_completed(MirrorLakeInkTrial.INTRO_FACT), "The battle does not require the optional tutorial")
 	expect_save_untouched()
 	finish("MIRROR LAKE STORY")

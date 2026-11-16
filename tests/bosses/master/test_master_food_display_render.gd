@@ -35,13 +35,12 @@ func run() -> void:
 	display.clear()
 	var baseline := await frame_image()
 	food._refresh_display()
-	display.countdown.hide()
-	var bubble := await frame_image()
-	check(changed_pixels(baseline,bubble) > 150,"The requested food icon bubble draws over the actual room")
-	display.bubble.hide()
-	display.countdown.show()
+	var request := await frame_image()
+	display.food_icon.hide()
 	var timer := await frame_image()
+	check(changed_pixels(timer,request) > 150,"The requested food icon draws beside the countdown")
 	check(changed_pixels(baseline,timer) > 300,"Numeric ring countdown is visible in screen space below the developer toolbar")
+	display.food_icon.show()
 	food.remaining = 0.2
 	food.selected = food.wanted
 	food.bag[food.wanted] = 1
@@ -49,10 +48,10 @@ func run() -> void:
 	food.advance(0.01)
 	check(display.countdown.digits.text == "20" and is_equal_approx(display.countdown.seconds,20),"Delivery refills the actual countdown display for the next request")
 	var next_round := await frame_image()
-	check(changed_pixels(timer,next_round) > 150,"Next round redraws its icon and refreshed countdown")
+	check(changed_pixels(request,next_round) > 150,"Next round redraws its icon and refreshed countdown")
 	food.fail()
 	food._refresh_display()
-	check(not display.bubble.visible and not display.countdown.visible,"Failure removes both UI elements without a text prompt")
+	check(not display.food_icon.is_visible_in_tree() and not display.countdown.visible,"Failure hides the icon and countdown")
 	dev.free()
 	current_scene = null
 	expect_save_untouched()
