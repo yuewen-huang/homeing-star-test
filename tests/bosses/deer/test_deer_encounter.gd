@@ -78,7 +78,8 @@ func run() -> void:
 		"Victory clears combat bubbles before the paused ending")
 	var release_lines: Array = Dialogue.RELEASE.duplicate()
 	release_lines.append_array([Dialogue.REUNION, Dialogue.YUPO_GOODBYE, Dialogue.XIAOYA_GOODBYE])
-	await read_ending(release_lines, {2: "deer_release", 3: "deer_reunion_entry", 4: "deer_reunion", 5: "deer_reunion_farewell"})
+	await read_ending(release_lines, {0: "deer_farewell", 1: "deer_dissolves", 2: "deer_release",
+		3: "deer_reunion_entry", 4: "deer_reunion", 5: "deer_reunion_farewell"})
 	check(save.has_completed(Facts.DEER_RELEASE_READ), "Only reading the release and farewell settles the aftermath")
 	if room.story.reward_reveal!=null: room.story.reward_reveal._finish_reveal()
 	await wait_frames(2)
@@ -100,7 +101,7 @@ func run() -> void:
 		"Esc leaves the old route unread and keeps Lan in the arena")
 	press(KEY_E)
 	await read_ending([Dialogue.ROAD_OPENS, Dialogue.LAN_RECALLS, Dialogue.LAN_RESOLVES,
-		Dialogue.LAN_TO_WIND, Dialogue.LAN_STEPS_FORWARD], {1: "old_route_recall", 4: "old_route_departure"})
+		Dialogue.LAN_TO_WIND, Dialogue.LAN_STEPS_FORWARD], {0: "old_route_opens", 1: "old_route_recall", 4: "old_route_departure"})
 	var transition := root.get_node("SceneTransition") as SceneTransitionService
 	for frame in 900:
 		if current_scene is Chapter2SaltField and not transition.is_transitioning: break
@@ -139,9 +140,15 @@ func read_ending(lines: Array, shots: Dictionary) -> void:
 			and dialogue._label.get_visible_line_count() == dialogue._label.get_line_count(),
 			"Quick reveal fits and stays on this line")
 		if lines[index] in [Dialogue.YUPO_GOODBYE, Dialogue.XIAOYA_GOODBYE]:
-			check(room.story.comic == null and dialogue._active_cast == [&"forest", &"family"]
-				and dialogue._actors[&"family"].current.texture == Dialogue.REUNION_FAREWELL,
+			check(room.story.comic == null and dialogue._active_cast == [&"scene", &"family"]
+				and dialogue._actors[&"family"].current.texture == Dialogue.FAMILY_FAREWELL,
 				"The reunion keeps both squirrels in the original dialogue frame")
+		if lines[index] == Dialogue.RELEASE[1]:
+			check(room.story.comic == null and dialogue._actors[&"scene"].current.texture == Dialogue.DEER_DISSOLVES,
+				"The original release dialogue uses the restored deer image at the cue")
+		if lines[index] == Dialogue.LAN_TO_WIND:
+			check(dialogue._active_id == &"lan" and dialogue._actors[&"lan"].current.texture == Dialogue.STOWS_CHART,
+				"Lan stows the chart in the original dialogue frame")
 		if shots.has(index):
 			if DisplayServer.get_name() != "headless": await create_timer(0.22).timeout
 			await capture(shots[index])

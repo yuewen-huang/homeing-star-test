@@ -187,6 +187,9 @@ func run() -> void:
 func verify_root_rescue(save: MemoryProgress) -> void:
 	var room := await enter_map(ROOT) as Chapter1RootRoom
 	var xiaoya := room.get_node("XiaoyaRescue")
+	var idle := xiaoya.get_node("Idle") as AnimatedSprite2D
+	check(idle.sprite_frames.resource_path.ends_with("/xiaoya/idle_frames.tres"),
+		"Root rescue uses Xiaoya's crouched sprite set")
 	var approach: Vector2 = xiaoya.position - Vector2(160, 0)
 	var slash := room.get_node("RootSlashMarks")
 	await stand_at(room, slash.position + Vector2(-60, 0))
@@ -222,7 +225,7 @@ func verify_root_rescue(save: MemoryProgress) -> void:
 	check(xiaoya.visible and xiaoya.dialogue == null and not paused and not room.player.input_frozen
 		and not save.has_completed(FACTS.XIAOYA_RESCUED), "Esc leaves Xiaoya in place without settling the rescue")
 	press(KEY_E)
-	check(xiaoya.dialogue._actors[&"xiaoya"].current.texture == STORY.XIAOYA_GUARDED,
+	check(xiaoya.dialogue._actors[&"xiaoya"].current.texture == STORY.XIAOYA_FRIGHTENED,
 		"The rescue starts with Xiaoya gripping her basket in the normal dialogue frame")
 	var rescue_lines: Array[String] = []
 	rescue_lines.assign(STORY.RESCUE_TEXT)
@@ -294,7 +297,7 @@ func verify_vine_gate(save: MemoryProgress) -> void:
 	var gate_lines: Array[String] = []
 	gate_lines.assign(STORY.VINE_GATE_TEXT)
 	await read_lines(gate.dialogue, gate_lines, {0: "vine_gate_closed", 2: "vine_gate_ajar", 4: "vine_gate_wind_glance",
-		7: "vine_gate_lan_reply", 9: "vine_gate_vines"})
+		5: "vine_gate_wind_looks_up", 7: "vine_gate_lan_reply", 9: "vine_gate_vines"})
 	check(save.has_completed(FACTS.VINE_STONE_GATE_SEEN), "Only completing the original story records the stone gate as seen")
 	check(save.get_stele_state(Chapter1VineRoom.COMBAT_ID) == MinigameStele.SteleState.LOCKED,
 		"The optional vine trial never gates or settles the story")
@@ -354,14 +357,17 @@ func read_lines(dialogue: TutorialDialogue, expected: Array[String], shots: Dict
 			and dialogue._label.get_line_count() == dialogue._label.get_visible_line_count(),
 			"First press reveals line %d without advancing or clipping" % (index + 1))
 		if expected[index] == STORY.RESCUE_TEXT[3]:
-			check(dialogue._actors[&"xiaoya"].current.texture == STORY.XIAOYA_REASSURED,
+			check(dialogue._actors[&"xiaoya"].current.texture == STORY.XIAOYA_RELIEVED,
 				"Xiaoya eases her grip after hearing about the lit lamp")
 		if expected[index] == STORY.VINE_GATE_TEXT[4]:
 			var wind = dialogue._actors.get(&"wind")
 			check(dialogue._active_id == &"wind" and wind != null
-				and wind.current.texture == STORY.WIND_GLANCE
+				and wind.current.texture == STORY.WIND_LOOKS_BACK
 				and dialogue._actors[&"gate"].current.texture == STORY.GATE_AJAR,
 				"The approved Wind portrait appears together with the ajar stone gate")
+		if expected[index] == STORY.VINE_GATE_TEXT[5]:
+			check(dialogue._actors[&"wind"].current.texture == STORY.WIND_LOOKS_UP,
+				"Wind looks up toward the vines after the authored cue")
 		if expected[index] == STORY.VINE_GATE_TEXT[9]:
 			check(dialogue._actors[&"gate"].current.texture == STORY.GATE_VINES,
 				"The thorn vines cover the gate on the original line")
