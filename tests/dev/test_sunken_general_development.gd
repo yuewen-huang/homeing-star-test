@@ -382,6 +382,17 @@ func _check_return_dash() -> void:
 		general._support_index = 0
 		general._choose_move()
 		check(general.move == General.DASH, "The pending dash starts outside melee reach")
+	room.set_combat_simulation(false)
+	room.set_combat_simulation(true)
+	general.set_physics_process(false)
+	player.reset_after_map_fall(Vector2(general.global_position.x - 130.0, BossDevelopmentRoom.FLOOR_Y))
+	general._choose_move()
+	check(general.move == General.WAVE_MOVE, "The initial AI action is still the horizontal blade")
+	general._idle()
+	general._choose_move()
+	check(general.move in [General.UPPERCUT, General.REVERSE],
+		"After a spent horizontal blade, close-range AI chooses a support attack before another blade")
+	general.set_physics_process(true)
 
 
 func _check_hit_armor() -> void:
@@ -522,13 +533,14 @@ func _check_uppercut_ground_fire() -> void:
 	if not spawned:
 		return
 	var fire := general._ground_fires[0]
-	check(not fire.active(), "Ground fire starts when the front foot plants")
-	check(await _until(fire.active, 20), "The patch ignites during the rising cut")
+	check(fire.is_warning() and fire.visible and not fire.active() and fire.delay >= General.GROUND_FIRE_WARNING,
+		"The planted foot exposes a visible, non-damaging floor warning before ignition")
+	check(await _until(fire.active, 42), "The warned patch ignites during the rising cut")
 	var full_width := fire.active_width()
 	check(is_equal_approx(full_width, 1020.0) and player.combat_stats.health == player.combat_stats.max_health,
 		"The fire starts at the full floor width of the wave and leaves its outside edge safe")
 	var fire_position := fire.global_position
-	await _until(func(): return general.action_frame == General.UPPERCUT_CONTACT_END, 55)
+	await _until(func(): return general.move == General.IDLE or general.action_frame >= General.UPPERCUT_CONTACT_END, 55)
 	# Leave room for the jump, then enter the center while already in the air.
 	player.reset_after_map_fall(Vector2(130.0, FLOOR))
 	await _tap_action(&"jump")
@@ -551,7 +563,8 @@ func _check_uppercut_ground_fire() -> void:
 	check(await _until(func(): return player.combat_stats.health < after_first, 30),
 		"Remaining on the fire causes another tick")
 	var edge_x := fire_position.x - full_width * 0.5 + 35.0
-	check(fire.active() and fire.active_width() < full_width * 0.65,
+	check(await _until(func(): return is_instance_valid(fire) and fire.active() \
+		and fire.active_width() < full_width * 0.65, 36),
 		"The hot zone recedes from both ends while its center is still burning")
 	player.reset_after_map_fall(Vector2(edge_x, FLOOR))
 	var after_retreat := player.combat_stats.health
@@ -567,7 +580,7 @@ func _check_uppercut_ground_fire() -> void:
 	room.set_combat_simulation(false)
 	room.select_combo(1)
 	room.play_action(3)
-	check(await _until(func(): return not general._ground_fires.is_empty() and general._ground_fires[0].active(), 100),
+	check(await _until(func(): return not general._ground_fires.is_empty() and general._ground_fires[0].active(), 130),
 		"Ground fire is visible in manual preview")
 	room.reset_room()
 	general = room.adapter.boss as General

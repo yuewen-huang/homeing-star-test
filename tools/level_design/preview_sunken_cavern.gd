@@ -5,11 +5,30 @@ const SCENE := "res://scenes/levels/chapter_2_underwater/cavern/sunken_cavern.ts
 
 func run() -> void:
 	use_memory_progress()
+	var connected_route := "--zhenxi-route" in OS.get_cmdline_user_args()
 	var level := (load(SCENE) as PackedScene).instantiate() as Node2D
 	root.add_child(level)
 	current_scene = level
+	if connected_route:
+		level.player.reset_after_map_fall(level.marker("pool_bank"))
+		level.snap_camera()
+		root.title = "归航星 · 镇西门 · 正式美术试玩"
+		print("ZHENXI_CONNECTED_ROUTE_READY")
+		return
+	if "--zhenxi-sluice-return" in OS.get_cmdline_user_args():
+		await preview_return_cut(level)
+		return
+	if "--zhenxi-aftermath" in OS.get_cmdline_user_args():
+		await stage_court(level)
+		var gallery: Node2D = level._hidden_gallery
+		gallery._on_general_defeated()
+		gallery.place_at_victory_return()
+		level.snap_camera()
+		root.title = "归航星 · 镇西门战后试玩"
+		print("ZHENXI_AFTERMATH_PLAYTEST_READY")
+		return
 	if "--flag-defense" in OS.get_cmdline_user_args():
-		await level._cross_hidden_door()
+		await stage_court(level)
 		var gallery: Node2D = level._hidden_gallery
 		var guard := gallery.get_node("GeneralStart") as Marker2D
 		level.player.reset_after_map_fall(level.to_local(guard.global_position - Vector2(340, 0)))
@@ -23,7 +42,7 @@ func run() -> void:
 		print("ZHENXI_FLAG_DEFENSE_PLAYTEST_READY")
 		return
 	if "--hidden-general" in OS.get_cmdline_user_args():
-		await level._cross_hidden_door()
+		await stage_court(level)
 		var retry := level._hidden_gallery.get_node("ArenaRetry") as Marker2D
 		level.player.reset_after_map_fall(level.to_local(retry.global_position))
 		level.snap_camera()
@@ -31,7 +50,7 @@ func run() -> void:
 		print("ZHENXI_GENERAL_PLAYTEST_READY")
 		return
 	if "--gate-art" in OS.get_cmdline_user_args():
-		await level._cross_hidden_door()
+		await stage_court(level)
 		root.title = "归航星 · 镇西门美术试玩"
 		print("ZHENXI_ART_PLAYTEST_READY")
 		return
@@ -95,6 +114,71 @@ func run() -> void:
 	var target := output.path_join("03_whole_graybox.png")
 	root.get_texture().get_image().save_png(target)
 	await close_capture(level)
+
+
+static func stage_court(level: SunkenCavern) -> void:
+	await level._cover_zhenxi_crossing()
+	if level._hidden_gallery == null:
+		level._prepare_hidden_gallery()
+	level._inside_gallery = true
+	level._set_gallery_music(true)
+	level._arrive_at_zhenxi_court(^"Arrival")
+	await level._uncover_zhenxi_crossing()
+
+
+func preview_return_cut(level: SunkenCavern) -> void:
+	await stage_court(level)
+	var gallery: Node2D = level._hidden_gallery
+	var progress := root.get_node("SaveProgress") as SaveProgressService
+	progress.finish_cinematic(level.ARRIVAL_COMIC_ID, true)
+	gallery._on_general_defeated()
+	gallery.place_at_victory_return()
+	var departure: Marker2D = level._gallery_exit
+	var a18_bank: Vector2 = level.marker("pool_bank")
+	level.snap_camera()
+	root.title = "归航星 · 镇西门战后回程预演"
+	print("ZHENXI_SLUICE_RETURN_READY")
+	if not "--verify" in OS.get_cmdline_user_args():
+		return
+
+	var lan: LanPlayer = level.player
+	check(not level._can_use_hidden_door(), "The return cut is outside the recovery area at the lamp")
+	var approach_x := level.to_local(departure.global_position).x - 40.0
+	Input.action_press(&"ui_right")
+	for frame in 320:
+		if lan.position.x >= approach_x:
+			break
+		await physics_frame
+	Input.action_release(&"ui_right")
+	check(level._can_use_hidden_door(), "Lan can walk east from the lamp to the main gate")
+	var interact_key := InputEventAction.new()
+	interact_key.action = &"interact"
+	interact_key.pressed = true
+	Input.parse_input_event(interact_key)
+	await wait_frames(2)
+	interact_key.pressed = false
+	Input.parse_input_event(interact_key)
+	for frame in 90:
+		if level._passage_comic != null and not level._passage_comic.get("covered_by_fade"):
+			break
+		await physics_frame
+	check(is_instance_valid(level._passage_comic), "The departure comic starts at the steps")
+	var skip := InputEventKey.new()
+	skip.physical_keycode = KEY_ESCAPE
+	skip.pressed = true
+	Input.parse_input_event(skip)
+	await wait_frames(2)
+	skip.pressed = false
+	Input.parse_input_event(skip)
+	for frame in 100:
+		if not level._inside_gallery and not level._crossing_door:
+			break
+		await physics_frame
+	check(not level._inside_gallery and level.player == lan, "The real departure interaction returns the same Lan to A18")
+	check(lan.position.distance_to(a18_bank) <= 24.0 and not lan.is_in_deep_water(),
+		"The return lands on the A18 dry bank, clear of the submerged entrance")
+	expect_save_untouched()
+	finish("ZHENXI SLUICE RETURN")
 
 
 func capture_routes(level: Node2D) -> void:

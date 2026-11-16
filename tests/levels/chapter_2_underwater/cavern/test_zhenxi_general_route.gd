@@ -14,9 +14,74 @@ func run() -> void:
 	player = level.player
 	player.reset_after_map_fall(level.marker("pool_bank"))
 	await step(12)
-	await check_route(save)
+	if "--garrison-only" in OS.get_cmdline_user_args():
+		await check_garrison()
+	else:
+		await check_route(save)
 	assist.set_difficulty(previous_difficulty)
 	await end_test()
+
+
+func check_garrison() -> void:
+	await CAVERN_PREVIEW.stage_court(level)
+	var gallery: Node2D = level._hidden_gallery
+	gallery._start_battle()
+	var boss: BossBase = gallery.general
+	var guard := gallery.get_node("GeneralStart") as Marker2D
+	player.reset_after_map_fall(level.to_local(guard.global_position - Vector2(340, 0)))
+	player.apply_attack_facing(1.0)
+	boss.phase = 3
+	gallery._start_flag_defense(boss)
+	var defense: Node2D = gallery._flag_defense
+	check(is_instance_valid(defense), "The production third-phase fixture opens")
+	if not is_instance_valid(defense):
+		return
+	check(defense._standard.global_position.is_equal_approx(gallery._props._standard.global_position),
+		"The damageable flag is planted at the exploration banner's position")
+	await tap_key(KEY_I)
+	await interact()
+	check(defense._arming.supply == 8 and defense._garrison.remaining() == 4 and player.input_frozen,
+		"The opening pose cannot spend supply or call a company")
+	await step(102)
+	check(not player.input_frozen and player.facing_direction == -1.0,
+		"Lan faces the western attackers at the moment the first lesson unlocks")
+	await tap_key(KEY_I)
+	check(defense._arming.active_move() == defense.Arsenal.WAVING and defense._arming._direction == -1.0,
+		"The first real I input drives a west-facing wave")
+
+	var health := player.combat_stats.health
+	defense._hit_flag(100)
+	await step(44)
+	var retry: Node2D = gallery._flag_defense
+	check(is_instance_valid(retry) and retry != defense and gallery.general == boss and boss.phase == 3
+		and retry._flag_health == retry.FLAG_HEALTH and player.combat_stats.health == health,
+		"A fallen banner restarts the defense with the same living Lan and no new duel")
+	if not is_instance_valid(retry) or retry == defense:
+		return
+	await step(100)
+	await interact()
+	check(retry._garrison.remaining() == 4, "Lessons cannot spend any of the four companies")
+	# Isolate order accounting and contacts from the 90-second survival test.
+	retry._assault_started = true
+	retry._wave = retry.LESSON_WAVES
+	for expected: int in [8, 5, 3, 1]:
+		await interact()
+		check(retry._garrison._troops.size() == expected, "Call deploys %d visible defenders" % expected)
+		await interact()
+		check(retry._garrison._troops.size() == expected,
+			"Pressing E during an active company preserves the next order")
+		await step(42)
+		await capture("zhenxi_garrison_%d" % expected)
+		if expected == 1:
+			retry._garrison.advance(0.7, retry._soldiers)
+			var flag_health: int = retry._flag_health
+			retry._hit_flag(12)
+			check(retry._flag_health == flag_health, "The old soldier covers a hit that would reach the flag")
+		retry._garrison.advance(9.0, retry._soldiers)
+	await interact()
+	check(retry._garrison.remaining() == 0 and retry._garrison._troops.is_empty(),
+		"A fifth order has no company to answer")
+	await capture("zhenxi_garrison_exhausted")
 
 
 func check_route(save: SaveProgressService) -> void:
@@ -134,6 +199,12 @@ func defend_flag(gallery: Node2D, save: SaveProgressService) -> bool:
 	var duel_started_at_full_scale := false
 	var duel_contacts := 0
 	var duel_departures_complete := false
+	var relief_times: Array[float] = []
+	if "--summon-early" in OS.get_cmdline_user_args():
+		relief_times.assign([4.0, 13.0, 23.0, 34.0])
+	elif "--summon-late" in OS.get_cmdline_user_args():
+		relief_times.assign([46.0, 58.0, 71.0, 84.0])
+	var dispatched := 0
 	var guard_line := 220.0
 	var defense_ticks := ceili((defense.OPENING + defense.CHARGE_SECONDS + defense.RELEASE_SECONDS
 		+ defense.ShadowDuel.DURATION + 50.0) * 60.0)
@@ -173,6 +244,10 @@ func defend_flag(gallery: Node2D, save: SaveProgressService) -> bool:
 			if player.combat_stats.health < 60 and player.heal.charges > 0 and i % 11 == 0:
 				Input.action_press(&"heal")
 			if defense._assault_started:
+				if dispatched < relief_times.size() and assault_time >= relief_times[dispatched] \
+						and defense._garrison.can_call():
+					defense.try_call_support()
+					dispatched += 1
 				_drive_assault(defense, visible_troops, bat, i % 7 == 0, guard_line)
 			else:
 				_drive_lesson(defense, visible_troops, bat, i % 7 == 0)
@@ -210,6 +285,8 @@ func defend_flag(gallery: Node2D, save: SaveProgressService) -> bool:
 	release()
 	print("Defense ended at %.2fs with %d flag health, %d deployments, %d last-wave survivors and casts %s"
 		% [assault_time, flag_remaining, waves_seen, last_wave_before_shot, cast_seen.keys()])
+	if not relief_times.is_empty():
+		check(dispatched == relief_times.size(), "The chosen relief schedule reaches all four orders")
 	check(assault_after_lessons and waves_seen == gallery.FLAG_DEFENSE.WAVES.size()
 		and assault_time >= gallery.FLAG_DEFENSE.CHARGE_SECONDS - 0.02,
 		"Clearing the two lesson armies starts the full 90-second assault")

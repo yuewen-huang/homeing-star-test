@@ -4,8 +4,11 @@ extends "../../tests/levels/chapter_2_underwater/cavern/test_sunken_cavern_grayb
 ## isolate the postfight route from the separate combat playtest.
 
 const HELMET_FACT := &"zhenxi_xiaowu_helmet"
+const SLUICE_PREVIEW := preload("preview_zhenxi_sluice.gd")
+const CAVERN_PREVIEW := preload("preview_sunken_cavern.gd")
 const WALK_OFFSETS := {
-	"ShadowScreen": Vector2(0, 26),
+	"GrainSacks": Vector2(50, 0),
+	"ReturnDoor": Vector2(-22, 0),
 	"LampInspect": Vector2(-96, 0),
 }
 const CITY_LAYERS := [&"FarSkyAndSmoke", &"DistantRoofline", &"MasonryAndBuildings", &"ForegroundRubble"]
@@ -15,6 +18,7 @@ func run() -> void:
 	var save := use_memory_progress()
 	var shadow_only := "--shadow-corridor" in OS.get_cmdline_user_args()
 	var gate_only := "--gate-entry" in OS.get_cmdline_user_args()
+	var aftermath_only := "--aftermath-only" in OS.get_cmdline_user_args()
 	if "--legacy-progress" in OS.get_cmdline_user_args():
 		save.try_complete_fact(&"sunken_general_defeated")
 		save.try_complete_fact(&"zhenxi_last_lamp_lit")
@@ -38,6 +42,14 @@ func run() -> void:
 		await verify_shadow_corridor()
 	elif gate_only:
 		await verify_gate_entry(save)
+	elif aftermath_only:
+		await CAVERN_PREVIEW.stage_court(level)
+		var gallery: Node2D = level._hidden_gallery
+		gallery._on_general_defeated()
+		gallery.place_at_victory_return()
+		level.snap_camera()
+		await step(12)
+		await leave_after_victory(gallery, save)
 	else:
 		await play_route(save)
 	if "--legacy-progress" in OS.get_cmdline_user_args():
@@ -83,148 +95,51 @@ func enter_chapter() -> Node2D:
 		return null
 	var music := level.get_node_or_null("ZhenxiGateMusic") as AudioStreamPlayer
 	check(music != null and music.playing, "The gallery starts its own music")
+	if is_instance_valid(level.sluice) and not await cross_sluice(level.sluice):
+		return null
 	return level._hidden_gallery
 
 
 func verify_shadow_corridor() -> void:
 	var gallery := await enter_chapter()
-	if gallery == null:
-		return
-	var layout := gallery.get_node("ChapterLayout") as Node2D
-	var shadow := gallery.get("_shadow_gallery") as Node2D
-	check(shadow != null, "The authored shadow corridor is active in the real gallery")
-	if shadow == null:
-		return
-	var front := (layout.get_node("ShadowScreen") as Marker2D).global_position.x - 30.0
-	var support := (layout.get_node("ShadowPole") as Marker2D).global_position.x
-	var threshold := (layout.get_node("ShadowBackThreshold") as Marker2D).global_position.x
-	if not await hold_to_x(front):
-		return
-	await step(34)
-	var front_floor := player.global_position.y
-	check(shadow.reveal_amount() <= 0.03, "The curtain and facade hide the backstage from the approach")
-	await interact()
-	check(not gallery._shadow_restored, "E at the front cannot repair the support behind the curtain")
-	check(not shadow.lamp_is_carried() and not shadow.projection_is_aligned(),
-		"E at the front leaves the backstage lamp and projection unchanged")
-	await capture("01_front")
+	check(gallery != null, "The real shadow route reaches the existing lamp court")
 
-	if not await hold_to_x(threshold - 20.0):
-		return
-	check(shadow.reveal_amount() <= 0.03, "The backstage remains hidden up to the corner")
-	if not await hold_to_x(support):
-		return
-	await step(42)
-	check(standing() and player.global_position.y >= front_floor + 50.0
-		and shadow.reveal_amount() >= 0.97,
-		"Holding D rounds the corner and lands in the lowered backstage with the rear revealed")
-	check(not gallery._shadow_restored, "Walking past the curtain does not repair the projection")
-	var centered: Vector2 = level.camera.get_screen_center_position()
-	var zoom: Vector2 = level.camera.zoom
-	await capture("02_rear_before_e")
-	await interact()
-	await step(42)
-	check(gallery._shadow_restored and shadow._repair >= 0.97,
-		"E near the rear support finishes the bamboo movement")
-	check(not shadow.projection_is_aligned(), "The upright support still needs the lamp at the correct angle")
-	check(level.camera.get_screen_center_position().distance_to(centered) <= 2.0
-		and level.camera.zoom.is_equal_approx(zoom), "The before and after captures use the same camera framing")
-	await capture("03_rear_after_e")
 
-	if not await verify_shadow_lamp(layout, shadow):
-		return
-	check(standing(), "The regular dry route continues through the east end")
-	Input.action_press(&"ui_left")
-	await step(8)
-	Input.action_press(&"jump")
-	await step(2)
-	Input.action_release(&"jump")
-	await step(8)
-	Input.action_press(&"instant_dash")
+func cross_sluice(section: ZhenxiSluiceSection) -> bool:
+	var controller := SLUICE_PREVIEW.RouteInput.new(self)
+	if not await controller.leave_pool(section) or not await controller.board_from_entry(section):
+		check(false, "Lan swims ashore and boards on her own")
+		return false
+	await capture("01_approach_board")
+	var aligned := await controller.position_for_jump(section, 490.0, true)
+	check(aligned and section.shadow_wall.shadow_on_cloth, "The actual moving plate carries Lan through the projected formation")
+	if not aligned:
+		return false
+	await capture("02_shadow_on_cloth")
+	await controller.jump_right(115)
+	if not section.reached_exit or not await controller.climb_rear_steps(section):
+		check(false, "Lan jumps through the throat and climbs the rear steps")
+		return false
+	check(section.shadow_wall.rear_view == 1.0, "The rear steps reveal the bamboo and armor behind the same cloth")
+	await capture("03_behind_the_cloth")
+	await controller.walk_right(section, ZhenxiSluiceSection.COMIC_THRESHOLD, 130)
+	await resolve_passage(level.ARRIVAL_COMIC_ID)
+	check(level.sluice == null, "Clearing the rear threshold lands Lan in the existing court")
+	return level.sluice == null
+
+
+func resolve_passage(id: StringName) -> void:
 	await step(3)
-	Input.action_release(&"instant_dash")
-	check(player.aerial_dash_used, "Lan can jump and air-dash while turning back through the corridor")
-	if not await hold_to_x(front):
-		return
-	await step(42)
-	check(standing() and shadow.reveal_amount() <= 0.03,
-		"Backtracking restores the curtain-side composition after an aerial approach")
-	check(gallery._shadow_restored and shadow.projection_is_aligned() and not shadow.lamp_is_carried(),
-		"Returning to the front retains the aligned projection and the seated lamp")
-	await capture("04_front_return")
-	check(not is_instance_valid(gallery.general) and not player.input_frozen,
-		"The optional corridor interaction leaves normal movement active")
-
-
-func verify_shadow_lamp(layout: Node2D, shadow: Node2D) -> bool:
-	var source: float = (layout.get_node("ShadowWorkLamp") as Marker2D).global_position.x
-	var rest: float = (layout.get_node("ShadowLampRest") as Marker2D).global_position.x
-	if not await hold_to_x(source):
-		return false
-	var floor_y := player.global_position.y
-	Input.action_press(&"jump")
-	await step(2)
-	Input.action_release(&"jump")
-	await step(11)
-	await interact()
-	check(player.global_position.y < floor_y - 35.0 and not shadow.lamp_is_carried(),
-		"An airborne E over the lamp leaves it on its holder")
-	await step(52)
-
-	await interact()
-	check(shadow.lamp_is_carried(), "A grounded E near the lamp lifts it from the original holder")
-	if not await hold_to_x((source + rest) * 0.5):
-		return false
-	await step(24)
-	check(shadow.lamp_is_carried() and not shadow.projection_is_aligned(),
-		"Carrying the lamp partway leaves the repaired soldier out of line")
-	await capture("05_lamp_midway")
-	if not await hold_to_x(source):
-		return false
-	await interact()
-	check(not shadow.lamp_is_carried() and not shadow.projection_is_aligned(),
-		"Returning the lamp to its original holder leaves the projection misaligned")
-	await interact()
-	check(shadow.lamp_is_carried(), "The lamp can be lifted again after returning it")
-	if not await hold_to_x(rest):
-		return false
-	await step(24)
-	check(shadow.lamp_is_carried() and shadow.projection_is_aligned(),
-		"The carried light aligns the restored soldier at the second holder")
-	await capture("06_lamp_aligned_in_hand")
-	await interact()
-	await step(24)
-	check(not shadow.lamp_is_carried() and shadow.projection_is_aligned(),
-		"Placing the lamp on the second holder keeps the soldier in formation")
-	await capture("07_lamp_seated")
-	await interact()
-	check(shadow.lamp_is_carried(), "The second holder also allows picking up the lamp")
-	if not await hold_to_x(layout.to_global(Vector2(7210, 0)).x):
-		return false
-	await step(24)
-	check(not shadow.lamp_is_carried() and shadow.projection_is_aligned(),
-		"Leaving the work area returns the lamp to its last holder")
-	return true
-
-
-func hold_to_x(target: float) -> bool:
-	var direction := signf(target - player.global_position.x)
-	if is_zero_approx(direction):
-		return true
-	var action := &"ui_right" if direction > 0.0 else &"ui_left"
-	Input.action_press(action)
-	var reached := false
-	var timeout := ceili(absf(target - player.global_position.x) / 120.0 * 60.0) + 180
-	for frame in timeout:
-		if direction * (target - player.global_position.x) <= 4.0:
-			reached = true
+	for frame in 180:
+		var comic: WindSightingComic = level._passage_comic
+		if comic != null and not comic.get("covered_by_fade"):
+			check(comic.cinematic_id == id, "The route opens the passage comic in sequence")
+			await tap_key(KEY_ESCAPE)
+			break
+		if not level._crossing_door:
 			break
 		await step(1)
-	release()
-	await step(4)
-	check(reached, "Holding the movement direction reaches corridor x %.0f at %s"
-		% [target, player.global_position])
-	return reached
+	await step(32)
 
 
 func start_fight_from_a18(save: SaveProgressService) -> Node2D:
@@ -236,27 +151,17 @@ func start_fight_from_a18(save: SaveProgressService) -> Node2D:
 	if layout == null:
 		return null
 	await capture("01_arrival")
-	if not await walk_to_mark(layout, "XiaowuEntrance"):
-		return null
-	await interact()
-	check(await read_story(gallery), "E opens Xiaowu's dialogue")
-	await capture("02_water_gate")
-	var capture_city := "--city-visual" in OS.get_cmdline_user_args()
-	if capture_city and not await capture_city_walk(layout, [5900.0, 6140.0, 6420.0]):
-		return null
-	if not await walk_to_mark(layout, "ShadowScreen") or not await walk_to_mark(layout, "ShadowPole"):
-		return null
-	await interact()
-	await read_story(gallery)
-	check(gallery._shadow_restored, "E at the shadow pole projects the soldier formation")
-	await capture("03_shadow_corridor")
-	if capture_city and not await capture_city_walk(layout, [7030.0, 7300.0, 7520.0, 7750.0]):
+	if "--decoy-sacks" in OS.get_cmdline_user_args():
+		if not await walk_to_mark(layout, "GrainSacks"):
+			return null
+		await verify_decoy_sacks(gallery, save)
+	if "--city-visual" in OS.get_cmdline_user_args() and not await capture_city_walk(layout, [8250.0, 8690.0, 9120.0]):
 		return null
 	if not await walk_to_mark(layout, "LampInspect"):
 		return null
 	check(not is_instance_valid(gallery.general), "Approaching the lamp does not skip the encounter dialogue")
 	check(not save.has_completed(gallery.CHAPTER_VICTORY), "Approaching the lamp does not write the new victory")
-	check(not gallery._chapter_layout._return_open, "The return passage is shut before combat")
+	check(not gallery._chapter_layout._gate_barrier.disabled, "The main gate is shut before combat")
 	await capture("04_lamp_approach")
 	if not await interact_at_lamp(gallery, true, "--auto-lamp" in OS.get_cmdline_user_args()):
 		return null
@@ -266,6 +171,19 @@ func start_fight_from_a18(save: SaveProgressService) -> Node2D:
 		"The first two phases contain one viewport")
 	await capture("05_battle_start")
 	return gallery
+
+
+func verify_decoy_sacks(gallery: Node2D, save: SaveProgressService) -> void:
+	var sacks := gallery._props.get_node("DecoySacks") as DamageReceiver2D
+	check(not sacks.split and not save.has_completed(sacks.SPLIT), "The decoy sacks start intact")
+	Input.action_press(&"ui_left")
+	await step(2)
+	release()
+	await tap_key(KEY_J)
+	await step(32)
+	check(sacks.split and save.has_completed(sacks.SPLIT),
+		"Lan's real J attack tears open the sacks and records the optional discovery")
+	await capture("02_decoy_sacks_split")
 
 
 func capture_city_walk(layout: Node2D, sampling_points: Array[float]) -> bool:
@@ -317,8 +235,8 @@ func write_city_motion(points: Array[float], samples: Array[Dictionary]) -> void
 	for i in CITY_LAYERS.size():
 		layer_travel.append(float(first.screen_x[i]) - float(last.screen_x[i]))
 	check(travel > 100.0 and layer_travel[0] < layer_travel[1] and layer_travel[1] < layer_travel[2]
-		and layer_travel[2] + 5.0 < layer_travel[3],
-		"Gameplay camera pans through four distinct depth speeds: %s" % [layer_travel])
+		and is_equal_approx(layer_travel[2], layer_travel[3]),
+		"Distant layers move at different speeds and foreground rubble stays anchored to the street: %s" % [layer_travel])
 	DirAccess.make_dir_recursive_absolute(output)
 	var filename := "motion_%04d_to_%04d.json" % [int(points.front()), int(points.back())]
 	var artifact := FileAccess.open(output.path_join(filename), FileAccess.WRITE)
@@ -346,12 +264,14 @@ func interact_at_lamp(gallery: Node2D, expect_dialogue: bool, approach := false)
 	if approach:
 		Input.action_press(&"ui_right")
 		for frame in 90:
-			if player.input_frozen:
+			if gallery._near_marker(^"LampInspect", 45.0):
 				break
 			await step(1)
 		release()
-	else:
-		await interact()
+		await step(5)
+		check(not player.input_frozen and not is_instance_valid(gallery.general),
+			"Walking up to the lamp keeps Lan in control until she interacts")
+	await interact()
 	var saw_dialogue := await read_story(gallery)
 	check(saw_dialogue == expect_dialogue, "The first lamp interaction gives the dialogue, then retries skip it")
 	for attempt in 120:
@@ -426,38 +346,67 @@ func leave_after_victory(gallery: Node2D, save: SaveProgressService) -> void:
 		and not is_instance_valid(gallery.general),
 		"Victory releases the battlefield and is saved independently")
 	var layout := gallery.get_node("ChapterLayout") as Node2D
-	var return_entry := layout.get_node("ReturnEntry") as Marker2D
 	var music := level.get_node_or_null("ZhenxiGateMusic") as AudioStreamPlayer
+	var view := gallery.get_node("PostBattleView") as CanvasLayer
 	check(not save.has_claimed_reward(HELMET_FACT), "Winning alone does not collect Xiaowu's helmet")
-	if not await walk_to_mark(layout, "StoryHelmet"):
+	check(not save.has_completed(gallery.ARCHIVE_READ), "Victory does not mark the optional archive read")
+	await capture("06_lamp_return")
+	if "--upper-return" in OS.get_cmdline_user_args():
+		check(not save.has_claimed_reward(HELMET_FACT) and not save.has_completed(gallery.ARCHIVE_READ),
+			"The departure does not require collecting the helmet or reading the archive")
+	elif not await inspect_aftermath(gallery, save, layout, view, music):
 		return
-	await interact()
-	await read_story(gallery)
-	check(save.has_claimed_reward(HELMET_FACT) and save.get_item_count(HELMET_FACT) == 1,
-		"E at the helmet adds the named unique inventory item")
-	await interact()
-	await read_story(gallery)
-	check(save.get_item_count(HELMET_FACT) == 1, "The helmet reward cannot be collected twice")
-	await capture("06_helmet")
-	if not await enter_return_passage(return_entry, gallery) or not await walk_to_mark(layout, "Archive"):
-		return
-	check(player.position.y - gallery.position.y > 750, "The return leads through the lower passage")
-	await capture("07_archive")
-	await interact()
-	check(await read_story(gallery), "The optional archive can be read from the lower passage")
-	if not await walk_to_mark(layout, "ReturnJoin") or not await walk_to_mark(layout, "ReturnDoor"):
+	if not await walk_to_mark(layout, "ReturnDoor"):
 		return
 	check(not is_instance_valid(gallery.general), "Walking back does not restart the fight")
 	await interact()
-	await step(35)
-	check(not level._inside_gallery and player.is_in_deep_water(), "The original arch returns to A18 underwater")
+	await resolve_passage(level.DEPARTURE_COMIC_ID)
+	var bank: Vector2 = level.marker("pool_bank")
+	check(not level._inside_gallery and not player.is_in_deep_water() and player.position.distance_to(bank) < 24.0,
+		"The main gate returns to the A18 dry bank")
 	if level._inside_gallery:
 		return
 	check(music == null or not music.playing, "The gallery track releases when Lan leaves")
-	if not await swim_to(Vector2(9088, 3328), "swim") or not await swim_to(Vector2(8880, 2880), "swim"):
-		return
-	check(await swim_to(level.marker("pool_bank"), "exit"), "Lan can swim back to the A18 dry bank")
 	await capture("08_returned_to_a18")
+
+
+func inspect_aftermath(gallery: Node2D, save: SaveProgressService, layout: Node2D,
+		view: CanvasLayer, music: AudioStreamPlayer) -> bool:
+	if not await walk_to_mark(layout, "StoryHelmet"):
+		return false
+	await interact()
+	check(view.visible and player.input_frozen, "E opens the helmet inspection and locks movement")
+	check(save.has_claimed_reward(HELMET_FACT) and save.get_item_count(HELMET_FACT) == 1,
+		"E at the helmet adds the named unique inventory item")
+	await capture("06_helmet_detail")
+	await interact()
+	await interact()
+	check(not view.visible and save.get_item_count(HELMET_FACT) == 1,
+		"The inspection closes and the helmet cannot be collected twice")
+	if not await walk_to_mark(layout, "Archive"):
+		return false
+	await capture("07_archive_niche")
+	var reading_position := player.global_position
+	var track: AudioStream = music.stream if music else null
+	await interact()
+	check(view.visible and view.archive_page == 0 and player.input_frozen
+		and not save.has_completed(gallery.ARCHIVE_READ), "Opening the archive displays page one without recording a read")
+	await capture("07_archive_page_one")
+	await tap_key(KEY_ESCAPE)
+	check(not view.visible and not player.input_frozen and not save.has_completed(gallery.ARCHIVE_READ),
+		"Esc on page one restores movement and leaves the archive unread")
+	await interact()
+	await interact()
+	check(view.visible and view.archive_page == 1 and save.has_completed(gallery.ARCHIVE_READ),
+		"Reopening and using E to reach page two records the archive")
+	await capture("07_archive_page_two")
+	await interact()
+	check(not view.visible and not player.input_frozen and reading_position.distance_to(player.global_position) < 8,
+		"E on page two closes the archive with Lan at the niche")
+	if DisplayServer.get_name() != "headless":
+		check(music != null and music.playing and not music.stream_paused and music.stream == track,
+			"Reading the archive leaves the gallery track playing")
+	return true
 
 
 func walk_to_mark(layout: Node2D, name: String) -> bool:
@@ -469,20 +418,6 @@ func walk_to_mark(layout: Node2D, name: String) -> bool:
 	var reached := await walk_plain(destination)
 	check(reached, "Real Lan traverses to %s at %s" % [name, destination])
 	return reached
-
-
-func enter_return_passage(entry: Marker2D, gallery: Node2D) -> bool:
-	var drop_edge := entry.global_position.x
-	Input.action_press(&"ui_right")
-	for frame in 360:
-		if player.global_position.x >= drop_edge:
-			break
-		await step(1)
-	release()
-	await step(55)
-	var landed := standing() and player.global_position.y - gallery.global_position.y > 750.0
-	check(landed, "The east exit opens a physical descent into the return passage")
-	return landed
 
 
 func interact() -> void:
