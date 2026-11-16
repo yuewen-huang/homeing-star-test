@@ -72,6 +72,9 @@ func run() -> void:
 		comic._auto_remaining = -1
 		comic._show_panel(comic._frames.size() - 1, false)
 		comic._request_finish(false)
+		if id == "back_alley_pill":
+			while comic._wake_dialogue != null:
+				comic._wake_dialogue.advance()
 		comic._request_finish(true)
 		check(completions[0] == 1, id + ": completion settles once under repeated input")
 		comic.free()
@@ -86,6 +89,9 @@ func run() -> void:
 		comic._show_panel(comic._frames.size() - 1, false)
 		var before := routing.destinations.size()
 		key(comic, KEY_E)
+		if row[0] == "back_alley_pill":
+			while comic._wake_dialogue != null:
+				comic._wake_dialogue.advance()
 		check(comic._pending_completion_retry and routing.destinations.size() == before and not save.has_completed(row[1]), row[0] + ": failed save rolls back progress and blocks travel")
 		save.fail_writes = false
 		key(comic, KEY_E)

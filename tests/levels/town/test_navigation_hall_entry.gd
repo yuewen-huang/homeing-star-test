@@ -1,5 +1,7 @@
 extends "../../support/harness.gd"
 
+const STAGED_VIEW := preload("res://scripts/ui/main_story_dialogue.gd")
+
 func _initialize() -> void:
 	call_deferred("run_test")
 
@@ -37,28 +39,46 @@ func run_test() -> void:
 	check(current_scene != null and current_scene.name == "NavigationHallPlaceholder",
 		"看完漫画后应进入临时房间")
 	var room := current_scene
-	var dialogue := room.get("navigator_dialogue") as TutorialDialogue
-	check(dialogue != null and dialogue.opened, "漫画结束后应自动与导航员对话")
-	check(dialogue.get_line_progress() == Vector2i(0, 11), "导航员对话应有 11 句")
-	var portrait_sizes: Dictionary = {}
-	for _index in range(11):
-		var name_text := dialogue._name_label.text
-		var portrait := dialogue._portrait.texture
-		check(portrait != null and portrait.get_size() == Vector2(120, 107) and portrait.resource_path.contains("/portraits/dialogue_fit/"), "归航厅表情应直接使用校准后的头像画布")
-		check(dialogue._portrait_clip.position == TutorialDialogue.BOX_POSITION
-			+ (TutorialDialogue.CUTOUT_LEFT.position if name_text == "岚"
-			else TutorialDialogue.CUTOUT_RIGHT.position), "头像必须留在说话人对应的框内")
-		check(is_equal_approx(dialogue._portrait.position.y + dialogue._portrait.size.y,
-			dialogue._portrait_clip.size.y), "头像底边必须贴齐头像框底边")
-		if portrait_sizes.has(name_text):
-			check(dialogue._portrait.size.is_equal_approx(portrait_sizes[name_text]),
-				"同一角色切换表情时头像大小不能跳动")
-		else:
-			portrait_sizes[name_text] = dialogue._portrait.size
+	check(room.get("navigator_dialogue") == null and room.get("star_dialogue") == null,
+		"进厅后仍由玩家决定往哪里走")
+	var hall_player := room.get("player") as LanPlayer
+	hall_player.position.x = room.NAVIGATOR_X
+	room._unhandled_input(e)
+	var optional := room.get("navigator_dialogue") as TutorialDialogue
+	check(optional != null and optional is STAGED_VIEW and optional.opened,
+		"靠近导航员按 E 可选听新版半身对白")
+	if optional != null:
+		check(optional.get_line_progress() == Vector2i(0, 11), "导航员对白仍为原来的十一句")
+		var attendant = optional._actors[&"navigator"]
+		var lan_listener = optional._actors[&"lan"]
+		check(attendant.current.texture != null and attendant.current.flip_h,
+			"导航员面朝岚抬手制止")
+		optional._complete_line()
+		check(lan_listener.current.texture.resource_path.ends_with("caught_off_guard.png"),
+			"导航员说别碰时岚先有反应")
+		await capture_navigator()
+		for index in 10:
+			optional.advance()
+		check(attendant.current.texture.resource_path.ends_with("bored.png"),
+			"最后一句回到导航员等着下班的神情")
+		optional.advance()
+	check(not save.has_completed(SaveProgressService.QUEST_FIRST_SIGHT_STEP),
+		"导航员的闲聊不能代替调查")
+	hall_player.position.x = room.STAR_X
+	room._unhandled_input(e)
+	var dialogue := room.get("star_dialogue") as TutorialDialogue
+	check(dialogue != null and dialogue.get_line_progress() == Vector2i(0, 2),
+		"靠近归航星按 E 播放岚的两句调查对白")
+	if dialogue != null:
+		var performer = dialogue._actors[&"lan"]
+		check(performer.current.texture != null and performer.current.texture.resource_path.ends_with(
+			"altar_chill.png"), "岚在祭坛前先因寒气抱紧斗篷")
+		dialogue.advance()
+		check(performer.current.texture != null and performer.current.texture.resource_path.ends_with(
+			"determined.png"), "岚决定去找师傅时换成坚定的姿势")
 		dialogue.advance()
 	check(save.has_completed(SaveProgressService.QUEST_FIRST_SIGHT_STEP),
-		"与导航员聊完后应保存当前任务进度")
-	check(save._config.get_value(SaveProgressService.PROGRESS_SECTION, String(SaveProgressService.QUEST_FIRST_SIGHT_STEP), false), "导航员对话完成状态应通过存档服务结算" )
+		"岚调查归航星后才完成旧任务键")
 	var next_quest_found := false
 	var quest_view := (root.get_node("QuestLog") as QuestLogService).get_track_view()
 	for quest: Dictionary in quest_view.get("quests", []):
@@ -118,11 +138,18 @@ func run_test() -> void:
 		return_glow.position.x + return_glow.size.x * 0.5,
 		float(room.EXIT_X)
 	), "归航镇返回交互点应对齐门口")
+	var town_spawn := {"x": INF}
+	var record_town_spawn := func() -> void:
+		if current_scene != null and current_scene.name == "HomewardTown":
+			var arriving_player := current_scene.get("player") as LanPlayer
+			town_spawn.x = arriving_player.position.x
+	scene_changed.connect(record_town_spawn)
 	room._unhandled_input(e)
 	await create_timer(3.0).timeout
 	check(current_scene.scene_file_path == "res://scenes/story/comics/navigation_hall_exit_comic.tscn", "首次离厅先播放离场漫画")
 	var exit_comic := current_scene as ComicPlayer
 	if exit_comic == null:
+		scene_changed.disconnect(record_town_spawn)
 		finish("NAVIGATION HALL ENTRY")
 		return
 	for index in exit_comic._frames.size():
@@ -131,15 +158,32 @@ func run_test() -> void:
 	await create_timer(3.0).timeout
 	check(current_scene != null and current_scene.name == "HomewardTown",
 		"应返回归航镇")
-	var returned_player := current_scene.get("player") as LanPlayer
-	check(absf(returned_player.position.x - (door_x + 90.0)) < 2.0,
-		"回镇后应出现在归航厅门口附近")
+	scene_changed.disconnect(record_town_spawn)
+	check(absf(float(town_spawn.x) - (door_x + 90.0)) < 2.0,
+		"回镇出生点应在归航厅门口附近（%.1f）" % float(town_spawn.x))
 	var revisit: Node2D = (load(
 		"res://scenes/levels/navigation_hall/navigation_hall.tscn") as PackedScene).instantiate()
 	root.add_child(revisit)
 	await process_frame
-	check(revisit.get("navigator_dialogue") == null, "重进归航厅不应重播对话")
+	check(revisit.get("navigator_dialogue") == null and revisit.get("star_anchor") == null, "重进归航厅不应重播已经调查过的剧情")
+	revisit.player.position.x = revisit.NAVIGATOR_X
+	revisit._unhandled_input(e)
+	var after_star := revisit.get("navigator_dialogue") as TutorialDialogue
+	check(after_star != null and after_star.opened, "调查归航星之后仍可回来找导航员")
+	if after_star != null:
+		while after_star.opened:
+			after_star.advance()
 	revisit.queue_free()
 	print("归航厅入场、返回与任务进度通过")
 	expect_save_untouched()
 	finish("NAVIGATION HALL ENTRY")
+
+
+func capture_navigator() -> void:
+	var output := OS.get_environment("HOMING_STAR_TEST_OUTPUT")
+	if output.is_empty() or DisplayServer.get_name() == "headless":
+		return
+	await create_timer(0.22).timeout
+	await RenderingServer.frame_post_draw
+	check(root.get_texture().get_image().save_png(output.path_join("06-navigator.png")) == OK,
+		"保存导航员实机画面")

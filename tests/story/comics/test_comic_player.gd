@@ -156,6 +156,11 @@ func run() -> void:
 		var before := routing.destinations.size()
 		press()
 		press()
+		if name == "back_alley_pill":
+			check(routing.destinations.size() == before and comic._wake_dialogue.opened,
+				"Pill comic shows sober dialogue before travel")
+			while comic._wake_dialogue != null:
+				comic._wake_dialogue.advance()
 		check(routing.destinations.size() == before + 1, name + " final panel routes exactly once")
 		check(routing.music_arguments[-1] == null, name + " preserves existing BGM")
 		if name == "back_alley_entry":

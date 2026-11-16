@@ -79,11 +79,9 @@ func run() -> void:
 	await frames()
 	var gift := MasterCoreGift.new()
 	host.add_child(gift)
-	gift.begin(player, save)
-	check(player.input_frozen and gift.dialogue != null, "Handover dialogue owns the player's input lock")
-	check(save.get_item_count(ItemCatalog.SPIRIT_PENDANT) == 0, "Beginning dialogue grants nothing")
 	save.writes_fail = true
-	finish_dialogue(gift)
+	gift.begin(player, save)
+	check(player.input_frozen, "Handover owns the player's input lock")
 	check(save.get_item_count(ItemCatalog.SPIRIT_PENDANT) == 0 and not save.has_claimed_reward(ForestCoreRelic.REWARD_ID), "Failed grant rolls back both item and reward")
 	check(gift.reveal == null and gift.dialogue != null and player.input_frozen, "Failed grant waits for explicit retry instead of displaying success")
 	save.writes_fail = false

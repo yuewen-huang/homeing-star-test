@@ -72,13 +72,18 @@ func run() -> void:
 	check(current_scene.scene_file_path == "res://scenes/levels/navigation_hall/navigation_hall.tscn", "Entry completes at the real navigation hall")
 	var room := current_scene
 	await wait_frames(2)
-	check(room.navigator_dialogue != null and room.navigator_dialogue.opened, "Navigator dialogue starts normally after entry")
-	# Advance through several lines before Esc; this used to leave older loops.
-	for i in 3: room.navigator_dialogue.advance()
+	check(room.star_dialogue == null and not room.player.input_frozen, "Player can move on entering the hall")
+	room.player.position.x = room.STAR_X
+	await press_key(KEY_E)
+	check(room.star_dialogue != null and room.star_dialogue.opened, "E at the star opens the investigation")
+	if room.star_dialogue == null:
+		finish("NAVIGATION HALL ESCAPE")
+		return
+	room.star_dialogue.advance()
 	await press_key(KEY_ESCAPE)
 	check(settings.settings_panel.visible and paused, "Esc in the hall dialogue pauses through the same settings handler")
 	await press_key(KEY_ESCAPE)
-	while room.navigator_dialogue != null: room.navigator_dialogue.advance()
+	room.star_dialogue.advance()
 	await wait_frames(4)
 	check(not settings.settings_panel.visible and not paused and not room.player.input_frozen, "Dialogue can finish after Esc with no stuck pause or frozen player")
 	current_scene = null

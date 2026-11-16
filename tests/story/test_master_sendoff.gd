@@ -78,12 +78,8 @@ func run() -> void:
 	for i in range(dialogue.get_line_progress().x, dialogue.get_line_progress().y): dialogue.advance()
 	check(save.has_completed(SaveProgressService.STORY_C1_MASTER_SENDOFF_SEEN), "Completing all lines saves separate sendoff flag")
 	var gift: MasterCoreGift = room._core_gift
-	check(gift != null and gift.dialogue != null and player.input_frozen, "Sendoff continues into master's item handover")
-	await capture("master_gift_right")
-	gift.dialogue.advance()
-	await capture("master_gift_left")
-	var gift_dialogue := gift.dialogue
-	for i in range(gift_dialogue.get_line_progress().x, gift_dialogue.get_line_progress().y): gift_dialogue.advance()
+	check(gift != null and gift.dialogue == null and player.input_frozen,
+		"Sendoff reaches the silent item handover")
 	check(save.get_item_count(ItemCatalog.SPIRIT_PENDANT) == 1 and gift.reveal != null, "Handover grants one pendant before its reveal")
 	check(not save.has_completed(ForestCoreRelic.PRESENTED_ID), "Ownership does not imply completed presentation")
 	await capture("master_gift_reveal")
@@ -123,8 +119,7 @@ func run() -> void:
 	gift = master._core_gift
 	check(gift != null, "Old victory can recover the unclaimed gift from the town master")
 	if gift != null:
-		gift_dialogue = gift.dialogue
-		for i in range(gift_dialogue.get_line_progress().x, gift_dialogue.get_line_progress().y): gift_dialogue.advance()
+		check(gift.dialogue == null, "Old-save recovery also omits the item lines")
 		gift.reveal._finish_reveal()
 	check(save.get_item_count(ItemCatalog.SPIRIT_PENDANT) == 1, "Recovery grants exactly one pendant")
 	await process_frame

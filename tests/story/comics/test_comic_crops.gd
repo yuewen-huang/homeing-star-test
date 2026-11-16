@@ -68,12 +68,22 @@ func inspect(comic: Node, name: String) -> void:
 		name + " uses the common bottom hint style")
 	for i in comic.PANELS.size():
 		check(comic.panel_index == i, "%s panel %d advances in original order" % [name, i + 1])
-		var texture: AtlasTexture = comic._panel_texture
-		var bounds := Rect2(Vector2.ZERO, texture.atlas.get_size())
-		check(bounds.encloses(texture.region) and texture.region.has_area(), "%s panel %d stays inside source" % [name, i + 1])
-		var page := texture.atlas.get_image()
-		if page.is_compressed(): page.decompress()
-		var panel := page.get_region(Rect2i(texture.region))
+		var texture := comic._image.texture as Texture2D
+		var panel: Image
+		if texture is AtlasTexture:
+			var atlas := texture as AtlasTexture
+			var bounds := Rect2(Vector2.ZERO, atlas.atlas.get_size())
+			check(bounds.encloses(atlas.region) and atlas.region.has_area(),
+				"%s panel %d stays inside source" % [name, i + 1])
+			var page := atlas.atlas.get_image()
+			if page.is_compressed():
+				page.decompress()
+			panel = page.get_region(Rect2i(atlas.region))
+		else:
+			panel = texture.get_image()
+			check(not panel.is_empty(), "%s panel %d loads its independent source" % [name, i + 1])
+			if panel.is_compressed():
+				panel.decompress()
 		check(not has_ink_or_gutter_edge(panel), "%s panel %d excludes straight ink/gutter edges" % [name, i + 1])
 		check(comic._image.stretch_mode == TextureRect.STRETCH_KEEP_ASPECT_CENTERED, "Panel preserves original proportions")
 		await capture("crop_%s_%02d" % [name, i + 1])
