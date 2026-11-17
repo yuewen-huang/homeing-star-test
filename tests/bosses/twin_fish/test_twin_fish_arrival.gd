@@ -1,11 +1,12 @@
 extends SceneTree
-## Native runtime checks and optional Godot screenshots of the five-second intro.
+## Native runtime checks and optional Godot captures of the entrance and free swim.
 var room
 var twin: TwinFishBoss
 var checks := 0
 var failures := 0
 var output := ""
 var record_animation := false
+var capture_fps := 60
 var handoffs := 0
 
 func _initialize() -> void: call_deferred("run")
@@ -38,6 +39,8 @@ func run() -> void:
 		output = args[index + 1]
 		DirAccess.make_dir_recursive_absolute(output)
 	record_animation = args.has("--capture-animation") and not output.is_empty()
+	index = args.find("--capture-fps")
+	if index >= 0: capture_fps = clampi(int(args[index + 1]), 1, 120)
 	var save_exists := FileAccess.file_exists(SaveProgressService.SAVE_PATH)
 	var saved := FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) if save_exists else PackedByteArray()
 	var previous_speed := Engine.time_scale
@@ -48,11 +51,16 @@ func run() -> void:
 	room.boss_picker.item_selected.emit(2)
 	await process_frame
 	freeze()
-	check(room.boss_picker.item_count == 4 and room.selected_boss == 2 and room.boss_picker.get_item_text(2).contains("双子"), "third picker option selects real TwinFishBoss")
+	twin._swim_random.seed = 41019
+	var twin_dodge_callbacks: int = room.player.dodge_evaded_attack.get_connections().size()
+	check(room.selected_boss == 2 and room.boss_picker.get_item_text(2).contains("双子"), "third picker option selects real TwinFishBoss")
 	check(twin.manual_control and twin is BossBase and twin is DamageReceiver2D, "development twin uses shared combat contract with AI disabled")
-	check(twin.white_data.source == "双子白-walk.aseprite" and twin.black_data.source == "双子黑-walk.aseprite", "only the two requested authored walk sources are used")
-	check(twin.white_data.duration_ms.size() == 16 and twin.black_data.duration_ms.size() == 16 and twin.black_data.source_depth == 8, "native 16-frame timing and indexed black palette are retained")
-	check(twin.white_sprite.offset == Vector2(-128, -128) and twin.white_sprite.scale == Vector2.ONE * 1.4 and twin.black_sprite.scale == twin.white_sprite.scale, "full-canvas shared pivot and uniform art scale are retained")
+	check_shared_library()
+	check_fixed_canvas_playback()
+	check_turn_registration()
+	check(twin.white_swimmer != twin.black_swimmer, "each fish owns an independent motion and action controller")
+	check(twin.white_sprite.scale == Vector2.ONE * 0.91 and twin.black_sprite.scale == twin.white_sprite.scale, "both fish use the selected display scale")
+	check(rig_is_valid(twin.white_sprite) and rig_is_valid(twin.black_sprite), "both fish show one original painted sprite with five source guide bones")
 	check(not twin.is_in_group(&"damageable") and twin.get_node("Hurtbox").collision_layer == 0, "specimen cannot be damaged by the observing player")
 	check(not room.combo_button.visible and not room.charge_button.visible and not room.ultimate_row.visible and not room.segment_row.visible, "unimplemented attacks and deer-specific controls are hidden")
 	check(not room.dummy.visible, "cinematic fish preview hides the non-attacking dummy so it cannot cover the fish")
@@ -66,87 +74,49 @@ func run() -> void:
 	to_time(0.30)
 	var entry_b := twin.white_sprite.position
 	to_time(0.45)
-	check(absf(entry_a.distance_to(entry_b) - entry_b.distance_to(twin.white_sprite.position)) < 0.1, "entry cruises at uniform speed instead of easing down through the whole segment")
+	check(entry_a.distance_to(entry_b) > entry_b.distance_to(twin.white_sprite.position), "the entrance gradually slows as the fish approach")
 	check(twin.state == TwinFishBoss.State.ARRIVAL and twin.white_sprite.position.x > 0 and twin.black_sprite.position.x < 0, "first second brings both fish inward from opposite sides")
-	check(twin.white_sprite.rotation == 0 and twin.black_sprite.rotation == 0 and not twin.white_sprite.flip_h and twin.black_sprite.flip_h, "entry stays horizontal and black fish mirrors without turning belly-up")
-	var tail := twin.black_sprite.deformed_point(Vector2(80, 0))
-	var head := twin.black_sprite.deformed_point(TwinFishSwimSprite.HEAD_POINT)
-	var entry_frame := twin.black_frame
+	check(twin.white_sprite.head_forward().dot(Vector2.LEFT) > 0.9 and twin.black_sprite.head_forward().dot(Vector2.RIGHT) > 0.9 and not twin.white_sprite.current_mirrored and twin.black_sprite.current_mirrored, "entry keeps both fish upright and facing into the room")
+	var tail: Vector2 = twin.black_sprite.global_joints()[4] - twin.black_sprite.global_position
+	var entry_frame: int = twin.black_sprite.current_frame
 	to_time(0.65)
-	check(twin.black_frame != entry_frame and twin.black_sprite.deformed_point(Vector2(80, 0)).distance_to(tail) > 0.5 and twin.black_sprite.deformed_point(TwinFishSwimSprite.HEAD_POINT).distance_to(head) < 0.001, "native swim frames and travelling tail wave advance while entry head stays stable")
+	var moved_tail: Vector2 = twin.black_sprite.global_joints()[4] - twin.black_sprite.global_position
+	check(twin.black_sprite.current_frame != entry_frame and moved_tail.distance_to(tail) > 0.1 and source_points_are_preserved(), "swim frames and source bone markers advance without moving the shared canvas pivot")
+	to_time(1.7)
 	await capture("01_two_sides")
-	to_time(1.02)
-	check(twin.state == TwinFishBoss.State.CHASE, "1 second enters chasing state")
-	check((twin.white_sprite.position + twin.black_sprite.position).length() < 0.01, "orbit phases differ by PI around the same center")
-	check(twin.black_sprite.head_forward().dot(twin.white_sprite.head_forward()) < -0.999, "head-led fish have opposite tangent headings without a whole-sprite roll")
-	var tangent := twin.white_trail.head_direction
-	check(twin.white_sprite.head_forward().dot(tangent) > 0.99, "the rendered head follows the actual swimming tangent")
-	to_time(1.3)
-	var angle_a := twin.orbit_angle
-	to_time(1.55)
-	var angle_b := twin.orbit_angle
-	to_time(1.8)
-	check(twin.orbit_radius < TwinFishBoss.OPEN_RADIUS and absf((angle_b - angle_a) - (twin.orbit_angle - angle_b)) < 0.001, "chase contracts its orbit while maintaining a steady rotation rate")
-	check(twin.white_sprite.follows_path and twin.black_sprite.follows_path and twin.white_sprite.skin.mesh != null, "both textured bodies follow head-path history instead of rigid pictures")
-	check(twin.white_sprite.point_in_boss(TwinFishSwimSprite.HEAD_POINT).distance_to(twin.white_sprite.position) < 0.001, "head joint is anchored to the actual head path")
-	await capture("02_chase")
-	to_time(2.55)
-	check(twin.state == TwinFishBoss.State.TAICHI and is_equal_approx(twin.orbit_radius, TwinFishBoss.TAICHI_RADIUS), "2.5 seconds forms the compact taichi arrangement")
-	var frame := twin.white_frame
-	var black_frame := twin.black_frame
-	var angle := twin.orbit_angle
-	to_time(3.1)
-	check(twin.white_frame == frame and twin.black_frame == black_frame, "taichi freezes both authored swim poses")
-	check(twin.orbit_angle > angle and twin.orbit_angle - angle < 0.2, "frozen taichi turns only gently")
-	await capture("03_taichi")
-	to_time(3.6)
-	check(twin.state == TwinFishBoss.State.SUBMERGE and twin.dive_progress > 0.0, "3.5 seconds starts the dark-water dive")
+	await check_arrival_formation()
+	to_time(TwinFishBoss.FREE_SWIM_TIME - 0.01)
+	var before_white := travel_position(twin.white_swimmer)
+	var before_black := travel_position(twin.black_swimmer)
+	to_time(TwinFishBoss.FREE_SWIM_TIME + 0.01)
+	check(twin.state == TwinFishBoss.State.SWIM_OUT and twin.black_sprite.visible and twin.white_sprite.visible, "both fish finish their authored recovery and continue into independent swimming")
+	check(travel_position(twin.white_swimmer).distance_to(before_white) < 4.0 and travel_position(twin.black_swimmer).distance_to(before_black) < 4.0, "both action roots remain continuous as the fish swim apart")
+	check(rig_is_valid(twin.white_sprite) and rig_is_valid(twin.black_sprite), "the approach-to-release handoff retains one original painted sprite per fish")
 	var at := twin.black_sprite.position
-	var dive := twin.dive_progress
-	var age := twin.arrival_age
+	var age := twin.idle_age
 	twin.advance_action(0.0)
 	await process_frame
 	await process_frame
-	check(twin.arrival_age == age and twin.dive_progress == dive and twin.black_sprite.position == at, "pause freezes fish, water and Tween even across scene frames")
-	to_time(4.01)
-	check(twin.black_sprite.mirror_enabled and twin.black_sprite.modulate.a == 1.0 and twin.black_sprite.scale == Vector2.ONE * 1.4, "dive uses a spatial mirror mask without whole-fish fading or shrinking")
-	check(twin.white_leaving and twin.handoff_blend < 0.02, "white begins its tangent departure at four seconds while black is still diving")
-	await capture("04_dark_water")
-	to_time(4.15)
-	check(twin.black_sprite.point_in_boss(TwinFishSwimSprite.HEAD_POINT).y > TwinFishBoss.MIRROR_POSITION.y and twin.black_sprite.point_in_boss(Vector2(92, -6)).y < TwinFishBoss.MIRROR_POSITION.y, "head is below the mirror while the following tail is still above it")
-	check(twin.white_sprite.head_forward().dot(Vector2.LEFT) > 0.99 and twin.white_sprite.position.x < 0 and twin.white_frame != frame, "white swims forward off the tangent and resumes its native swim frames")
-	await capture("04b_head_under_tail_above")
-	to_time(4.4)
-	check(twin.black_sprite.visible and twin.black_sprite.modulate.a == 1.0 and twin._black_spine(230).y < TwinFishBoss.MIRROR_POSITION.y, "late dive still retains the tail until it physically reaches the mirror")
-	await capture("05_mirror_entry")
-	to_time(4.48)
-	check(twin._black_spine(240).y > TwinFishBoss.MIRROR_POSITION.y, "the full visible black body clears the mirror before cleanup")
-	to_time(4.7)
-	check(twin.state == TwinFishBoss.State.UNFOLD and not twin.black_sprite.visible and twin.handoff_blend > 0, "4.5 seconds hides black fish and restores white posture")
-	check(twin.white_path_distance > 130 and twin.white_sprite.head_forward().dot(Vector2.LEFT) > 0.99, "white heading and movement stay aligned throughout the overlap")
-	await capture("06_white_unfold")
-	to_time(4.99)
-	check(twin.state == TwinFishBoss.State.UNFOLD and twin.phase == 0, "combat phase cannot start before the last half-second finishes")
-	var before_handoff := twin.white_sprite.position
-	var tail_before := twin._white_spine(220)
-	to_time(5.02)
-	check(twin.state == TwinFishBoss.State.PHASE_ONE and twin.phase == 1 and handoffs == 1, "5 seconds hands the same white sprite to the real phase-one state once")
-	check(twin.white_sprite.position.distance_to(twin.phase_one_position) < 0.1 and twin.white_sprite.head_forward().dot(Vector2.LEFT) > 0.999, "phase-one station is the actual departure endpoint with a horizontal head")
-	check(before_handoff.distance_to(twin.white_sprite.position) < 4.0 and tail_before.distance_to(twin._white_spine(220)) < 4.0, "state handoff cannot teleport the head or snap the tail straight")
-	check(not twin.black_sprite.visible and is_zero_approx(twin.dive_progress) and twin.attack_hitbox.attack == null, "handoff leaves no dark-water effect or attack")
-	var white_id := twin.white_sprite.get_instance_id()
-	await capture("07_phase_one")
-	frame = twin.white_frame
-	twin.advance_action(0.35)
-	check(twin.white_frame != frame and twin.white_sprite.get_instance_id() == white_id and handoffs == 1, "phase one resumes authored horizontal swimming without respawning the fish")
+	check(twin.idle_age == age and twin.black_sprite.position == at, "pause freezes the free swim across scene frames")
+	to_time(TwinFishBoss.FREE_SWIM_TIME + 0.35)
+	await capture("04_swimming_out")
+	to_time(TwinFishBoss.ARRIVAL_TIME - 0.01)
+	check(twin.state == TwinFishBoss.State.SWIM_OUT and twin.phase == 0, "both fish swim out before the phase handoff")
+	before_white = travel_position(twin.white_swimmer)
+	before_black = travel_position(twin.black_swimmer)
+	to_time(TwinFishBoss.ARRIVAL_TIME + 0.02)
+	check(twin.state == TwinFishBoss.State.PHASE_ONE and twin.phase == 1 and handoffs == 1, "the entrance enters the continuous idle once")
+	check(before_white.distance_to(travel_position(twin.white_swimmer)) < 6.0 and before_black.distance_to(travel_position(twin.black_swimmer)) < 6.0, "state handoff keeps both action roots continuous")
+	check(twin.black_sprite.visible and twin.find_child("MirrorSurface", false, false) == null and twin.attack_hitbox.attack == null, "the old mirror exit is gone and idle has no attack")
+	await check_free_swim()
 	check(room.dummy.contacts.is_empty() and room.player.combat_stats.health == 100, "the entire entrance has no damage or dummy hit")
 	room.play_action(0)
-	check(twin.state == TwinFishBoss.State.ARRIVAL and twin.entry_blend == 0 and twin.black_sprite.visible and twin.black_sprite.modulate == Color.WHITE, "replay completely restores the two fish after the dive")
+	check(twin.state == TwinFishBoss.State.ARRIVAL and twin.entry_blend == 0 and twin.black_sprite.visible and twin.black_sprite.modulate == Color.WHITE, "replay completely restores the entrance from idle")
 	var old_tween := twin._timeline
 	room.play_action(0)
 	check(not old_tween.is_valid() and twin._timeline.is_valid(), "repeated play kills the prior Tween instead of stacking timelines")
 	room.heavy_button.pressed.emit()
-	check(twin.state == TwinFishBoss.State.PHASE_ONE and twin._timeline == null and not twin.black_sprite.visible, "2 directly previews phase-one idle without a dangling arrival Tween")
+	check(twin.state == TwinFishBoss.State.PHASE_ONE and twin._timeline == null and twin.black_sprite.visible, "2 directly previews both swimming fish without the entrance Tween")
 
 	# Real automatic physics under the room's speed selector, rather than merely
 	# scaling a fake preview timer.
@@ -155,10 +125,10 @@ func run() -> void:
 	twin.set_physics_process(true)
 	for i in 12: await physics_frame
 	twin.set_physics_process(false)
-	check(absf(twin.arrival_age - 0.05) < 0.009, "quarter-speed selector advances the real five-second intro by quarter action time")
+	check(absf(twin.arrival_age - 0.05) < 0.009, "quarter-speed selector advances the entrance by quarter action time")
 	room.set_playback_speed(2)
 
-	for cut in [0.4, 1.8, 2.8, 4.0, 4.8]:
+	for cut in [0.4, 2.8, 5.0, 6.7, TwinFishBoss.ARRIVAL_TIME + 0.1]:
 		room.play_action(0)
 		to_time(cut)
 		var previous := twin
@@ -167,8 +137,8 @@ func run() -> void:
 		await process_frame
 		await process_frame
 		freeze()
-		check(not is_instance_valid(previous) and not old_tween.is_valid() and room.selected_boss == 2 and twin.state == TwinFishBoss.State.ARRIVAL, "R clears the whole specimen and replays from stage %.1f" % cut)
-	check(room.specimen.find_children("WhiteFish", "Sprite2D", true, false).size() == 1 and room.specimen.find_children("BlackFish", "Sprite2D", true, false).size() == 1, "resets retain exactly one fish pair under the current specimen")
+		check(not is_instance_valid(previous) and (old_tween == null or not old_tween.is_valid()) and room.selected_boss == 2 and twin.state == TwinFishBoss.State.ARRIVAL, "R clears the whole specimen and replays from stage %.1f" % cut)
+	check(room.specimen.find_children("WhiteFish", "Node2D", true, false).size() == 1 and room.specimen.find_children("BlackFish", "Node2D", true, false).size() == 1, "resets retain exactly one fish pair under the current specimen")
 	for cut in [0.6, 3.0, 4.1]:
 		room.play_action(0)
 		to_time(cut)
@@ -181,21 +151,22 @@ func run() -> void:
 		room.select_boss(2)
 		await process_frame
 		freeze()
-	check(room.player.dodge_evaded_attack.get_connections().size() <= 1, "switching never accumulates shared player combat callbacks")
+	check(room.player.dodge_evaded_attack.get_connections().size() == twin_dodge_callbacks, "switching never accumulates shared player combat callbacks")
 	room.play_action(0)
 	to_time(4.0)
 	old_tween = twin._timeline
 	twin.combat_stats.apply_health_damage(twin.combat_stats.max_health)
-	check(twin.state == TwinFishBoss.State.DEFEATED and twin._timeline == null and not old_tween.is_valid() and not twin.black_sprite.visible and twin.dive_progress == 0, "real death signal immediately clears the arrival Tween and dark-water effect")
+	check(twin.state == TwinFishBoss.State.DEFEATED and twin._timeline == null and not old_tween.is_valid() and not twin.black_sprite.visible, "real death signal cancels the swimming presentation")
 	room.play_action(0)
-	check(twin._mirror_surface.visible and twin.state == TwinFishBoss.State.ARRIVAL and not twin.black_sprite.mirror_enabled, "replay restores the mirror and clears the former underwater mask after cancellation")
+	check(twin.state == TwinFishBoss.State.ARRIVAL and twin.black_sprite.visible, "replay restores both fish after cancellation")
 	room.reset_room()
 	await process_frame
 	freeze()
 	if record_animation:
+		twin._swim_random.seed = 41019
 		twin.start_arrival()
-		for index_frame in 133:
-			if index_frame > 0: twin.advance_action(1.0 / 24.0)
+		for index_frame in 12 * capture_fps:
+			if index_frame > 0: twin.advance_action(1.0 / float(capture_fps))
 			await capture("movie_%03d" % index_frame)
 	room.play_action(0)
 	to_time(4.0)
@@ -203,8 +174,275 @@ func run() -> void:
 	room.free()
 	current_scene = null
 	await process_frame
-	check(not old_tween.is_valid(), "leaving mid-dive also destroys the bound arrival Tween")
+	check(not old_tween.is_valid(), "leaving during the transition destroys the bound entrance Tween")
 	check(Engine.time_scale == previous_speed, "leaving development room restores normal playback speed")
 	check(FileAccess.file_exists(SaveProgressService.SAVE_PATH) == save_exists and (not save_exists or FileAccess.get_file_as_bytes(SaveProgressService.SAVE_PATH) == saved), "arrival and all resets preserve story progress byte-for-byte")
 	print("TWIN FISH ARRIVAL: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures else 0)
+
+func travel_position(swimmer: TwinFishSwimmer) -> Vector2:
+	# A one-time change of source canvas at a clip seam is not travel.
+	return swimmer.position - swimmer.root_registration
+
+func source_body_center(swimmer: TwinFishSwimmer) -> Vector2:
+	var frame: Dictionary = twin.motion_data.frames[swimmer.frame_index]
+	var center := (Vector2(frame.joints[1][0], frame.joints[1][1]) + Vector2(frame.joints[2][0], frame.joints[2][1])) * 0.5
+	center -= Vector2(twin.motion_data.canvas[0], twin.motion_data.canvas[1]) * 0.5
+	if swimmer.mirrored: center.x = -center.x
+	return swimmer.position + center.rotated(swimmer.body_rotation) * TwinFishBoss.WORLD_SCALE
+
+func check_turn_registration() -> void:
+	# Registration is permitted once when changing the source clip. Every
+	# subsequent frame must retain the source canvas and its original motion.
+	var step := 1.0 / 120.0
+	for upward in [false, true]:
+		for facing_right in [false, true]:
+			var swimmer := TwinFishSwimmer.new()
+			var partner := TwinFishSwimmer.new()
+			swimmer.configure(twin.motion_data, 0, TwinFishBoss.WORLD_SCALE)
+			partner.configure(twin.motion_data, 1, TwinFishBoss.WORLD_SCALE)
+			var direction := Vector2.RIGHT if facing_right else Vector2.LEFT
+			swimmer.reset(Vector2(30.0, 10.0), direction)
+			partner.reset(Vector2(10000.0, 10000.0), direction)
+			check(swimmer.root_registration == Vector2.ZERO, "turn probe starts with cleared registration")
+			swimmer.start_turn(upward)
+			var registration_changes := 0
+			var before_frames := {}
+			var after_frames := {}
+			var aligned := true
+			var integrated := true
+			var change_on_new_drawing := true
+			var samples := 0
+			var expected_sign := (1.0 if upward else -1.0) * (-1.0 if facing_right else 1.0)
+			var direction_consistent := true
+			var total_turn := 0.0
+			var peak_turn_rate := 0.0
+			while swimmer.turning and samples < 1200:
+				var old_registration := swimmer.root_registration
+				var old_frame := swimmer.frame_index
+				var old_mirror := swimmer.mirrored
+				var old_center := source_body_center(swimmer)
+				var old_travel := travel_position(swimmer)
+				var old_heading := swimmer.heading
+				var old_painted_heading := swimmer._frame_head(swimmer.frame_index, swimmer.mirrored)
+				swimmer.advance(step, swimmer.position + direction * 300.0, 100.0, partner)
+				var turn_step := angle_difference(old_heading, swimmer.heading)
+				var painted_step := angle_difference(old_painted_heading, swimmer._frame_head(swimmer.frame_index, swimmer.mirrored))
+				direction_consistent = direction_consistent and turn_step * expected_sign >= -0.0001 and painted_step * expected_sign >= -0.0001
+				total_turn += turn_step
+				peak_turn_rate = maxf(peak_turn_rate, absf(turn_step) / step)
+				var changed := swimmer.root_registration.distance_to(old_registration) > 0.00001
+				if changed:
+					registration_changes += 1
+					aligned = aligned and source_body_center(swimmer).distance_to(old_center) <= swimmer.speed * step + 0.1
+					change_on_new_drawing = change_on_new_drawing and (old_frame != swimmer.frame_index or old_mirror != swimmer.mirrored)
+				integrated = integrated and travel_position(swimmer).distance_to(old_travel) <= swimmer.speed * step + 0.001
+				var key := "%d/%s" % [swimmer.frame_index, swimmer.mirrored]
+				if registration_changes == 0: before_frames[key] = true
+				else: after_frames[key] = true
+				samples += 1
+			var label := "turn %s facing %s" % ["up" if upward else "down", "right" if facing_right else "left"]
+			check(not swimmer.turning and registration_changes == 1 and change_on_new_drawing and before_frames.size() >= 2 and after_frames.size() >= 2, label + " registers exactly once between clips and retains that registration across subsequent drawings")
+			check(aligned and integrated, label + " preserves the world body center at its seam while continuous travel remains bounded by velocity")
+			check(direction_consistent and absf(total_turn * expected_sign - PI) < 0.001, label + " keeps both painted and travel turns in one direction through the full half-turn")
+			check(peak_turn_rate <= deg_to_rad(301.0), label + " bounds the source action's angular playback rate without rotating the sprite")
+			swimmer.reset(Vector2.ZERO, direction)
+			check(swimmer.root_registration == Vector2.ZERO, label + " clears registration on replay")
+
+func rig_is_valid(sprite: TwinFishRigSprite) -> bool:
+	return sprite.visible and sprite.bones.size() == 5 and is_instance_valid(sprite.skeleton) and sprite.skin is Sprite2D and sprite.skin.visible and sprite.skin.texture != null and sprite.find_children("*", "MeshInstance2D", true, false).is_empty()
+
+func source_points_match(sprite: TwinFishRigSprite) -> bool:
+	var canvas := Vector2(twin.motion_data.canvas[0], twin.motion_data.canvas[1])
+	var pivot := canvas * 0.5
+	if sprite.skin.centered or sprite.skin.offset.distance_to(-pivot) > 0.001 or sprite.skin.position.length() > 0.001: return false
+	var side := -1.0 if sprite.current_mirrored else 1.0
+	if sprite.skin.scale.distance_to(Vector2(side, 1.0)) > 0.001: return false
+	var source: Array = twin.motion_data.frames[sprite.current_frame].joints
+	var joints: PackedVector2Array = sprite.global_joints()
+	if joints.size() != source.size(): return false
+	for index in source.size():
+		var point := Vector2(source[index][0], source[index][1]) - pivot
+		point.x *= side
+		var expected := sprite.global_transform * point.rotated(sprite.skin.rotation)
+		if joints[index].distance_to(expected) > 0.001: return false
+	return true
+
+func source_points_are_preserved() -> bool:
+	return source_points_match(twin.white_sprite) and source_points_match(twin.black_sprite)
+
+func check_fixed_canvas_playback() -> void:
+	# Run each complete original curl in isolation with an immobile world root.
+	# This catches frame-wise head anchoring even if live motion hides its drift.
+	for sprite in [twin.white_sprite, twin.black_sprite]:
+		var original_transform: Transform2D = sprite.transform
+		var original_frame: int = sprite.current_frame
+		var original_mirror: bool = sprite.current_mirrored
+		var original_rotation: float = sprite.skin.rotation
+		sprite.position = Vector2(37.0, -29.0)
+		var fixed_root: Vector2 = sprite.global_position
+		for clip_name in ["high_curl", "low_curl"]:
+			var clip: Dictionary = twin.motion_data.clips[clip_name]
+			for mirrored in [false, true]:
+				for body_rotation in [0.0, 0.23]:
+					var exact := true
+					var root_still := true
+					var head_min := Vector2.INF
+					var head_max := -Vector2.INF
+					var body_min := Vector2.INF
+					var body_max := -Vector2.INF
+					for frame in int(clip.count):
+						sprite.show_pose(int(clip.first) + frame, mirrored, body_rotation, 1.0 / 12.0, frame == 0)
+						exact = exact and source_points_match(sprite) and absf(sprite.skin.rotation - body_rotation) < 0.001
+						root_still = root_still and sprite.global_position.distance_to(fixed_root) < 0.001
+						var points: PackedVector2Array = sprite.global_joints()
+						var head: Vector2 = sprite.to_local(points[0])
+						var body: Vector2 = sprite.to_local(points[2])
+						head_min = head_min.min(head)
+						head_max = head_max.max(head)
+						body_min = body_min.min(body)
+						body_max = body_max.max(body)
+					var label := "%s %s mirror=%s rotation=%.2f" % [sprite.name, clip_name, mirrored, body_rotation]
+					check(exact and root_still, label + " keeps the canvas root and offset fixed while preserving every original joint")
+					check(head_min.distance_to(head_max) > 60.0 and body_min.distance_to(body_max) > 30.0, label + " retains the head and body's authored movement within the cell")
+		sprite.transform = original_transform
+		sprite.show_pose(original_frame, original_mirror, original_rotation, 0.0, true)
+
+func check_shared_library() -> void:
+	var data: Dictionary = twin.motion_data
+	for clip in ["high_curl", "low_curl"]:
+		check(absf(twin.white_swimmer.clip_duration(clip) - TwinFishBoss.CURL_TIME) < 0.001, clip + " finishes its retimed source frames at the entrance handoff")
+	check(data.frames.size() == 240 and data.clips.size() == 8 and data.columns == 8, "the shared motion library contains the native swim and all seven complete actions")
+	var valid := true
+	for frame in data.frames:
+		valid = valid and frame.joints.size() == 5 and is_finite(float(frame.heading_deg))
+		for point in frame.joints:
+			valid = valid and point.size() == 2 and is_finite(float(point[0])) and is_finite(float(point[1]))
+	check(valid, "every source frame has the same five-joint pose description and a finite heading")
+	var covered := {}
+	for name in data.clips:
+		var clip: Dictionary = data.clips[name]
+		for index in int(clip.count): covered[int(clip.first) + index] = true
+	check(covered.size() == data.frames.size() and covered.has(0) and covered.has(239), "the shared action index covers every packed source frame")
+	check(twin.white_sprite.skin.texture != twin.black_sprite.skin.texture and twin.white_sprite.skin.texture.get_size() == twin.black_sprite.skin.texture.get_size(), "the same source frame index can render either color atlas")
+
+func capture_bones(label: String) -> void:
+	if output.is_empty(): return
+	twin.white_sprite.debug_bones = true
+	twin.black_sprite.debug_bones = true
+	await capture(label)
+	twin.white_sprite.debug_bones = false
+	twin.black_sprite.debug_bones = false
+
+func check_arrival_formation() -> void:
+	to_time(TwinFishBoss.GLIDE_TIME - 0.01)
+	var last_positions := [travel_position(twin.white_swimmer), travel_position(twin.black_swimmer)]
+	var last_headings := [twin.white_sprite.head_forward(), twin.black_sprite.head_forward()]
+	var last_frames := [twin.white_sprite.current_frame, twin.black_sprite.current_frame]
+	var hold_times := [0.0, 0.0]
+	var maximum_hold := 0.0
+	var continuous_roots := true
+	var continuous_headings := true
+	var source_preserved := true
+	var single_sprite := true
+	var frames := [{}, {}]
+	var minimum_body_separation := INF
+	var gather_capture := false
+	var before_capture := false
+	var meeting_capture := false
+	var after_capture := false
+	var release_capture := false
+	var passage := TwinFishBoss.SWIM_OUT_TIME - TwinFishBoss.TAICHI_START
+	var before_time := TwinFishBoss.TAICHI_START + passage * 0.2
+	var meeting_time := TwinFishBoss.TAICHI_START + passage * 0.5
+	var after_time := TwinFishBoss.TAICHI_START + passage * 0.8
+	# The pair meets while playing continuous source actions. No fixed diagram,
+	# exact head-to-tail contact, or slow held drawing is required.
+	while twin.arrival_age < TwinFishBoss.FREE_SWIM_TIME - 0.0101:
+		var step := minf(1.0 / 60.0, TwinFishBoss.FREE_SWIM_TIME - 0.01 - twin.arrival_age)
+		twin.advance_action(step)
+		var sprites := [twin.white_sprite, twin.black_sprite]
+		source_preserved = source_preserved and source_points_are_preserved()
+		for i in 2:
+			var sprite: TwinFishRigSprite = sprites[i]
+			var swimmer: TwinFishSwimmer = twin.white_swimmer if i == 0 else twin.black_swimmer
+			var moved: Vector2 = travel_position(swimmer) - last_positions[i]
+			continuous_roots = continuous_roots and moved.length() < 6.0
+			continuous_headings = continuous_headings and absf(last_headings[i].angle_to(sprite.head_forward())) < deg_to_rad(65.0)
+			single_sprite = single_sprite and rig_is_valid(sprite)
+			frames[i][sprite.current_frame] = true
+			hold_times[i] = hold_times[i] + step if last_frames[i] == sprite.current_frame else step
+			maximum_hold = maxf(maximum_hold, hold_times[i])
+			last_frames[i] = sprite.current_frame
+			last_positions[i] = travel_position(swimmer)
+			last_headings[i] = sprite.head_forward()
+		var white_joints: PackedVector2Array = sprites[0].global_joints()
+		var black_joints: PackedVector2Array = sprites[1].global_joints()
+		minimum_body_separation = minf(minimum_body_separation, white_joints[2].distance_to(black_joints[2]))
+		if not gather_capture and twin.arrival_age >= lerpf(TwinFishBoss.GATHER_START, TwinFishBoss.TAICHI_START, 0.5):
+			gather_capture = true
+			await capture("02_painted_gather")
+		if not before_capture and twin.arrival_age >= before_time:
+			before_capture = true
+			await capture("03_before")
+		if not meeting_capture and twin.arrival_age >= meeting_time:
+			meeting_capture = true
+			await capture("03_taichi")
+			await capture_bones("03_taichi_bones")
+		if not after_capture and twin.arrival_age >= after_time:
+			after_capture = true
+			await capture("03_after")
+		if not release_capture and twin.arrival_age >= lerpf(TwinFishBoss.SWIM_OUT_TIME, TwinFishBoss.FREE_SWIM_TIME, 0.5):
+			release_capture = true
+			await capture("04_authored_release")
+	check(continuous_roots and continuous_headings, "both fish preserve continuous action-root motion and bounded orientation changes through approach and release")
+	check(source_preserved and single_sprite, "both fish retain the fixed canvas pivot and all original joint motion in a single undeformed sprite")
+	check(maximum_hold <= 0.15, "the paired movement never holds one source drawing for more than 0.15 seconds")
+	check(minimum_body_separation > 45.0, "the two body cores remain distinct while meeting and swimming apart")
+	check(frames[0].size() >= 20 and frames[1].size() >= 20, "both fish advance through their source actions during the meeting")
+
+func check_free_swim() -> void:
+	var minima := [Vector2.INF, Vector2.INF]
+	var maxima := [-Vector2.INF, -Vector2.INF]
+	var frames := [{}, {}]
+	var actions := [{}, {}]
+	var turns := [0, 0]
+	var continuous := true
+	var source_preserved := true
+	var single_skin := true
+	var in_water := true
+	var independently_moving := false
+	var independently_animated := false
+	var nearest := INF
+	var farthest := 0.0
+	for sample in 480:
+		var last := [travel_position(twin.white_swimmer), travel_position(twin.black_swimmer)]
+		twin.advance_action(0.05)
+		var sprites := [twin.white_sprite, twin.black_sprite]
+		var swimmers := [twin.white_swimmer, twin.black_swimmer]
+		source_preserved = source_preserved and source_points_are_preserved()
+		var separation: float = sprites[0].position.distance_to(sprites[1].position)
+		nearest = minf(nearest, separation)
+		farthest = maxf(farthest, separation)
+		independently_moving = independently_moving or swimmers[0].velocity.distance_to(swimmers[1].velocity) > 15.0
+		independently_animated = independently_animated or swimmers[0].action_name != swimmers[1].action_name or absf(swimmers[0].action_age - swimmers[1].action_age) > 0.15
+		for i in 2:
+			var sprite: TwinFishRigSprite = sprites[i]
+			var at := sprite.position
+			minima[i] = minima[i].min(at)
+			maxima[i] = maxima[i].max(at)
+			frames[i][sprite.current_frame] = true
+			actions[i][swimmers[i].action_name] = true
+			if swimmers[i].turning: turns[i] += 1
+			continuous = continuous and last[i].distance_to(travel_position(swimmers[i])) < 15.0
+			single_skin = single_skin and rig_is_valid(sprite)
+			in_water = in_water and at.x > -400.0 and at.x < 400.0 and at.y > -160.0 and at.y < 160.0
+		if sample % 80 == 0:
+			await capture("swim_%02d" % sample)
+			if sample == 160: await capture_bones("swim_both_bones")
+	if not in_water: print("SWIM BOUNDS: ", minima, " to ", maxima)
+	check(in_water and twin.state == TwinFishBoss.State.PHASE_ONE and handoffs == 1, "both independent fish remain in the preview water through 24 seconds of pursuit")
+	check(continuous and source_preserved and single_skin, "free swimming preserves both fixed canvas pivots, authored joint motion and continuous action roots")
+	check(independently_moving and independently_animated and farthest - nearest > 35.0, "the pair has independent velocity, action progress and changing following distance")
+	check(maxima[0].x - minima[0].x > 300.0 and maxima[1].x - minima[1].x > 300.0 and maxima[0].y - minima[0].y > 50.0 and maxima[1].y - minima[1].y > 50.0, "both fish traverse and change depth rather than staying in a fixed orbit")
+	check(frames[0].size() > 24 and frames[1].size() > 24 and actions[0].size() >= 2 and actions[1].size() >= 2 and turns[0] > 0 and turns[1] > 0, "both fish select multiple shared actions and perform authored turns during pursuit")
