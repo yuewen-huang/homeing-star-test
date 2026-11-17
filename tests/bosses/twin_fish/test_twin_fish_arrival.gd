@@ -62,7 +62,7 @@ func run() -> void:
 	check(twin.white_sprite.scale == Vector2.ONE * 0.91 and twin.black_sprite.scale == twin.white_sprite.scale, "both fish use the selected display scale")
 	check(rig_is_valid(twin.white_sprite) and rig_is_valid(twin.black_sprite), "both fish show one original painted sprite with five source guide bones")
 	check(not twin.is_in_group(&"damageable") and twin.get_node("Hurtbox").collision_layer == 0, "specimen cannot be damaged by the observing player")
-	check(not room.combo_button.visible and not room.charge_button.visible and not room.ultimate_row.visible and not room.segment_row.visible, "unimplemented attacks and deer-specific controls are hidden")
+	check(room.combo_button.visible and room.combo_button.text.contains("演阵") and not room.charge_button.visible and not room.ultimate_row.visible and not room.segment_row.visible, "the array showcase is available without unrelated attack controls")
 	check(not room.dummy.visible, "cinematic fish preview hides the non-attacking dummy so it cannot cover the fish")
 	twin.phase_one_started.connect(func() -> void: handoffs += 1)
 	room.light_button.pressed.emit()
@@ -108,15 +108,18 @@ func run() -> void:
 	check(twin.state == TwinFishBoss.State.PHASE_ONE and twin.phase == 1 and handoffs == 1, "the entrance enters the continuous idle once")
 	check(before_white.distance_to(travel_position(twin.white_swimmer)) < 6.0 and before_black.distance_to(travel_position(twin.black_swimmer)) < 6.0, "state handoff keeps both action roots continuous")
 	check(twin.black_sprite.visible and twin.find_child("MirrorSurface", false, false) == null and twin.attack_hitbox.attack == null, "the old mirror exit is gone and idle has no attack")
+	check(twin._taichi_array.visible, "after the entrance the array remains behind the free swim")
 	await check_free_swim()
 	check(room.dummy.contacts.is_empty() and room.player.combat_stats.health == 100, "the entire entrance has no damage or dummy hit")
 	room.play_action(0)
 	check(twin.state == TwinFishBoss.State.ARRIVAL and twin.entry_blend == 0 and twin.black_sprite.visible and twin.black_sprite.modulate == Color.WHITE, "replay completely restores the entrance from idle")
+	await check_taichi_array()
 	var old_tween := twin._timeline
 	room.play_action(0)
 	check(not old_tween.is_valid() and twin._timeline.is_valid(), "repeated play kills the prior Tween instead of stacking timelines")
 	room.heavy_button.pressed.emit()
-	check(twin.state == TwinFishBoss.State.PHASE_ONE and twin._timeline == null and twin.black_sprite.visible, "2 directly previews both swimming fish without the entrance Tween")
+	check(twin.state == TwinFishBoss.State.PHASE_ONE and twin._timeline == null and twin.black_sprite.visible and not twin._taichi_array.visible, "2 directly previews free swim and clears the entrance array")
+	await check_array_evolution()
 
 	# Real automatic physics under the room's speed selector, rather than merely
 	# scaling a fake preview timer.
@@ -128,7 +131,7 @@ func run() -> void:
 	check(absf(twin.arrival_age - 0.05) < 0.009, "quarter-speed selector advances the entrance by quarter action time")
 	room.set_playback_speed(2)
 
-	for cut in [0.4, 2.8, 5.0, 6.7, TwinFishBoss.ARRIVAL_TIME + 0.1]:
+	for cut in [0.4, 2.8, TwinFishBoss.ARRAY_FORM_TIME + 0.1, 6.7, TwinFishBoss.ARRIVAL_TIME + 0.1]:
 		room.play_action(0)
 		to_time(cut)
 		var previous := twin
@@ -139,7 +142,7 @@ func run() -> void:
 		freeze()
 		check(not is_instance_valid(previous) and (old_tween == null or not old_tween.is_valid()) and room.selected_boss == 2 and twin.state == TwinFishBoss.State.ARRIVAL, "R clears the whole specimen and replays from stage %.1f" % cut)
 	check(room.specimen.find_children("WhiteFish", "Node2D", true, false).size() == 1 and room.specimen.find_children("BlackFish", "Node2D", true, false).size() == 1, "resets retain exactly one fish pair under the current specimen")
-	for cut in [0.6, 3.0, 4.1]:
+	for cut in [0.6, 3.0, TwinFishBoss.SWIM_OUT_TIME + 0.3]:
 		room.play_action(0)
 		to_time(cut)
 		var previous := twin
@@ -153,10 +156,10 @@ func run() -> void:
 		freeze()
 	check(room.player.dodge_evaded_attack.get_connections().size() == twin_dodge_callbacks, "switching never accumulates shared player combat callbacks")
 	room.play_action(0)
-	to_time(4.0)
+	to_time(TwinFishBoss.SWIM_OUT_TIME + 0.3)
 	old_tween = twin._timeline
 	twin.combat_stats.apply_health_damage(twin.combat_stats.max_health)
-	check(twin.state == TwinFishBoss.State.DEFEATED and twin._timeline == null and not old_tween.is_valid() and not twin.black_sprite.visible, "real death signal cancels the swimming presentation")
+	check(twin.state == TwinFishBoss.State.DEFEATED and twin._timeline == null and not old_tween.is_valid() and not twin.black_sprite.visible and not twin._taichi_array.visible, "real death signal cancels the swimming presentation and array")
 	room.play_action(0)
 	check(twin.state == TwinFishBoss.State.ARRIVAL and twin.black_sprite.visible, "replay restores both fish after cancellation")
 	room.reset_room()
@@ -334,6 +337,57 @@ func capture_bones(label: String) -> void:
 	twin.white_sprite.debug_bones = false
 	twin.black_sprite.debug_bones = false
 
+func check_taichi_array() -> void:
+	var array := twin._taichi_array
+	to_time(TwinFishBoss.ARRAY_FORM_TIME - 0.02)
+	check(not array.visible, "the array stays hidden while the fish approach")
+	to_time(TwinFishBoss.ARRAY_FORM_TIME + 0.04)
+	var white := twin.white_sprite.position
+	var black := twin.black_sprite.position
+	var white_core := twin.white_sprite.joint_in_boss(1).lerp(twin.white_sprite.joint_in_boss(2), 0.35)
+	var black_core := twin.black_sprite.joint_in_boss(1).lerp(twin.black_sprite.joint_in_boss(2), 0.35)
+	var at := array.position
+	var poles := array.active_core_positions()
+	var held_size: Vector2 = array._circle.size
+	check(twin.white_frame == 189 and twin.black_frame == 32, "the array reveals on the reference pose, with the curled white fish high right and the black fish low left")
+	check(array.visible and array.stage == 2.0 and poles.size() == 2 and array.to_global(poles[1]).is_equal_approx(twin.to_global(white_core)) and array.to_global(poles[0]).is_equal_approx(twin.to_global(black_core)), "each original Liangyi pole aligns to its own fish at the held pose")
+	check(array.get_index() < twin.black_sprite.get_index() and array.z_index <= twin.black_sprite.z_index and array.z_index < twin.white_sprite.z_index, "the array draws behind both fish")
+	to_time(TwinFishBoss.SWIM_OUT_TIME - 0.03)
+	check(twin.white_sprite.position == white and twin.black_sprite.position == black and array.active_core_positions() == poles and is_equal_approx(array.modulate.a, 1.0), "both fish and the two poles hold the fully revealed pose before release")
+	await capture("taichi_hold")
+	to_time(TwinFishBoss.SWIM_OUT_TIME + 0.65)
+	var turned := array.active_core_positions()
+	var pole_turn := angle_difference((poles[0] / held_size).angle(), (turned[0] / array._circle.size).angle())
+	check(twin.white_sprite.position.distance_to(white) > 30.0 and twin.black_sprite.position.distance_to(black) > 30.0 and array.position.distance_to(array.resting_center()) < at.distance_to(array.resting_center()) and pole_turn < 0.0, "both fish swim away while the circle turns and rises toward its ground-aligned center")
+	await capture("taichi_release")
+	twin.advance_action(0.0)
+	await process_frame
+	check(array.active_core_positions() == turned, "the array pauses with the action clock")
+	to_time(TwinFishBoss.SWIM_OUT_TIME + array.OPEN_TIME + 0.02)
+	var area := array.battlefield_rect()
+	var paint := array.painted_bounds()
+	check(array._circle.size.is_equal_approx(array.field_size()) and array._circle.size.x == array._circle.size.y and array.scale == Vector2.ONE, "the entrance fits a circle within the reserved battlefield height")
+	check(is_equal_approx(paint.end.y, area.end.y) and paint.position.y >= area.position.y - 0.01, "the outer circle meets the floor and stays below the battlefield ceiling")
+
+func check_array_evolution() -> void:
+	room.combo_button.pressed.emit()
+	var array := twin._taichi_array
+	check(array.visible and array.playing_evolution and array.stage == 0.0, "3 begins the full array sequence in the development room")
+	check(array._circle.size.is_equal_approx(array.field_size()) and array._circle.size.x == array._circle.size.y and is_equal_approx(array.painted_bounds().end.y, array.battlefield_rect().end.y), "the full array uses the same ground-aligned circle in the development room")
+	var elapsed := 0.0
+	for phase in 4:
+		var settled: float = array.STAGE_ENDS[phase] + 0.20
+		twin.advance_action(settled - elapsed)
+		elapsed = settled
+		check(is_equal_approx(array.stage, float(phase + 1)), "the full sequence settles on stage %d at the original cue" % (phase + 1))
+		await capture("ritual_stage_%d" % (phase + 1))
+	var cardinals := array.active_core_positions()
+	check(cardinals.size() == 8 and cardinals[0].dot(Vector2.UP) > 0.0 and absf(cardinals[0].x) < 0.01 and cardinals[2].dot(Vector2.RIGHT) > 0.0 and absf(cardinals[2].y) < 0.01, "the packaged Bagua keeps all eight gates on the project axes")
+	twin.advance_action(0.4)
+	check(array.active_core_positions() == cardinals, "project Bagua directions stay fixed while the field continues to animate")
+	room.heavy_button.pressed.emit()
+	check(not array.visible and not array.playing_evolution, "switching to free swim clears the full array sequence")
+
 func check_arrival_formation() -> void:
 	to_time(TwinFishBoss.GLIDE_TIME - 0.01)
 	var last_positions := [travel_position(twin.white_swimmer), travel_position(twin.black_swimmer)]
@@ -356,8 +410,9 @@ func check_arrival_formation() -> void:
 	var before_time := TwinFishBoss.TAICHI_START + passage * 0.2
 	var meeting_time := TwinFishBoss.TAICHI_START + passage * 0.5
 	var after_time := TwinFishBoss.TAICHI_START + passage * 0.8
-	# The pair meets while playing continuous source actions. No fixed diagram,
-	# exact head-to-tail contact, or slow held drawing is required.
+	# Ignore only the explicitly timed array pose when checking the normal frame cadence.
+	var brake_start := TwinFishBoss.ARRAY_FORM_TIME - TwinFishBoss.ARRAY_RAMP_TIME
+	var resume_end := TwinFishBoss.SWIM_OUT_TIME + TwinFishBoss.ARRAY_RAMP_TIME
 	while twin.arrival_age < TwinFishBoss.FREE_SWIM_TIME - 0.0101:
 		var step := minf(1.0 / 60.0, TwinFishBoss.FREE_SWIM_TIME - 0.01 - twin.arrival_age)
 		twin.advance_action(step)
@@ -371,7 +426,8 @@ func check_arrival_formation() -> void:
 			continuous_headings = continuous_headings and absf(last_headings[i].angle_to(sprite.head_forward())) < deg_to_rad(65.0)
 			single_sprite = single_sprite and rig_is_valid(sprite)
 			frames[i][sprite.current_frame] = true
-			hold_times[i] = hold_times[i] + step if last_frames[i] == sprite.current_frame else step
+			var array_pause := twin.arrival_age >= brake_start and twin.arrival_age <= resume_end
+			hold_times[i] = hold_times[i] + step if last_frames[i] == sprite.current_frame and not array_pause else step
 			maximum_hold = maxf(maximum_hold, hold_times[i])
 			last_frames[i] = sprite.current_frame
 			last_positions[i] = travel_position(swimmer)
@@ -397,7 +453,7 @@ func check_arrival_formation() -> void:
 			await capture("04_authored_release")
 	check(continuous_roots and continuous_headings, "both fish preserve continuous action-root motion and bounded orientation changes through approach and release")
 	check(source_preserved and single_sprite, "both fish retain the fixed canvas pivot and all original joint motion in a single undeformed sprite")
-	check(maximum_hold <= 0.15, "the paired movement never holds one source drawing for more than 0.15 seconds")
+	check(maximum_hold <= 0.15, "outside the array pose the paired movement holds no source drawing for more than 0.15 seconds")
 	check(minimum_body_separation > 45.0, "the two body cores remain distinct while meeting and swimming apart")
 	check(frames[0].size() >= 20 and frames[1].size() >= 20, "both fish advance through their source actions during the meeting")
 

@@ -11,7 +11,8 @@ param(
     [switch]$ZhenxiAftermath,
     [switch]$ZhenxiSluice,
     [switch]$ZhenxiSluiceReturn,
-    [switch]$ZhenxiRoute
+    [switch]$ZhenxiRoute,
+    [switch]$TwinFish
 )
 $ErrorActionPreference = 'Stop'
 if (-not $Godot) {
@@ -25,7 +26,7 @@ if (-not $Godot -or -not (Test-Path -LiteralPath $Godot -PathType Leaf)) {
 }
 $cavernWorkspace = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $cavernGame = Join-Path $cavernWorkspace 'homeing-star-game'
-$cavernScriptName = if ($ZhenxiSluice) { 'preview_zhenxi_sluice.gd' } else { 'preview_sunken_cavern.gd' }
+$cavernScriptName = if ($TwinFish) { 'preview_twin_fish_arena.gd' } elseif ($ZhenxiSluice) { 'preview_zhenxi_sluice.gd' } else { 'preview_sunken_cavern.gd' }
 $cavernScript = Join-Path $PSScriptRoot $cavernScriptName
 $cavernArtifacts = Join-Path $cavernWorkspace 'homeing-star-test/artifacts/sunken_cavern_graybox_20261101'
 New-Item -ItemType Directory -Path $cavernArtifacts -Force | Out-Null

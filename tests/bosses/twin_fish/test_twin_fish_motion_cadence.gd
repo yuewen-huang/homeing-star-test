@@ -58,6 +58,8 @@ func measure(label: String) -> void:
 		cpu.append(float(Time.get_ticks_usec() - start))
 		elapsed += STEP
 		var stage := "entry" if elapsed < TwinFishBoss.GLIDE_TIME else ("curl" if elapsed < TwinFishBoss.FREE_SWIM_TIME else "free")
+		if elapsed >= TwinFishBoss.ARRAY_FORM_TIME - TwinFishBoss.ARRAY_RAMP_TIME and elapsed < TwinFishBoss.SWIM_OUT_TIME + TwinFishBoss.ARRAY_RAMP_TIME:
+			stage = "array_pose"
 		for i in 2:
 			var name := stage + ("_white" if i == 0 else "_black")
 			if not metrics.has(name): metrics[name] = blank_stats()
@@ -85,6 +87,8 @@ func measure(label: String) -> void:
 		# Angular timing can hold a drawing for 0.125 s; allow one 60 Hz sample
 		# of quantization while still rejecting the former long frozen poses.
 		var limit := 0.18 if str(name).begins_with("free") else (0.145 if str(name).begins_with("curl") else 0.125)
+		if str(name).begins_with("array_pose"):
+			limit = TwinFishBoss.ARRAY_HOLD_TIME + 2.0 * TwinFishBoss.ARRAY_RAMP_TIME + STEP
 		check(stats.max_hold <= limit, "%s %s source drawing hold %.3fs stays below %.3fs" % [label, name, stats.max_hold, limit])
 		var speed_limit := 600.0 if str(name).begins_with("entry") else 240.0
 		check(stats.finite_root and stats.max_root_speed <= speed_limit, "%s %s action root remains continuous with speed %.2f below %.2f px/s" % [label, name, stats.max_root_speed, speed_limit])
