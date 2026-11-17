@@ -34,9 +34,19 @@ def main():
                 raise ValueError(f"Second-form lesson must use second-form footage: {clip['id']}")
         if clip['id'].startswith('phase_2_') and not clip.get('no_damage'):
             raise ValueError(f"Defense demonstration took damage: {clip['id']}")
-        expected_parries = {'phase_2_slash': 1, 'phase_2_combo': 3}
+        expected_parries = {'phase_2_slash': 1}
         if clip['id'] in expected_parries and clip.get('parries') != expected_parries[clip['id']]:
             raise ValueError(f"Incomplete manual parry demonstration: {clip['id']}")
+        if clip['id'] == 'phase_2_combo' and (
+            clip.get('attack_speed') != 1.76 or clip.get('parries') != 6 or clip.get('red_parries') != 0
+            or clip.get('dodges') != 2 or clip.get('punish_hits') != [1, 2]
+        ):
+            raise ValueError('Claw lesson must show the three and five at full buff, with both gold dodges and openings')
+        if clip['id'] == 'phase_2_quake' and (
+            clip.get('attack_speed') != 1.76 or clip.get('dodges') != 1
+            or not clip.get('wave_jumped') or clip.get('punish_hits') != 2
+        ):
+            raise ValueError('Quake lesson must show one gold dodge, the independent jump and two punish hits at full buff')
         if clip['id'] == 'phase_2_red_dash' and clip.get('red_parries', 0) < 1:
             raise ValueError('Second-form teleport must demonstrate a real red counter')
         if clip['id'] == 'phase_2_wave' and not clip.get('wave_jumped'):
@@ -64,9 +74,10 @@ def main():
         if duration < 1.0:
             raise ValueError(f"Take too short: {clip['id']}: {duration}")
         output = target / f"{clip['id']}.ogv"
+        preview_fps = 60 if clip['id'] in {'phase_2_combo', 'phase_2_quake'} else 30
         subprocess.run([args.ffmpeg, '-hide_banner', '-loglevel', 'error', '-y',
                         '-ss', str(start), '-i', str(args.recording / 'raw.avi'),
-                        '-t', str(duration), '-vf', 'scale=640:360:flags=lanczos,fps=30',
+                        '-t', str(duration), '-vf', f'scale=640:360:flags=lanczos,fps={preview_fps}',
                         '-c:v', 'libtheora', '-q:v', '7', '-pix_fmt', 'yuv420p', '-an', str(output)], check=True)
         subprocess.run([args.ffmpeg, '-hide_banner', '-loglevel', 'error', '-y',
                         '-ss', str(duration * 0.5), '-i', str(output), '-frames:v', '1',

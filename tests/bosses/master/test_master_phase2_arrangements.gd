@@ -62,9 +62,19 @@ func run() -> void:
 			await process_frame
 	master.phase_2_buff_remaining=0
 	master.phase_2_body_choice=0
+	master._start_phase_2_regular_attack(100)
+	check(master.state == MasterBoss.State.PHASE_2_ATTACK and master.animated_sprite.animation == &"phase_2_attack_1", "Close opening introduces the single claw")
+	master._interrupt_phase_2_action(0)
+	master._start_phase_2_regular_attack(100)
+	check(master.phase_2_body_action.id == MasterPhase2BodyAction.TRIPLE_CLAW, "Close opening shows the unified three claws")
+	master._interrupt_phase_2_action(0)
+	master._start_phase_2_regular_attack(100)
+	check(master.phase_2_body_action.id == MasterPhase2BodyAction.PRESSURE_FIVE, "Close opening teaches how the same three claws fit into five")
+	master._interrupt_phase_2_action(0)
+	master.phase_2_body_choice=0
 	for id: StringName in MasterPhase2BodyAction.IDS:
 		master._start_phase_2_regular_attack(100)
-		check(master.state == MasterBoss.State.PHASE_2_ATTACK, "A short attack separates every long combination")
+		check(master.state == MasterBoss.State.PHASE_2_ATTACK or master.phase_2_body_action.id == MasterPhase2BodyAction.TRIPLE_CLAW, "A short attack separates every long combination")
 		master._interrupt_phase_2_action(.5)
 		master._start_phase_2_regular_attack(100)
 		check(master.phase_2_body_action.id==id,"Formal AI chooses the three new combos")

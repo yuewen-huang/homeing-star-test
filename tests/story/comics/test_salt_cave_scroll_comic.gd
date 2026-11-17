@@ -10,6 +10,7 @@ class MemorySave extends SaveProgressService:
 
 const FIELD := "res://scenes/levels/chapter_2_salt/chapter_2_salt_field.tscn"
 const COMIC_ID := &"salt_cave_scroll_to_mirror_lake"
+const TEXT := preload("res://scripts/story/chapter_2_dialogue.gd")
 const FRAME_NAMES := ["01_scroll_discovery", "02_touch", "03_absorption", "04_arrival", "05_look_up", "06_ink_world"]
 var save: MemorySave
 var field: Chapter2SaltField
@@ -67,6 +68,20 @@ func capture(label_: String) -> void:
 func status() -> SaveProgressService.CinematicStatus:
 	return save.get_cinematic_status(COMIC_ID)
 
+func open_scroll_comic() -> WindSightingComic:
+	press()
+	var encounter = field.crab_encounter
+	var dialogue := encounter.dialogue as TutorialDialogue
+	check(dialogue != null and dialogue._label.text == TEXT.SCROLL[0][1] and encounter.comic == null,
+		"Cave interaction first shows the existing scroll dialogue")
+	if dialogue == null: return null
+	press()
+	await process_frame
+	if encounter.dialogue != null:
+		press()
+		await process_frame
+	return encounter.comic
+
 func run() -> void:
 	seed(20261029)
 	var original := root.get_node("SaveProgress")
@@ -84,10 +99,13 @@ func run() -> void:
 	var original_music := transition.music_player.stream
 	await create_timer(0.2).timeout
 	var original_position := transition.music_player.get_playback_position()
-	press()
 	var encounter = field.crab_encounter
-	var comic: WindSightingComic = encounter.comic
-	check(comic != null and comic.panel_index == 0, "Real E opens frame zero without entry-key passthrough")
+	var comic := await open_scroll_comic()
+	check(comic != null and comic.panel_index == 0, "Finishing the dialogue opens frame zero without input passthrough")
+	if comic == null:
+		clear_scene()
+		quit(1)
+		return
 	check(comic is ComicPlayer and comic.get_script().resource_path == "res://scripts/story/comics/wind_sighting_comic.gd", "Existing WindSightingComic owns playback")
 	check(comic._frames.size() == 6 and comic.cinematic_id == COMIC_ID, "Six frames have an independent viewing record")
 	check(paused and field.pawn.player.input_frozen and not field.hud.visible, "Reading pauses exploration and hides its HUD")
@@ -121,14 +139,13 @@ func run() -> void:
 	check(status() == SaveProgressService.CinematicStatus.UNHANDLED and encounter.comic == null, "Abandon never claims watching or skipping")
 	save.fail_write = false
 	encounter.step(1.0 / 60)
-	press()
-	check(encounter.comic != null and encounter.comic.panel_index == 0, "Fresh cave interaction retries an abandoned comic")
+	check(await open_scroll_comic() != null and encounter.comic.panel_index == 0,
+		"Fresh cave interaction retries an abandoned comic")
 	clear_scene()
 	await process_frame
 	check(not paused and status() == SaveProgressService.CinematicStatus.UNHANDLED, "Teardown restores pause without false completion")
 	enter()
-	press()
-	comic = field.crab_encounter.comic
+	comic = await open_scroll_comic()
 	comic._show_panel(5, false)
 	save.fail_write = true
 	press()
@@ -142,7 +159,14 @@ func run() -> void:
 	check(not (root.get_node("AudioSettings") as AudioSettingsService).settings_panel.visible, "Repeated final Esc cannot leak into global settings")
 	await wait_for_fade()
 	var lake := current_scene as MirrorLake
-	check(lake != null and not paused and not (lake.player as LanPlayer).input_frozen, "Real transition restores controllable Mirror Lake")
+	var opening: TutorialDialogue = lake.chapter_story.beat.dialogue if lake != null else null
+	check(opening != null and opening._label.text == TEXT.LAKE_ENTRY[0][1], "Real transition starts Lan's Mirror Lake opening")
+	if opening != null:
+		press()
+		await process_frame
+		if lake.chapter_story.beat.dialogue != null: press()
+		await process_frame
+	check(lake != null and not paused and not lake.player.input_frozen, "Finishing the opening restores control in Mirror Lake")
 	check(not (root.get_node("AudioSettings") as AudioSettingsService).settings_panel.visible, "Arrival is not covered by an input-leaked settings menu")
 	check(save.has_completed(&"mirror_lake_entered") and not lake._arrival_pending, "Destination records successful arrival")
 	check(lake.side == MirrorLake.Side.YANG and is_equal_approx(lake.player.position.x, MirrorLake.SPAWN_X) and not lake.entry.seal_activated, "Arrival preserves the ordinary entrance and unsolved seal")
@@ -156,8 +180,7 @@ func run() -> void:
 	clear_scene()
 	save._config.set_value("cinematics", String(COMIC_ID), SaveProgressService.CinematicStatus.UNHANDLED)
 	enter()
-	press()
-	comic = field.crab_encounter.comic
+	comic = await open_scroll_comic()
 	check(comic != null and comic.panel_index == 0, "Older lake arrival can still view the new comic once")
 	save.fail_write = true
 	press(KEY_ESCAPE)

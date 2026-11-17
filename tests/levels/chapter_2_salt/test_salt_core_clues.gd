@@ -1,6 +1,7 @@
 extends SceneTree
 const CLUE := preload("res://scripts/levels/chapter_2_salt/salt_core_clue.gd")
 const PROJECTION := preload("res://scripts/levels/chapter_2_salt/salt_field_projection.gd")
+const STORY_TEXT := preload("res://scripts/story/chapter_2_dialogue.gd")
 class MemorySave extends SaveProgressService:
 	var fail_write := false
 	func load_progress() -> void:
@@ -94,9 +95,19 @@ func run() -> void:
 	excavate(1)
 	check(field.boss_found and field.dig_hint.contains("找到核心") and not field.dig_hint.contains("空空如也"),"Digging the correct heap announces the core discovery")
 	await capture("salt_core_discovered")
-	check(field.crab_encounter.active,"Core discovery starts the production encounter")
-	field.crab_encounter.crab.combat_stats.apply_health_damage(999)
+	var encounter = field.crab_encounter
+	check(encounter.active,"Core discovery starts the production encounter")
+	for _frame in 180:
+		if encounter._warning.dialogue != null: break
+		encounter.step(1.0 / 60.0)
+	for _line in STORY_TEXT.CRAB_WARNING:
+		encounter._warning.dialogue.advance()
+	var crab: CrystalCrabBoss = encounter.crab
+	crab.combat_stats.apply_health_damage(crab.combat_stats.health)
 	await process_frame
+	await crab.wait_for_boss_finisher()
+	await process_frame
+	encounter._cancel_departure()
 	excavate(6)
 	check(field.dig_hint.contains("已经确认") and not field.dig_hint.contains("方向"),"Further empty digs do not send the player toward an already found core")
 	field.free()

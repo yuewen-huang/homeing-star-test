@@ -224,10 +224,10 @@ func run() -> void:
 		return
 	var frames: Dictionary={}
 	for f in 210:
-		frames[deer.human.source_frame]=true
+		if deer.human.clip=="change": frames[deer.human.source_frame]=true
 		if f in [50,115,185]: await capture("wind_transform_%d"%f)
 		await physics_frame
-	check(frames.size()>=32 and deer.transform_left==0,"All 32 transformation cells reach the human form")
+	check(frames.size()==16 and deer.transform_left==0 and deer.human.clip=="hover","All 16 transformation cells reach the hovering human form")
 	for index in 4:
 		setup_at()
 		deer.start_spell(index)
@@ -387,7 +387,7 @@ func tornado_manual_route() -> void:
 	await step(2)
 	check(deer.spell_serial==serial and deer.cast_index==-1,"Manual leaf button respects the same internal cooldown")
 	while is_instance_valid(retained) and not retained.roots_released: await step(1)
-	check(is_instance_valid(retained) and absf(retained.release_age-6.15)<.03,"Root forest releases on its original beat after manual followups")
+	check(is_instance_valid(retained) and absf(retained.release_age-retained.root_clear_time())<.03,"Root forest clears on its escape beat before the unchanged wind-wall collapse")
 	while is_instance_valid(retained) and retained.age<7.34: await step(1)
 	check(is_instance_valid(retained) and not retained.objects[0].fx._air.items.is_empty() and not retained.objects[1].fx._air.items.is_empty(),"Both tornadoes survive through their complete authored active phase")
 	await step(90)
@@ -476,7 +476,7 @@ func ai_route() -> void:
 		for spell in deer.spells:
 			if is_instance_valid(spell) and spell.kind=="tornado":
 				tornado_lifetimes[spell.serial]={"node":spell,"age":spell.age}
-				if spell.age>2 and spell.age<6.12:
+				if spell.age>2 and spell.age<spell.root_clear_time()-.03:
 					roots_intact=roots_intact and spell.objects.any(func(o): return o.type=="root" and o.sprite.visible)
 			if not is_instance_valid(spell) or spell.kind!="leaves" or seen.has(spell.serial): continue
 			seen[spell.serial]=true
@@ -547,13 +547,24 @@ func escape_route(route: String) -> void:
 	var hp: int=lan.combat_stats.health
 	var x: float=lan.position.x
 	if route=="early_U":
-		while spell.age<float(spell.config.release_at)-.65: await step(1)
+		while spell.age<spell.root_clear_time()-.65: await step(1)
 		lan.facing_direction=1
 		key(KEY_U,true)
 		await step(1)
 		key(KEY_U,false)
 	while not spell.roots_released: await step(1)
-	check(spell.root_count>12,"Roots fill the area behind both moving tornadoes")
+	var covered: bool=spell.root_count>2
+	var center: float=(deer.world_min_x+deer.world_max_x)*.5
+	for wall in spell.objects.slice(0,2):
+		var root_x: Array=[]
+		for obj in spell.objects:
+			if obj.type=="root" and (obj.x-center)*wall.side<0: root_x.append(float(obj.x))
+		root_x.sort()
+		covered=covered and root_x.size()>1
+		for i in range(1,root_x.size()): covered=covered and root_x[i]-root_x[i-1]<=56
+		var front: float=root_x.back() if wall.side>0 else root_x.front()
+		covered=covered and absf(spell.tornado_x(wall)-front)<=122
+	check(covered,"Roots cover both trails without gaps up to the earlier escape beat")
 	check(spell.objects.filter(func(o): return o.type=="root").all(func(o): return not o.sprite.visible and (not is_instance_valid(o.contact) or o.contact.hitbox.attack==null)),"All original and newly grown roots disappear and disarm on the escape beat")
 	await capture("wind_escape_open")
 	if route=="U":

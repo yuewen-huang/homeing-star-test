@@ -1,5 +1,9 @@
 extends SceneTree
 const Revised := preload("res://scripts/story/chapter_2_dialogue.gd")
+const RIDE_PANELS := [
+	"01_approach.png", "02_lift.png", "03_seated.png", "04_travel.png",
+	"04a_raise_claws.png", "04b_break_salt_wall.png", "05_arrival.png", "06_set_down.png",
+]
 class MemorySave extends SaveProgressService:
 	var fail_write := false
 	func load_progress() -> void:
@@ -46,11 +50,22 @@ func run() -> void:
 	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_player_invincible(false)
 	save._config.set_value("map_states","chapter_2_salt_field",{"boss_pile":1,"dug":[]})
 	enter()
+	var encounter = field.crab_encounter
+	field.feet = encounter.CAVE_FEET
+	field._sync_view(0)
+	check(encounter.cave_art.texture == encounter.SEALED_CAVE_ART and not encounter.portal.visible,
+		"The cave starts as a solid salt mound")
+	check(not encounter.exit_prompt.available and not encounter.can_use_exit() and not encounter.interact(),
+		"The solid mound offers no prompt or interaction while the crab lives")
+	check(encounter.cave_blocks_position(encounter.CAVE_FEET)
+		and not encounter.cave_blocks_position(encounter.ARRIVAL_FEET),
+		"The cave blocks its base without obstructing the comic's arrival")
+	check(field.piles[39].pile_id == 39 and field.piles[39].ground_position == Vector2(5525, 1145),
+		"The salt heap occluded by the cave moves clear and keeps its saved ID")
 	field.feet = field.piles[1].ground_position+Vector2(0,42)
 	field._sync_view(0)
 	field.target = 1
 	field._finish_dig()
-	var encounter = field.crab_encounter
 	var player: LanPlayer = field.pawn.player
 	var crab: CrystalCrabBoss = encounter.crab
 	check(encounter.active and encounter.entering and not crab.visible,"Real excavation triggers underground entrance")
@@ -63,7 +78,8 @@ func run() -> void:
 	await capture("salt_crab_emergence")
 	advance(0.7)
 	check(encounter._warning.dialogue != null and paused, "The first entrance pauses for the prebattle warning")
-	encounter._warning.dialogue.advance()
+	for _line in Revised.CRAB_WARNING:
+		encounter._warning.dialogue.advance()
 	check(not encounter.entering and player.is_physics_processing() and not player.input_frozen and not crab.manual_control,"Entrance enables actual autonomous fight and player physics")
 	check(player.hurtbox.monitorable and player.hurtbox.collision_layer==4,"Production damage receiver restored")
 	player.set_physics_process(false)
@@ -129,14 +145,21 @@ func run() -> void:
 	advance(4)
 	check(crab.position.distance_to(start)>10 and crab.rhythm==null,"Defeated crab wanders without attacking")
 	check(not save.has_completed(encounter.VICTORY),"Failed save does not claim persistent completion")
+	check(encounter.cave_art.texture == encounter.SEALED_CAVE_ART and not encounter.portal.visible,
+		"A failed victory save leaves the cave sealed while the game retries")
 	save.fail_write = false
 	advance(1.1)
 	check(save.has_completed(encounter.VICTORY) and not encounter.pending_victory,"Victory save retries successfully")
+	encounter.refresh_prompts()
+	check(encounter.cave_art.texture == encounter.OPEN_CAVE_ART and encounter.portal.visible,
+		"Successfully recorded victory reveals the cave on the same visit")
 	await capture("salt_crab_peaceful")
 	field.free()
 	current_scene = null
 	enter()
 	check(field.crab_encounter.crab.peaceful and not field.crab_encounter.active,"Reentry restores peaceful crab without entrance or refight")
+	check(field.crab_encounter.cave_art.texture == field.crab_encounter.OPEN_CAVE_ART and field.crab_encounter.portal.visible,
+		"Old victories reload an open cave despite the ride being unfinished")
 	var resident: CrystalCrabBoss = field.crab_encounter.crab
 	await process_frame
 	check(resident.get_node("SaltBindings").released and not resident.get_node("SaltBindings").strips[0].visible, "Old victories restore a clean crab")
@@ -196,20 +219,24 @@ func run() -> void:
 		and encounter.dialogue._actors.has(&"岚"), "The new authored farewell uses Lan's staged dialogue")
 	await capture("salt_departure_lan_dialogue")
 	save.fail_write = true
-	encounter.dialogue.advance()
-	check(not save.has_completed(encounter.DIALOGUE_FACT) and encounter.dialogue.opened and encounter.comic==null,"Failed dialogue settlement keeps the last line retryable")
+	for _line in Revised.CRAB_TRAVEL:
+		encounter.dialogue.advance()
+	check(not save.has_completed(encounter.DIALOGUE_FACT) and encounter.dialogue.opened and encounter.comic==null,"Failed dialogue settlement keeps the farewell retryable")
 	save.fail_write = false
-	encounter.dialogue.advance()
+	for _line in Revised.CRAB_TRAVEL:
+		encounter.dialogue.advance()
 	await process_frame
 	var route: WindSightingComic = encounter.comic
 	check(route is ComicPlayer and route.get_script().resource_path.ends_with("wind_sighting_comic.gd"),"Route reuses the existing configured common comic, without a new playback script")
-	check(route._frames.size()==6 and route.panel_index==0 and route.cinematic_id==encounter.DEPARTURE_ID,"Configured route starts with six independent panels and its own viewing record")
+	var panel_names := route._frames.map(func(frame: Texture2D): return frame.resource_path.get_file())
+	check(panel_names == RIDE_PANELS and route.panel_index == 0 and route.cinematic_id == encounter.DEPARTURE_ID,
+		"Ride plays the revised travel, raised claws and wall break before arrival and the original dismount")
 	check(save.has_completed(encounter.DIALOGUE_FACT) and not encounter.departure_complete() and not field.hud.visible,"Dialogue, comic completion and exploration HUD stay separate")
 	await capture("salt_departure_panel_01")
 	route._show_panel(2,false)
 	await capture("salt_departure_panel_03")
-	route._show_panel(5,false)
-	await capture("salt_departure_panel_06")
+	route._show_panel(route._frames.size() - 1, false)
+	await capture("salt_departure_dismount")
 	save.fail_write = true
 	route._request_finish(false)
 	check(route._pending_completion_retry and encounter.session_active and encounter.portal.visible,"Comic retry leaves the victory-unlocked gate available after closing playback")
@@ -224,7 +251,7 @@ func run() -> void:
 	field._sync_view(0)
 	check(encounter.interact() and encounter.dialogue==null and encounter.comic!=null,"Interrupted route resumes the comic after its separately saved dialogue")
 	route = encounter.comic
-	route._show_panel(5,false)
+	route._show_panel(route._frames.size() - 1, false)
 	route._request_finish(false)
 	check((root.get_node("SceneTransition") as SceneTransitionService).is_transitioning and encounter.session_active and route.visible,"Final panel stays visible under the common scene fade")
 	await wait_for_map_fade()

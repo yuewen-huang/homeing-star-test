@@ -69,10 +69,11 @@ func run() -> void:
 			check(SaltFieldGround.tile_uv(column,row,Vector2(1,0.4))==SaltFieldGround.tile_uv(column+1,row,Vector2(0,0.4)),"Mirror tiling shares the same horizontal seam samples")
 	for column in 4:
 		check(SaltFieldGround.tile_uv(column,0,Vector2(0.3,1))==SaltFieldGround.tile_uv(column,1,Vector2(0.3,0)),"Mirror tiling shares the same vertical seam samples")
-	for i in 5:
-		var art_pile := field.piles[i]
-		check(art_pile.art_variant == i and art_pile.sprite.texture == SaltFieldPile.TEXTURES[i],"Painted salt variant %d appears in actual map" % (i+1))
-		check(art_pile.sprite.scale == Vector2.ONE * SaltFieldPile.ART_SCALE,"Painted art keeps uniform source-pixel scale for variant %d" % (i+1))
+	var common_heap_art := true
+	for pile in field.piles:
+		common_heap_art = common_heap_art and pile.sprite.texture == SaltFieldPile.HEAP_TEXTURE \
+			and pile.sprite.scale == Vector2.ONE * SaltFieldPile.ART_SCALE and pile.span == field.piles[0].span
+	check(common_heap_art, "All unexcavated heaps share a silhouette, art scale and footprint")
 	var projection := field.PROJECTION
 	var corners := projection.rect_polygon(Rect2(Vector2.ZERO,field.MAP_SIZE))
 	check(is_equal_approx(corners[0].distance_to(corners[1])/corners[2].distance_to(corners[3]),0.6),"Far boundary is sixty percent of near boundary width")

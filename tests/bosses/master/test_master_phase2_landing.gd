@@ -66,7 +66,7 @@ func run() -> void:
 						var shape := box.get_child(member_index) as CollisionShape2D
 						if shape.disabled: continue
 						var member: Dictionary = group.members[member_index]
-						var source_time: float = float(clip.start_time)+action.elapsed-action.clip_start
+						var source_time := action._source_time(clip)
 						var sample_index := clampi(int((source_time-float(member.release))*120),0,member.samples.size()-1)
 						var sample: Array = member.samples[sample_index]
 						var offset: Array = clip.geometry_offset
@@ -81,6 +81,7 @@ func run() -> void:
 			check(ticks<900 and seen.size()==action.data.clips.size(),"All clips finish on the shared action clock")
 			check(stable_root and dash_moves==(0 if id==MasterPhase2BodyAction.IDS[0] else 1),"Only the authored dash changes the landing point, once")
 			check(aligned_shapes and aligned_effects,"Body, live claw collision and emitted effects share registration")
+			master._process(.24)
 			var final_toe := master.to_local(_toe_world(master,Vector2(74,200),Vector2(256,256)))
 			check(final_toe.distance_to(idle_toe)<.001,"Recovery returns to the same standing registration")
 			await process_frame

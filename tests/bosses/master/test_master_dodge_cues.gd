@@ -39,7 +39,6 @@ func run() -> void:
 	for difficulty in [0,1,2]:
 		assist.set_difficulty(difficulty)
 		for buffed in [false,true]:
-			var speed := 1.4 if buffed else 1.0
 			for facing in [-1.0,1.0]:
 				for id: StringName in MasterPhase2BodyAction.IDS:
 					for finale in [false,true]:
@@ -61,29 +60,31 @@ func run() -> void:
 							var row: Dictionary = action._danger_groups[index]
 							var expected_beat := float(row.release) > first_release + .000001
 							check(bool(row.beat)==expected_beat, "%s group %d uses opener/full or continuation/beat" % [id,index])
+							var speed := boss.get_phase_2_attack_speed()
 							var peak := float(row.release)-DangerFlash.DODGE_LEAD*speed
 							boss._process(peak/speed)
 							check(boss.danger_flash != null and boss.danger_flash.visible and is_equal_approx(boss._danger_flash_age,DangerFlash.PEAK_TIME), "%s group %d has a visible peak 100 ms before release" % [id,index])
 							check(boss.danger_flash.beat==expected_beat, "%s group %d displays the intended cue mode" % [id,index])
 							var expected_kind: StringName = &"gold" if int(row.danger)==CombatAttackData.DangerType.UNPARRYABLE_DANGER else &"red"
 							check(boss.danger_flash.kind==expected_kind, "%s group %d shows the matching danger colour" % [id,index])
-							if finale: check(expected_kind==&"gold", "Finale danger group is gold")
 							boss._interrupt_phase_2_action(0)
 							await process_frame
-	# A travelling quake supplies a separate short gold cue at its own release.
-	reset(false,true,1)
-	boss.start_phase_2_body_action(&"master_phase2_rising_quake")
+	# The live claw and the jumpable ground front have distinct cues.
+	assist.set_difficulty(BattleAssistSettingsService.Difficulty.NORMAL)
+	reset(false, true, 1)
+	boss.start_phase_2_body_action(MasterPhase2BodyAction.RISING_QUAKE)
 	var ground_action := boss.phase_2_body_action
-	var ground_peaks := 0
-	for tick in 1200:
-		boss._process(1.0/240.0)
-		if not is_instance_valid(ground_action) or not ground_action.active: break
-		for row: Dictionary in ground_action.vfx.ground_cues():
-			var age := DangerFlash.WARNING_LEAD - (float(row.release) - ground_action.elapsed)
-			if absf(age - DangerFlash.PEAK_TIME) < 1.0/240.0:
-				ground_peaks += 1
-				check(boss.danger_flash.visible and boss.danger_flash.beat and boss.danger_flash.kind == &"gold" and absf(boss._danger_flash_age - DangerFlash.PEAK_TIME) < 1.0/240.0, "Ground danger shows its short gold peak 100 ms before release")
-	check(ground_peaks > 0, "Travelling ground attack exposes a danger cue")
+	ground_action.advance(ground_action._gold_end_at + .10)
+	var warning := ground_action.vfx._quake_warning
+	check(warning._used == 1 and (boss.danger_flash == null or not boss.danger_flash.visible),
+		"The post-claw brace marks the ground without another chest flash")
+	assist.set_difficulty(BattleAssistSettingsService.Difficulty.NIGHTMARE)
+	ground_action.advance(.04)
+	check(warning._used == 0 and boss.animated_sprite.animation == &"phase_2_special_attack"
+		and boss.animated_sprite.frame == 15, "Nightmare hides the range strip and keeps the tucked landing pose")
+	assist.set_difficulty(BattleAssistSettingsService.Difficulty.NORMAL)
+	ground_action.advance(.57)
+	check(warning._used == 0, "The travelling front takes over from the floor strip")
 	boss._interrupt_phase_2_action(0)
 	# The ninth flying sword is a short gold beat.
 	reset(false,false,1)

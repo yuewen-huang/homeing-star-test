@@ -32,7 +32,8 @@ func run() -> void:
 	master._enter_phase_2()
 	while master.state == MasterBoss.State.TRANSFORM: await physics_frame
 	running = true
-	for pair in [[&"phase_2_slash", &"phase_2_attack_1"], [&"phase_2_combo", &"phase_2_attack_2"], [&"phase_2_red_dash", &"phase_2_dash"], [&"phase_2_wave", &"phase_2_uppercut"], [&"phase_2_gold_chain", &"phase_2_dash"], [&"phase_2_poise_throw", &""], [&"ultimate", &""]]:
+	# The shared three/five-claw lesson is recorded by test_master_phase2_readability.gd.
+	for pair in [[&"phase_2_slash", &"phase_2_attack_1"], [&"phase_2_red_dash", &"phase_2_dash"], [&"phase_2_wave", &"phase_2_uppercut"], [&"phase_2_gold_chain", &"phase_2_dash"], [&"phase_2_poise_throw", &""], [&"ultimate", &""]]:
 		if OS.get_cmdline_user_args().size() > 1 and String(pair[0]) != OS.get_cmdline_user_args()[1]: continue
 		_reset_take()
 		master.manual_control = false
@@ -86,7 +87,6 @@ func run() -> void:
 		await _wait(0.8)
 		check(lan.combat_stats.health == lan.combat_stats.max_health, "%s demonstrates defense without taking damage" % stage)
 		if stage == "phase_2_slash": check(total_parries - before == 1, "Second-form slash settles one real parry")
-		if stage == "phase_2_combo": check(total_parries - before == 3, "Second-form combo settles all three manual parries")
 		if stage == "phase_2_red_dash": check(red_parries > red_before, "Second-form teleport settles a real red counter")
 		if stage == "phase_2_gold_chain": check(dodges > dodge_before, "Gold chain settles real evasions")
 		if stage == "phase_2_wave": check(wave_jumped, "Lan jumps the actual ground wave")

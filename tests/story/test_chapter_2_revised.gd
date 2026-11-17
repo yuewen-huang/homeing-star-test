@@ -28,8 +28,13 @@ func salt() -> void:
 	await wait_frames(3)
 	var field := current_scene as Chapter2SaltField
 	await read(field.salt_story.beat.dialogue, Text.SALT_ENTRY, "salt_arrival")
-	check(save.has_completed(SaltStory.ENTRY_READ), "Only finishing both lines settles the opening")
-	check(not field.has_node("Shibo"), "The retired anomaly narrative does not spawn")
+	check(save.has_completed(SaltStory.ENTRY_READ), "Finishing Yanbo's full opening establishes the new introduction")
+	check(field.has_node("Yanbo") and not field.has_node("Shibo"), "The land tortoise is the entrance resident")
+	field.feet = SaltStory.ELDER_POINT + Vector2(-51, 0)
+	field._sync_view(0)
+	await wait_frames(2)
+	press(KEY_E)
+	await read(field.salt_story.beat.dialogue, Text.SALT_ELDER_REPEAT, "yanbo_repeat")
 	for point in SaltStory.POINTS:
 		field.feet = point[1]
 		field._sync_view(0)
@@ -47,6 +52,12 @@ func salt() -> void:
 	check(encounter.active and encounter.crab.manual_control, "The crystal crab stays held before the warning")
 	await read(encounter._warning.dialogue, Text.CRAB_WARNING, "crab_warning")
 	check(encounter.active and not encounter.crab.manual_control and not paused, "The first battle starts after the warning")
+	var crab_health: CombatantStats = encounter.crab.combat_stats
+	crab_health.apply_health_damage(ceili(crab_health.max_health * 0.5))
+	await wait_frames(2)
+	check(encounter._half_health_line_spoken and field.salt_story._bubble._label.text == Text.CRAB_BATTLE_BUBBLE
+		and not paused and not field.pawn.player.input_frozen, "The half-health line is a non-modal battle bubble")
+	await capture("crab_half_health_bubble")
 	# Skip the unchanged fight damage loop, then use its actual win and departure handoff.
 	encounter.crab.become_peaceful()
 	encounter._finish_victory()
@@ -149,8 +160,12 @@ func cavern() -> void:
 	await stand_at(map, story._gate_prompt.target.position)
 	press(KEY_E)
 	await read(story.beat.dialogue, Text.CICADA_OPEN, "cicada_open")
-	await wait_frames(3)
-	check(save.has_completed(CavernStory.PASSAGE) and story._gate.get_child(0).disabled, "All four readings open the actual passage")
+	check(save.has_completed(CavernStory.PASSAGE) and not story._gate.get_child(0).disabled,
+		"The finished blessing commits progress while the stone leaves still block the entrance")
+	for frame in 65:
+		if story._gate.get_child(0).disabled: break
+		await physics_frame
+	check(story._gate.get_child(0).disabled, "The actual passage opens after the guard folds and the leaves have slid away")
 	await stand_at(map, map.vector(map.layout.markers.boss))
 	await read(story.beat.dialogue, Text.FISH_PREBATTLE, "fish_prebattle")
 	check(save.has_completed(CavernStory.FISH) and not paused and map.player.can_process(), "The chapter ends its revised story at prebattle with controls restored")

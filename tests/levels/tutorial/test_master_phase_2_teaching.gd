@@ -39,6 +39,46 @@ func run() -> void:
 		if pair[0] == &"phase_2_attack_2": await capture("phase_2_combo_lesson")
 		teaching.lesson_player.close_lesson(true)
 	teaching._pending.clear()
+	master.start_phase_2_body_action(MasterPhase2BodyAction.PRESSURE_FIVE)
+	var action := master.phase_2_body_action
+	action.advance(action._gold_prepare_at)
+	teaching._process(0)
+	check(teaching.key_hint.pending_labels == ["L"], "Near five switches to dodge during the gold claw's raised-arm preparation")
+	action.advance(action._gold_end_at - action.elapsed + .02)
+	teaching._process(0)
+	check(teaching.key_hint.pending_labels == ["K"], "After gold, the remaining near-five uppercut offers parry")
+	# The high-buff scene normally offers the equipped pill. Reuse a separate
+	# memory-only save for this check so later inventory cases start empty.
+	var inventory := save._config
+	save._config = ConfigFile.new()
+	save.add_item(ItemCatalog.HANGOVER_PILL)
+	save.equip_special_item(ItemCatalog.HANGOVER_PILL)
+	action.advance(float(action.data.duration))
+	teaching._process(0)
+	check(teaching.key_hint.pending_labels == ["J", "I"], "Visible settle shows the punish prompt ahead of the ready pill")
+	save._config = inventory
+	teaching._pending.clear()
+	master.manual_control = true
+	master.movement_direction = -1.0
+	lan.position.x = master.position.x - 110.0
+	master.start_phase_2_body_action(MasterPhase2BodyAction.RISING_QUAKE)
+	var quake := master.phase_2_body_action
+	teaching._process(0)
+	check(paused and teaching.lesson_player.lesson_id == &"phase_2_quake",
+		"The body-action quake opens the actual claw-and-jump lesson")
+	await capture("phase_2_quake_lesson")
+	teaching.lesson_player.close_lesson(true)
+	quake.advance(quake._gold_prepare_at + .03)
+	teaching._process(0)
+	check(teaching.key_hint.pending_labels == ["L"], "The sustained gold claws offer dodge")
+	quake.advance(quake._gold_end_at - quake.elapsed + .10)
+	teaching._process(0)
+	check(teaching.key_hint.pending_labels == ["W"], "The ground brace switches from dodge to a separate jump cue")
+	quake.advance(float(quake.data.duration))
+	teaching._process(0)
+	check(teaching.key_hint.pending_labels == ["J", "I"], "Settling after the travelling front offers a punish")
+	master.manual_control = false
+	teaching._pending.clear()
 	master.phase_2_finale_active = true
 	master._start_phase_2_attack(&"phase_2_dash")
 	teaching._process(0)
