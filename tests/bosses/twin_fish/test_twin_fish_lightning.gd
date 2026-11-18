@@ -57,6 +57,7 @@ func verify_opening() -> void:
 	var duel := fish.lightning
 	var last := -1
 	var detached := false
+	var released_as_pair := false
 	var charged := false
 	var locked := false
 	var straight := true
@@ -129,6 +130,7 @@ func verify_opening() -> void:
 				charged = charged or absf(duel.yin.position.distance_to(fish.black_sprite.joint_in_boss(4)) - rim) < 4.0
 		if duel.orb.flying and duel.orb.age < 0.02 and not detached:
 			detached = absf(duel.orb.position.distance_to(fish.black_sprite.joint_in_boss(4)) - duel.Field.RING_RADIUS) < 6.0
+			released_as_pair = duel.orb.paired_with_dash
 		if duel.orb.flying and duel.orb.age > 1.6 and duel.orb.velocity.dot(duel.orb.position.direction_to(target)) > 60:
 			chased = true
 		if duel.beat == Duel.Beat.DASH:
@@ -163,6 +165,7 @@ func verify_opening() -> void:
 	sword(false)
 	if recorder: recorder.set_process(false)
 	check(charged and detached, "Yin charge and release originate at the painted tail fin")
+	check(released_as_pair, "The teaching orb shares the same lifetime as the paired dash")
 	check(chased, "The released orb bends toward the real player")
 	check(locked and straight and observed.has(Duel.Beat.DASH), "The charge commits to one straight lane")
 	check(tracks_target and cue_turned, "The warning follows moving Lan throughout the windup")

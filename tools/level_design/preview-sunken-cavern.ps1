@@ -12,7 +12,8 @@ param(
     [switch]$ZhenxiSluice,
     [switch]$ZhenxiSluiceReturn,
     [switch]$ZhenxiRoute,
-    [switch]$TwinFish
+    [switch]$TwinFish,
+    [switch]$FourSymbols
 )
 $ErrorActionPreference = 'Stop'
 if (-not $Godot) {
@@ -26,13 +27,14 @@ if (-not $Godot -or -not (Test-Path -LiteralPath $Godot -PathType Leaf)) {
 }
 $cavernWorkspace = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $cavernGame = Join-Path $cavernWorkspace 'homeing-star-game'
-$cavernScriptName = if ($TwinFish) { 'preview_twin_fish_arena.gd' } elseif ($ZhenxiSluice) { 'preview_zhenxi_sluice.gd' } else { 'preview_sunken_cavern.gd' }
+$cavernScriptName = if ($TwinFish -or $FourSymbols) { 'preview_twin_fish_arena.gd' } elseif ($ZhenxiSluice) { 'preview_zhenxi_sluice.gd' } else { 'preview_sunken_cavern.gd' }
 $cavernScript = Join-Path $PSScriptRoot $cavernScriptName
 $cavernArtifacts = Join-Path $cavernWorkspace 'homeing-star-test/artifacts/sunken_cavern_graybox_20261101'
 New-Item -ItemType Directory -Path $cavernArtifacts -Force | Out-Null
 $cavernLog = Join-Path $cavernArtifacts ('preview-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.log')
 $cavernArgs = @('--path', ('"{0}"' -f $cavernGame), '--rendering-method', 'gl_compatibility', '--log-file', ('"{0}"' -f $cavernLog), '--position', '80,80', '--resolution', '1280x720', '--script', ('"{0}"' -f $cavernScript))
-if ($ZhenxiRoute) { $cavernArgs += @('--', '--zhenxi-route') }
+if ($FourSymbols) { $cavernArgs += @('--', '--four-symbols') }
+elseif ($ZhenxiRoute) { $cavernArgs += @('--', '--zhenxi-route') }
 elseif ($ZhenxiSluiceReturn) { $cavernArgs += @('--', '--zhenxi-sluice-return') }
 elseif ($ZhenxiAftermath) { $cavernArgs += @('--', '--zhenxi-aftermath') }
 elseif ($FlagDefense) { $cavernArgs += @('--', '--flag-defense') }

@@ -30,6 +30,7 @@ func run() -> void:
 	check(phase_count==4,"All four shipped phases retain isolated development entries")
 	var listeners := room.player.combat_stats.health_depleted.get_connections()
 	check(listeners.size()==1,"Switching phases leaves only the current actor's defeat listener")
+	await verify_twin_fish_targets_lan(room)
 	room.select_boss(1)
 	await wait_frames(3)
 	check(room.adapter.boss is MasterBoss,"Other boss adapters remain available")
@@ -41,3 +42,29 @@ func run() -> void:
 	check(is_equal_approx(Engine.time_scale,original_speed),"Leaving development restores playback speed")
 	expect_save_untouched()
 	finish("BOSS DEVELOPMENT ROOM")
+
+func verify_twin_fish_targets_lan(room: BossDevelopmentRoom) -> void:
+	room.select_boss(2)
+	var twin := room.adapter.boss as TwinFishBoss
+	twin._swim_random.seed = 41019
+	room.dummy_x.value = 1100.0
+	room.play_action(6)
+	var duel := twin.lightning
+	for frame in 600:
+		await physics_frame
+		if duel.orb.flying: break
+	var hurtbox := room.player.get_node("Hurtbox/CollisionShape2D") as CollisionShape2D
+	var target_before_move := duel._target()
+	var orb_at := duel.orb.global_position
+	check(not room.dummy.visible and duel.orb.flying and hurtbox.global_position.x < orb_at.x
+		and room.dummy.global_position.x > orb_at.x and duel.orb.velocity.x < 0.0,
+		"Twin Fish throws toward Lan with the hidden dummy on the opposite side")
+	room.dummy_x.value = 1180.0
+	check(duel._target().is_equal_approx(target_before_move), "Changing the hidden dummy does not change Twin Fish's target")
+	Input.action_press(&"ui_left")
+	await wait_frames(20)
+	Input.action_release(&"ui_left")
+	var lan_at := twin.to_local(hurtbox.global_position)
+	check(lan_at.x < target_before_move.x - 20.0 and duel._target().is_equal_approx(lan_at)
+		and duel.aim_direction.dot(duel.lane_start.direction_to(lan_at)) > 0.99,
+		"Lan's movement steers the live dash warning")

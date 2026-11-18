@@ -42,9 +42,12 @@ func run() -> void:
 	level = (load(SCENE) as PackedScene).instantiate() as SunkenCavern
 	root.add_child(level)
 	current_scene = level
+	var four_symbols := "--four-symbols" in args
+	if four_symbols:
+		level.twin_fish_encounter.opening_movement = TwinFishBoss.LightningDuel.Movement.FOUR_SYMBOLS
 	level.player.reset_after_map_fall(Vector2(8310, 5374))
 	level.snap_camera()
-	root.title = "归航星 · 双子正式战场 · 古城幻化"
+	root.title = "归航星 · 两仪生四象" if four_symbols else "归航星 · 双子正式战场 · 古城幻化"
 	await wait_frames(3)
 	if "--record" in args and not output.is_empty():
 		var recorder := make_recorder()
