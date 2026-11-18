@@ -62,7 +62,7 @@ func run() -> void:
 	check(twin.white_sprite.scale == Vector2.ONE * 0.91 and twin.black_sprite.scale == twin.white_sprite.scale, "both fish use the selected display scale")
 	check(rig_is_valid(twin.white_sprite) and rig_is_valid(twin.black_sprite), "both fish show one original painted sprite with five source guide bones")
 	check(not twin.is_in_group(&"damageable") and twin.get_node("Hurtbox").collision_layer == 0, "specimen cannot be damaged by the observing player")
-	check(room.combo_button.visible and room.combo_button.text.contains("演阵") and not room.charge_button.visible and not room.ultimate_row.visible and not room.segment_row.visible, "the array showcase is available without unrelated attack controls")
+	check(room.combo_button.visible and room.combo_button.text.contains("演阵") and room.charge_button.visible and room.charge_button.text.contains("冲刺") and not room.ultimate_row.visible and not room.segment_row.visible, "the room offers the array showcase and lightning duet")
 	check(not room.dummy.visible, "cinematic fish preview hides the non-attacking dummy so it cannot cover the fish")
 	twin.phase_one_started.connect(func() -> void: handoffs += 1)
 	room.light_button.pressed.emit()

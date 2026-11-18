@@ -29,6 +29,9 @@ class OpeningRecorder extends Node:
 func verifying() -> bool:
 	return "--verify" in OS.get_cmdline_user_args()
 
+func make_recorder() -> OpeningRecorder:
+	return OpeningRecorder.new()
+
 func run() -> void:
 	use_memory_progress()
 	var args := OS.get_cmdline_user_args()
@@ -44,7 +47,7 @@ func run() -> void:
 	root.title = "归航星 · 双子正式战场 · 古城幻化"
 	await wait_frames(3)
 	if "--record" in args and not output.is_empty():
-		var recorder := OpeningRecorder.new()
+		var recorder := make_recorder()
 		recorder.folder = output.path_join("frames")
 		DirAccess.make_dir_recursive_absolute(recorder.folder)
 		level.add_child(recorder)
@@ -83,6 +86,7 @@ func verify_opening() -> void:
 	var saved_mid := false
 	var saved_fish := false
 	var saved_chaos := false
+	var checked_origin := false
 	var previous_camera := level.camera.position
 	var max_camera_step := 0.0
 	var previous_fish_age := -1.0
@@ -113,9 +117,17 @@ func verify_opening() -> void:
 		if opening.age >= 5.2 and not saved_fish:
 			saved_fish = true
 			await capture("02_fish_entering")
-		if is_instance_valid(opening.fish) and opening.fish._taichi_array.visible and not saved_chaos:
-			saved_chaos = true
-			await capture("03_chaos")
+		if is_instance_valid(opening.fish) and opening.fish._taichi_array.visible:
+			var twin := opening.fish
+			var field := twin._taichi_array
+			if not checked_origin:
+				checked_origin = true
+				var white := twin.white_sprite.joint_in_boss(1).lerp(twin.white_sprite.joint_in_boss(2), 0.35)
+				var black := twin.black_sprite.joint_in_boss(1).lerp(twin.black_sprite.joint_in_boss(2), 0.35)
+				check(field.position.distance_to((black + white) * 0.5) < 6.0, "First ink appears between the passing fish")
+			if twin._array_age >= 0.54 and not saved_chaos:
+				saved_chaos = true
+				await capture("03_first_brushstrokes")
 		if opening.battle_ready: break
 	check(continuous, "All three reveal envelopes are continuous and monotonic")
 	check(max_camera_step < 20.0, "Camera approaches the field center without a positional cut")
