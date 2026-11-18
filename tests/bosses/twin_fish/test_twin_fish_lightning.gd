@@ -189,20 +189,37 @@ func verify_parry_and_exit(encounter: CavernTwinFishEncounter) -> void:
 		if encounter.battle_ready: break
 	var boss := encounter.fish
 	var duel := boss.lightning
-	# Isolate the defense branch after the normal-input encounter above. Place
-	# one newly launched orb just outside Lan's guard and use his real parry input.
+	# Isolate the new return during the stationary coil. Real input removes the
+	# hostile hitbox; the player projectile must leave both fish protected.
+	for i in 1000:
+		await physics_frame
+		if duel.beat == Duel.Beat.LOCK: break
 	var toward := Vector2(level.player.facing_direction, 0)
 	duel.orb.release(duel._target() + toward * 49.0, -toward * 115.0, 1000)
 	Input.action_press(&"parry")
 	var returned := false
+	var heading := Vector2.ZERO
+	var separate := true
+	var hp := boss.zhao.combat_stats.health
 	for i in 120:
 		await physics_frame
 		if i == 4: Input.action_release(&"parry")
-		returned = returned or duel.orb.reflected
-		if duel.beat == Duel.Beat.OPEN: break
+		if duel.counters.returned:
+			if not returned: heading = duel.counters.return_velocity
+			returned = true
+			separate = separate and not duel.orb.flying and duel.orb.hitbox.attack == null and heading.is_equal_approx(duel.counters.return_velocity)
+		if boss.zhao.combat_stats.health < hp: break
 	Input.action_release(&"parry")
-	check(returned and boss.defense_credit == 1, "Manual parry returns the yin orb and credits its owner once")
-	check(duel.beat == Duel.Beat.OPEN and duel.clashes == 1, "Reflected yin reaches Zhao and opens the same vulnerability")
+	check(returned and separate and boss.defense_credit == 1, "Parry consumes the enemy orb once and launches a separate straight return")
+	check(boss.zhao.combat_stats.health == hp - duel.counters.HIT_DAMAGE and boss.xuan.combat_stats.health == boss.xuan.combat_stats.max_health and duel.clashes == 0 and boss.invulnerable, "Only Zhao takes return damage; neither fish enters shared vulnerability")
+	# The following independent-health/exit fixture needs the normal punish window.
+	for i in 180:
+		await physics_frame
+		if duel.beat == Duel.Beat.DASH: break
+	duel.orb.release(duel.lane_start + duel.locked_direction * 85.0, Vector2.ZERO, 1001)
+	for i in 60:
+		await physics_frame
+		if duel.beat == Duel.Beat.OPEN: break
 	var zhao_first := "--zhao-first" in OS.get_cmdline_user_args()
 	var first := boss.zhao if zhao_first else boss.xuan
 	var survivor := boss.xuan if zhao_first else boss.zhao
