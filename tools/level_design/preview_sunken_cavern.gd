@@ -79,7 +79,7 @@ func run() -> void:
 					# Pop order: throw, fracture slam, then the other two normal combinations.
 					level.bronze_toad._bag.assign([1, 2, 3, 0])
 					level.bronze_toad._fracture_next = true)
-		level.player.reset_after_map_fall(level.bronze_toad.RETRY_AT)
+		level.player.reset_after_map_fall(level.bronze_toad.retry_at)
 		level.snap_camera()
 		root.title = "归航星 · A25 青铜金蟾试玩"
 		print("A25_PLAYTEST_READY")
@@ -91,7 +91,8 @@ func run() -> void:
 	if "--routes" in OS.get_cmdline_user_args():
 		await capture_routes(level)
 	if not "--overview" in OS.get_cmdline_user_args() and not "--routes" in OS.get_cmdline_user_args():
-		root.title = "归航星 · 沉没古城 · 全图试玩"
+		root.title = "归航星 · 沉没古城 · 全图试玩 · F3 设计图"
+		level.works.survey.visible = true
 		print("SUNKEN_CAVERN_PLAYTEST_READY")
 		return
 	for i in 12: await physics_frame
