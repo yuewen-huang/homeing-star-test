@@ -19,16 +19,16 @@ if ($List) { $available | ForEach-Object { $_.FullName.Substring($PSScriptRoot.L
 if (-not (Test-Path -LiteralPath (Join-Path $Project 'project.godot'))) { throw 'Project must contain project.godot' }
 if (-not (Test-Path -LiteralPath $Godot)) { throw 'Godot executable not found; specify -Godot' }
 if ($All) { $selected = $available }
-elseif ($Test) {
+else {
+  if (-not $Test) {
+    $Test = @('test_action_clock','test_combat_hit_query','test_save_path_migration')
+  }
   $selected = @($Test | ForEach-Object {
     $name = [IO.Path]::GetFileNameWithoutExtension($_)
     $match = @($available | Where-Object { $_.BaseName -eq $name })
     if ($match.Count -ne 1) { throw "Unknown or ambiguous test: $_" }
     $match[0]
   })
-} else {
-  $names = @('test_wind_flight_model','test_vine_flight_model','test_rune_lock','test_mist_parry_remake','test_chapter_1_boss_rooms')
-  $selected = @($available | Where-Object { $_.BaseName -in $names })
 }
 $runDir = Join-Path $PSScriptRoot ('artifacts\'+(Get-Date -Format 'yyyyMMdd-HHmmss-fff'))
 New-Item -ItemType Directory -Force -Path $runDir | Out-Null
@@ -69,7 +69,12 @@ try {
     if (-not (Invoke-Engine $arguments $item.BaseName)) { $failures++ }
   }
 } finally {
-  if ($hadSave) { [IO.File]::WriteAllBytes($saveFile,$saveBytes) }
+  if ($hadSave) {
+    if (-not (Test-Path -LiteralPath $saveFile) -or
+        -not [Linq.Enumerable]::SequenceEqual($saveBytes, [IO.File]::ReadAllBytes($saveFile))) {
+      [IO.File]::WriteAllBytes($saveFile,$saveBytes)
+    }
+  }
   elseif (Test-Path -LiteralPath $saveFile) { Remove-Item -LiteralPath $saveFile }
   $env:HOMING_STAR_TEST_OUTPUT = $oldOutput
 }

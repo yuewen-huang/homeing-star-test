@@ -4,6 +4,7 @@ func run() -> void:
 	var save := use_memory_progress()
 	var world := Node2D.new()
 	root.add_child(world)
+	current_scene = world
 	var player := load("res://scenes/player/lan/lan_player.tscn").instantiate() as LanPlayer
 	player.name = "Lan"
 	player.world_min_x = -1000
@@ -19,17 +20,32 @@ func run() -> void:
 	frog.manual_control = true
 	frog.world_min_x = -1000
 	frog.world_max_x = 1000
-	for boss in [frog, master]:
+	var crab := CrystalCrabBoss.new()
+	crab.combat_target = player
+	crab.manual_control = true
+	crab.world_min_x = -1000
+	crab.world_max_x = 1000
+	var pressure := AttackHitContext.new(&"pressure", 10, 9999)
+	for boss in [frog, master, crab]:
 		world.add_child(boss)
+		boss.set_process(false)
 		boss.set_physics_process(false)
 		var stats: CombatantStats = boss.combat_stats
 		var depleted := [0]
 		stats.poise_depleted.connect(func(): depleted[0] += 1)
-		for i in 20: stats.apply_poise_damage(100000)
+		for i in 20:
+			if boss != master:
+				stats.restore_health()
+				boss.receive_attack_hit(pressure, Vector2.ZERO)
+				boss.tick_combat(0.1)
+			stats.apply_poise_damage(100000)
+		if boss != master:
+			check(not boss.poise_broken and boss.stagger_remaining == 0, "Sustained pressure never activates default break stun")
 		boss._on_poise_depleted()
 		check(stats.poise == stats.max_poise and depleted[0] == 0, "Default damage emits no depletion on " + str(boss.get_class()))
 		check(not boss.is_poise_broken() and not boss.can_offer_break_empower(), "No default weakness or E reward")
 		check(not boss.has_poise_bar() and boss.has_hit_armor(), "HUD removal preserves BOSS hit armor")
+	check(player.find_throw_target() == null, "Default pressure cannot grant a throw")
 	var encounter = load("res://scripts/levels/back_alley/back_alley_encounter.gd").new()
 	encounter.save = save
 	encounter.player = player
@@ -51,6 +67,7 @@ func run() -> void:
 	check(binding.poise_broken and binding.combat_stats.health == 100, "Actual authored binding target interrupts on four hits without taking health damage")
 	binding.step(4.1)
 	check(not binding.poise_broken and binding.combat_stats.poise == 40, "Binding resumes after its explicitly authored four-second release")
+	current_scene = null
 	world.free()
 	await wait_frames(2)
 	expect_save_untouched()

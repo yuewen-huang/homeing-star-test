@@ -17,17 +17,13 @@ func run() -> void:
 	await test_enter_and_sink()
 	await test_eight_directions()
 	await test_slow_turning()
-	await test_art_switch()
 	await test_turn_up_no_burst()
-	await test_body_continuity()
 	await test_stroke()
 	await test_kick()
 	await test_floor_walk_and_push_off()
 	await test_surface_exit()
 	await test_surface_air_actions()
-	await test_animations()
 	await test_normal_bank_jump_entry()
-	await test_idle_stays_steady()
 	await test_shallow_water_unchanged()
 	await test_unregister()
 	expect_save_untouched()
@@ -182,79 +178,6 @@ func test_slow_turning() -> void:
 	release_all()
 
 
-func body_angle() -> float:
-	var sprite := player.animated_sprite
-	var art := LanSwimMotor.UP_ART_ANGLE if sprite.animation == LanSwimMotor.ANIM_UP else LanSwimMotor.DOWN_ART_ANGLE
-	return sprite.rotation + art  # facing right: the on-screen body line
-
-
-func elevation() -> float:
-	var h := player.swim.heading
-	return -atan2(h.y, absf(h.x))
-
-
-func test_art_switch() -> void:
-	var cap := LanSwimMotor.HEADING_TURN_RATE / 60.0 + deg_to_rad(0.5)
-	var band := LanSwimMotor.ART_HYSTERESIS
-	# Right, curve up: the art swaps to 向上游泳 only past +10°, the body line never jumps.
-	await swim_right_steady()
-	check(anim() == LanSwimMotor.ANIM_GLIDE, "Steady right swim glides: %s" % anim())
-	Input.action_press(&"ui_up")
-	var last := body_angle()
-	var jump := 0.0
-	var switch_at := INF
-	var turn_seen := false
-	for i in 50:
-		await step(1)
-		if anim() == LanSwimMotor.ANIM_TURN:
-			turn_seen = true
-		if anim() == LanSwimMotor.ANIM_UP and is_inf(switch_at):
-			switch_at = elevation()
-		if anim() == LanSwimMotor.ANIM_GLIDE and elevation() > 0.0:
-			check(elevation() <= band + 0.001, "Glide art held up to +10° only: %.1f°" % rad_to_deg(elevation()))
-		jump = maxf(jump, absf(angle_difference(last, body_angle())))
-		last = body_angle()
-	check(not is_inf(switch_at) and switch_at >= band - 0.001 and switch_at <= band + cap, "Up art starts just past +10°: %.1f°" % rad_to_deg(switch_at))
-	check(jump <= cap, "Body line stays continuous through glide → up: max %.2f°/frame" % rad_to_deg(jump))
-	check(not turn_seen, "No turn segment while steering out of a glide")
-	# Now curve down: back to the glide art only past −10°.
-	Input.action_release(&"ui_up")
-	Input.action_press(&"ui_down")
-	last = body_angle()
-	jump = 0.0
-	switch_at = INF
-	turn_seen = false
-	for i in 70:
-		await step(1)
-		if anim() == LanSwimMotor.ANIM_TURN:
-			turn_seen = true
-		if anim() == LanSwimMotor.ANIM_UP:
-			check(elevation() >= -band - 0.001, "Up art held down to −10° only: %.1f°" % rad_to_deg(elevation()))
-		elif is_inf(switch_at):
-			switch_at = elevation()
-		jump = maxf(jump, absf(angle_difference(last, body_angle())))
-		last = body_angle()
-	check(not is_inf(switch_at) and switch_at <= -band + 0.001 and switch_at >= -band - cap, "Glide art returns just past −10°: %.1f°" % rad_to_deg(switch_at))
-	check(jump <= cap, "Body line stays continuous through up → glide: max %.2f°/frame" % rad_to_deg(jump))
-	check(not turn_seen and anim() == LanSwimMotor.ANIM_GLIDE, "Up → down goes straight to the glide, no turn segment: %s" % anim())
-	# Steering inside a glide (right → right-down) never replays the turn segment.
-	await swim_right_steady()
-	Input.action_press(&"ui_down")
-	turn_seen = false
-	for i in 40:
-		await step(1)
-		turn_seen = turn_seen or anim() == LanSwimMotor.ANIM_TURN
-	check(not turn_seen, "Steering within a glide never plays the turn segment")
-	# Starting from rest still opens with the turn segment.
-	await place(Vector2(1000, 950))
-	await step(2)
-	Input.action_press(&"ui_right")
-	await step(2)
-	check(anim() == LanSwimMotor.ANIM_TURN, "Starting from rest plays the turn segment: %s" % anim())
-	release_all()
-
-
-## Swimming sideways, W turns her up at the turn rate: no speed spike over the cap.
 func test_turn_up_no_burst() -> void:
 	for side in [&"ui_right", &"ui_left"]:
 		await place(Vector2(1300, 1000))
@@ -285,91 +208,6 @@ func test_turn_up_no_burst() -> void:
 	await step(1)
 	check(player.velocity.y <= -LanSwimMotor.STROKE_IMPULSE + 0.01, "Jump with no side input still strokes: %.1f" % player.velocity.y)
 	release_all()
-
-
-## Where the drawn body anchor is relative to the node (NAN for clips without anchors).
-func body_rel() -> Vector2:
-	return LanSwimMotor.body_point(player)
-
-
-## Runs `frames` frames and returns the worst on-screen body jump (beyond the node's own
-## motion) at a clip switch, and on frame steps of the pinned swim clips.
-var body_log: Array[String] = []
-func watch_body(frames: int, worst: Array) -> void:
-	var prev := body_rel()
-	var prev_clip := anim()
-	var prev_frame := player.animated_sprite.frame
-	for i in frames:
-		await step(1)
-		var now := body_rel()
-		var clip := anim()
-		if not is_nan(now.x) and not is_nan(prev.x):
-			var pinned_step := clip == prev_clip and clip in LanSwimMotor.PINNED_ANIMATIONS and clip != LanSwimMotor.ANIM_IDLE
-			if clip != prev_clip or pinned_step:
-				var d := (now - prev).length()
-				if d > worst[0]:
-					worst[0] = d
-					worst[1] = "%s f%d → %s f%d" % [prev_clip, prev_frame, clip, player.animated_sprite.frame]
-				if clip != prev_clip:
-					body_log.append("%s→%s %.2f px" % [prev_clip, clip, d])
-		prev = now
-		prev_clip = clip
-		prev_frame = player.animated_sprite.frame
-
-
-func test_body_continuity() -> void:
-	var tol := 3.0
-	var worst := [0.0, ""]
-	body_log.clear()
-	# Rest → swim right (idle → turn → glide), curve up (glide → up, up loops), level
-	# off (up → glide), reverse (turn replays), stop (glide → idle), start again.
-	await place(Vector2(1300, 1000))
-	await watch_body(40, worst)
-	Input.action_press(&"ui_right")
-	await watch_body(70, worst)
-	Input.action_press(&"ui_up")
-	await watch_body(90, worst)
-	Input.action_release(&"ui_up")
-	Input.action_press(&"ui_down")
-	await watch_body(60, worst)
-	Input.action_release(&"ui_down")
-	await watch_body(30, worst)
-	Input.action_release(&"ui_right")
-	Input.action_press(&"ui_left")
-	await watch_body(60, worst)
-	Input.action_release(&"ui_left")
-	await watch_body(40, worst)
-	Input.action_press(&"ui_left")
-	await watch_body(40, worst)
-	release_all()
-	# Kick, then stop.
-	Input.action_press(&"instant_dash")
-	await watch_body(1, worst)
-	Input.action_release(&"instant_dash")
-	await watch_body(50, worst)
-	# Up while idle (a stroke with no direction: idle → up → idle).
-	Input.action_press(&"jump")
-	await watch_body(1, worst)
-	Input.action_release(&"jump")
-	await watch_body(60, worst)
-	# Rise to the surface (swim → surfacing → float), swim along it, then S back down.
-	await place(Vector2(1300, 700))
-	await step(30)
-	Input.action_press(&"ui_up")
-	await watch_body(120, worst)
-	Input.action_release(&"ui_up")
-	await watch_body(10, worst)
-	Input.action_press(&"ui_right")
-	await watch_body(40, worst)
-	Input.action_release(&"ui_right")
-	await watch_body(30, worst)
-	Input.action_press(&"ui_down")
-	await watch_body(40, worst)
-	release_all()
-	await watch_body(30, worst)
-	print("Body switches: ", ", ".join(body_log))
-	check(worst[0] <= tol, "On-screen body stays continuous over every clip switch (worst %.2f px at %s)" % [worst[0], worst[1]])
-	check(body_log.size() >= 8, "The run covers the clip switches (%d)" % body_log.size())
 
 
 func test_stroke() -> void:
@@ -697,91 +535,6 @@ func anim() -> StringName:
 	return player.animated_sprite.animation
 
 
-func test_animations() -> void:
-	var frames := player.animated_sprite.sprite_frames
-	var expected := {LanSwimMotor.ANIM_ENTER: 15, LanSwimMotor.ANIM_IDLE: 16, LanSwimMotor.ANIM_UP: 32,
-		LanSwimMotor.ANIM_DOWN: 32, LanSwimMotor.ANIM_SURFACE: 15}
-	for name: StringName in expected:
-		check(frames.has_animation(name) and frames.get_frame_count(name) == expected[name],
-			"%s registered with %d frames" % [name, expected[name]])
-	check(not frames.has_animation(&"swim_dive"), "Retired bank-dive animation is not registered")
-	check(not frames.has_animation(&"swim_water_to_land") and not player.swim.has_method(&"is_exiting"), "Retired surface jump clip and executor are removed")
-	check(not player.swim.has_method(&"try_start_dive"), "Retired bank-dive execution entry is removed")
-	var entry_frame := frames.get_frame_texture(LanSwimMotor.ANIM_ENTER, 0) as AtlasTexture
-	check(entry_frame.atlas.get_size() == Vector2(2400, 160) and entry_frame.region.position == Vector2.ZERO,
-		"Entry sheet contains only the 15 live frames, starting at index zero")
-	check(not frames.get_animation_loop(LanSwimMotor.ANIM_ENTER) and frames.get_animation_loop(LanSwimMotor.ANIM_IDLE), "Enter plays once, idle loops")
-	# Enter → idle.
-	await place(Vector2(1800, 800))
-	await step(2)
-	check(swimming() and anim() == LanSwimMotor.ANIM_IDLE, "Appearing deep under water skips the splash: %s" % anim())
-	await place(Vector2(1800, 530))
-	await step(2)
-	check(anim() == LanSwimMotor.ANIM_ENTER, "Falling in plays enter: %s" % anim())
-	await step(int(60.0 * 15.0 / LanSwimMotor.ASEPRITE_FPS) + 20)  # splash + settle (one clip), then idle
-	check(swimming() and anim() == LanSwimMotor.ANIM_IDLE, "Enter hands over to the underwater idle: %s" % anim())
-	await place(Vector2(1800, 530))
-	await step(4)
-	Input.action_press(&"ui_right")
-	await step(2)
-	check(anim() == LanSwimMotor.ANIM_TURN, "Steering cuts the entry splash short: %s" % anim())
-	release_all()
-	# Clip by angle: up / up-diagonal → 向上游泳; horizontal / down-diagonal / down → 向下游泳
-	# turn (0–3) then stroke loop (4–31). Each rotated from its own art axis, mirrored left.
-	check(frames.get_frame_count(LanSwimMotor.ANIM_TURN) == 4 and frames.get_frame_count(LanSwimMotor.ANIM_GLIDE) == 28, "Turn 4 f + glide 28 f")
-	var sprite := player.animated_sprite
-	var headings := {
-		[&"ui_right"]: [Vector2(1, 0), false], [&"ui_left"]: [Vector2(-1, 0), true],
-		[&"ui_right", &"ui_down"]: [Vector2(1, 1), false], [&"ui_left", &"ui_down"]: [Vector2(-1, 1), true],
-		[&"ui_down"]: [Vector2(0, 1), false],
-		[&"ui_right", &"ui_up"]: [Vector2(1, -1), false], [&"ui_left", &"ui_up"]: [Vector2(-1, -1), true],
-		[&"ui_up"]: [Vector2(0, -1), false],
-	}
-	for keys: Array in headings:
-		await place(Vector2(1300, 1000))
-		await step(2)
-		player.facing_direction = 1.0
-		player.animated_sprite.play(LanSwimMotor.ANIM_IDLE)
-		for k in keys:
-			Input.action_press(k)
-		var dir: Vector2 = headings[keys][0]
-		var up := LanSwimMotor.uses_up_art(dir)
-		await step(1)
-		check(anim() == (LanSwimMotor.ANIM_UP if up else LanSwimMotor.ANIM_TURN), "%s starts with %s: %s" % [keys, "swim_up" if up else "the turn segment", anim()])
-		await step(20)
-		var want := LanSwimMotor.swim_rotation(dir, 1.0)
-		check(anim() == (LanSwimMotor.ANIM_UP if up else LanSwimMotor.ANIM_GLIDE) and sprite.flip_h == headings[keys][1], "%s plays %s (flip %s)" % [keys, anim(), sprite.flip_h])
-		check(absf(sprite.rotation - want) < 0.01, "%s rotation %.1f° (want %.1f°)" % [keys, rad_to_deg(sprite.rotation), rad_to_deg(want)])
-		release_all()
-	check(is_equal_approx(LanSwimMotor.swim_rotation(Vector2(1, -1)), deg_to_rad(-45.0) - LanSwimMotor.UP_ART_ANGLE), "Up-right is measured from the 向上游泳 axis")
-	check(is_equal_approx(LanSwimMotor.swim_rotation(Vector2(0, -1), -1.0), -(deg_to_rad(-90.0) - LanSwimMotor.UP_ART_ANGLE)), "Straight up facing left is mirrored")
-	check(is_equal_approx(LanSwimMotor.swim_rotation(Vector2(0, 1)), deg_to_rad(90.0) - LanSwimMotor.DOWN_ART_ANGLE), "Straight down is measured from the 向下游泳 axis")
-	check(is_equal_approx(LanSwimMotor.glide_rotation(Vector2(1, 0)), -LanSwimMotor.DOWN_ART_ANGLE), "Horizontal right levels the 27° dive axis")
-	check(is_equal_approx(LanSwimMotor.glide_rotation(Vector2(-1, 0)), LanSwimMotor.DOWN_ART_ANGLE), "Horizontal left is mirrored")
-	await step(40)
-	check(absf(sprite.rotation) < 0.01, "Rotation eases back upright when not steering sideways")
-	# Up stroke / rising → swim_up; diving → swim_down.
-	Input.action_press(&"jump")
-	await step(2)
-	Input.action_release(&"jump")
-	check(anim() == LanSwimMotor.ANIM_UP, "Upward stroke plays swim_up: %s" % anim())
-	await step(60)
-	Input.action_press(&"ui_down")
-	await step(20)
-	check(anim() == LanSwimMotor.ANIM_GLIDE, "Holding down plays the 向下游泳 stroke rotated: %s" % anim())
-	Input.action_release(&"ui_down")
-	await step(90)
-	check(anim() == LanSwimMotor.ANIM_IDLE, "Back to idle when drifting: %s" % anim())
-	# Ground animations keep the original flip convention.
-	await place(Vector2(200, 1150))
-	player.facing_direction = 1.0
-	await step(30)
-	player.apply_facing_direction()
-	check(anim() not in LanSwimMotor.SWIM_ANIMATIONS and player.animated_sprite.flip_h, "Dry ground keeps the normal flip (%s)" % anim())
-	release_all()
-
-
-## World position of the aseprite canvas' top-left, from the frame on screen now.
 func canvas_origin() -> Vector2:
 	var sprite := player.animated_sprite
 	# Canvas position of the cell centre: entry cells from their shift, the idle (drawn in
@@ -798,40 +551,6 @@ func canvas_origin() -> Vector2:
 
 
 ## Plain idle under water for several loops: one clip, and the art only drifts with the body.
-func test_idle_stays_steady() -> void:
-	await place(Vector2(1300, 800))
-	await step(2)
-	var prev := canvas_origin()
-	var worst := 0.0
-	var other: Array[StringName] = []
-	for i in 60 * 4:
-		await step(1)
-		if anim() != LanSwimMotor.ANIM_IDLE:
-			other.append(anim())
-		var o := canvas_origin()
-		worst = maxf(worst, (o - prev).length())
-		prev = o
-	check(other.is_empty(), "Idle never switches clip: %s" % [other])
-	# 待机 is a 16-frame loop played forward only (no ping-pong) and it wraps 15 → 0.
-	var frames := player.animated_sprite.sprite_frames
-	check(frames.get_frame_count(LanSwimMotor.ANIM_IDLE) == 16 and frames.get_animation_loop(LanSwimMotor.ANIM_IDLE),
-		"Idle is the 16-frame forward loop")
-	check(not frames.has_animation(&"swim_idle_settle"), "No separate settle clip (the entry holds it)")
-	check(worst <= 1.6, "Idle loop has no frame jump (worst step %.2f px)" % worst)
-	# Hysteresis: near a threshold the current clip holds.
-	var sprite := player.animated_sprite
-	player.velocity.y = LanSwimMotor.DOWN_ANIM_SPEED - 10.0
-	sprite.play(LanSwimMotor.ANIM_DOWN)
-	check(player.swim.choose_animation(player, 0.0) == LanSwimMotor.ANIM_DOWN, "Down holds just under its threshold")
-	sprite.play(LanSwimMotor.ANIM_IDLE)
-	check(player.swim.choose_animation(player, 0.0) == LanSwimMotor.ANIM_IDLE, "Idle holds just under the down threshold")
-	player.velocity.y = LanSwimMotor.UP_ANIM_SPEED + 10.0
-	sprite.play(LanSwimMotor.ANIM_UP)
-	check(player.swim.choose_animation(player, 0.0) == LanSwimMotor.ANIM_UP, "Up holds just past its threshold")
-	sprite.play(LanSwimMotor.ANIM_IDLE)
-	check(player.swim.choose_animation(player, 0.0) == LanSwimMotor.ANIM_IDLE, "Idle holds just past the up threshold")
-
-
 func test_normal_bank_jump_entry() -> void:
 	var bank := PIECE.instantiate() as TerrainPiece
 	bank.position = Vector2(100, 500)

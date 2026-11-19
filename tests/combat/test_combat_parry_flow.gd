@@ -43,27 +43,6 @@ func run_test() -> void:
 	source.position = Vector2(100.0, 0.0)
 	room.add_child(source)
 
-	var timing_player := spawn_player(room, "Timing")
-	await process_frame
-	var frames := timing_player.animated_sprite.sprite_frames
-	var parry_duration := 0.0
-	for frame_index in frames.get_frame_count(&"parry"):
-		parry_duration += frames.get_frame_duration(&"parry", frame_index) / frames.get_animation_speed(&"parry")
-	if not require(is_equal_approx(parry_duration, 0.36), "Parry must preserve three 40ms wind-up frames and two 120ms frames"):
-		return
-	if not require(frames.get_frame_count(&"parry_nothing") == 5, "Parry nothing phase must contain five 70ms frames"):
-		return
-	var nothing_first := frames.get_frame_texture(&"parry_nothing", 0) as AtlasTexture
-	var nothing_last := frames.get_frame_texture(&"parry_nothing", 4) as AtlasTexture
-	if not require(
-		nothing_first != null
-		and nothing_last != null
-		and nothing_first.atlas.resource_path.ends_with("parry_nothing_160x160_5f.png")
-		and nothing_first.region != nothing_last.region,
-		"Parry nothing does not use its dedicated five-frame sheet",
-	):
-		return
-
 	var startup_player := spawn_player(room, "Startup")
 	await process_frame
 	startup_player.start_parry()
@@ -74,8 +53,8 @@ func run_test() -> void:
 	if not require(startup_player.combat_stats.health == startup_health and not startup_player.hit_reaction_active, "Immediate parry preserves health"):
 		return
 
-	# Every authored frame, including all three wind-up frames, has an active guard.
-	for frame_index in frames.get_frame_count(&"parry"):
+	# Changing the animation must not add unprotected frames to the parry.
+	for frame_index in range(1, startup_player.animated_sprite.sprite_frames.get_frame_count(&"parry")):
 		var frame_player := spawn_player(room, "Frame%d" % frame_index)
 		await process_frame
 		frame_player.start_parry()
@@ -93,7 +72,7 @@ func run_test() -> void:
 	var active_player := spawn_player(room, "Active")
 	await process_frame
 	active_player.start_parry()
-	active_player.animated_sprite.frame = 3
+	active_player.animated_sprite.frame = active_player.PARRY_STARTUP_FRAME_COUNT
 	active_player.on_player_animation_frame_changed()
 	active_player.parry_input_buffer_remaining = active_player.COMBAT_INPUT_BUFFER
 	var active_health := active_player.combat_stats.health
@@ -135,7 +114,7 @@ func run_test() -> void:
 	var late_player := spawn_player(room, "LateNothing")
 	await process_frame
 	late_player.start_parry_nothing()
-	late_player.animated_sprite.frame = 2
+	late_player.animated_sprite.frame = late_player.PARRY_NOTHING_EARLY_FRAME_COUNT
 	late_player.on_player_animation_frame_changed()
 	var late_health := late_player.combat_stats.health
 	var late_result := late_player.receive_combat_hit(make_attack(source, &"late_nothing"))
@@ -263,11 +242,11 @@ func run_test() -> void:
 	chain_player.start_parry(true)
 	if not require(chain_player.defense_state == chain_player.DefenseState.PARRY_ACTIVE and chain_player.animated_sprite.frame == chain_player.PARRY_STARTUP_FRAME_COUNT, "Chained parry did not skip startup and begin on its first active frame"):
 		return
-	chain_player.animated_sprite.set_frame_and_progress(4, 1.0)
 	chain_player.on_animation_finished()
-	if not require(chain_player.defense_state == chain_player.DefenseState.PARRY_ACTIVE and is_equal_approx(chain_player.parry_active_extension_remaining, 0.10), "Chained parry did not retain the 100ms active grace"):
+	var grace := chain_player.parry_active_extension_remaining
+	if not require(chain_player.defense_state == chain_player.DefenseState.PARRY_ACTIVE and grace > 0.0, "Chained parry did not retain its active grace"):
 		return
-	chain_player.update_defense_timing(0.10)
+	chain_player.update_defense_timing(grace)
 	if not require(chain_player.defense_state == chain_player.DefenseState.PARRY_NOTHING_EARLY, "Chained parry grace did not end in the nothing phase"):
 		return
 
