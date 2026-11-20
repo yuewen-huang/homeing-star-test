@@ -119,31 +119,50 @@ func run() -> void:
 	expect_save_untouched()
 	finish("CITY")
 
+func hit_hammer(index:int) -> bool:
+	var target:Node2D = level.works.tips[index]
+	if player.air_state in [player.AirState.GROUNDED,player.AirState.LANDING]:
+		await tap(KEY_W)
+	var bridge:bool = index < level.works.settings.hammers.size()
+	var before:int = level.works.relay_hits
+	for i in 145:
+		var d := target.position - player.position
+		set_action("ui_right",d.x>3)
+		set_action("ui_left",d.x< -3)
+		if bridge and level.works.ringing.has(index) or not bridge and level.works.relay_hits > before:
+			return true
+		if d.x>240 and d.y>58 and not player.aerial_dash_used:
+			await tap(KEY_U)
+		elif d.y < 55 and player.velocity.y > -170 and not player.double_jump_used and absf(d.x)>35:
+			await tap(KEY_W)
+		elif absf(d.x)<32 and d.y>5 and player.attack_state==player.AttackState.NONE:
+			await tap(KEY_X)
+		await physics_frame
+	print("Missed hammer ",index," at ",player.position," target ",target.position," relay ",level.works.relay_hits)
+	return false
+
+func return_dart(high:bool) -> void:
+	for i in 510:
+		if level.works.opened.reed_gate or (not high and level.works.low_reed_returned):
+			return
+		var distance:float = level.works.bolt_source.position.x - player.position.x
+		if level.works.bolt_dir < 0 and distance > 0 and distance < 70:
+			await tap(KEY_K)
+		await physics_frame
+
 func upper() -> void:
 	for v in [["fork",185,436],["fork",282,358],["fork",195,279],["fork",257,199],["fork",152,118],["fork",140,45,"climb"],["teeth",140,484,"climb"],["teeth",185,485],["teeth",202,485]]:
 		await waypoint(v)
 	if not route_ok:
 		return
-	for v in [[290,436],[444,381],[603,328]]:
-		var goal := room_position("teeth",v[0],v[1])
-		if player.air_state==player.AirState.GROUNDED:
-			await tap(KEY_W)
-		for i in 185:
-			set_action("ui_right",player.position.x<goal.x-3)
-			set_action("ui_left",player.position.x>goal.x+3)
-			if i==19 or (player.velocity.y>0 and player.position.y>goal.y-45 and player.position.x<goal.x-50 and not player.double_jump_used):
-				await tap(KEY_W)
-			if absf(player.position.x-goal.x)<34 and player.position.y<goal.y:
-				await tap(KEY_X)
-				break
-			await physics_frame
-		var count:int=level.works.ringing.size()
-		for i in 65:
-			if level.works.ringing.size()>count or level.works.opened.chain_gate:
-				break
-			await physics_frame
+	for i in level.works.settings.hammers.size():
+		if not await hit_hammer(i):
+			break
 	release_inputs()
-	check(level.works.opened.chain_gate,"Three hammers struck without landing")
+	check(level.works.opened.chain_gate,"Follow all four ringing hammers without landing")
+	if not level.works.opened.chain_gate:
+		route_ok = false
+		return
 	set_action("ui_right",true)
 	await frames(4)
 	await tap(KEY_U)
@@ -177,30 +196,34 @@ func upper() -> void:
 		await waypoint(v)
 	if not route_ok:
 		return
-	for i in 260:
-		if level.works.opened.reed_gate:
-			break
-		var dart_in_range:bool=level.works.bolt_dir<0 and level.works.bolt_source.position.x-player.position.x<70
-		if dart_in_range:
-			await tap(KEY_K)
-		await physics_frame
-	check(level.works.opened.reed_gate,"Parry opens reed door")
+	await return_dart(false)
+	if level.works.low_reed_returned:
+		await move_to("bolt",794,410)
+		await return_dart(true)
+	check(level.works.opened.reed_gate,"Return the low and high reeds from their landings")
 	if not level.works.opened.reed_gate:
+		route_ok = false
 		return
-	await move_to("tide",267,485)
+	await move_to("tide",85,520)
 	if not route_ok:
 		return
-	for i in 1900:
-		if level.works.spring>2.1:
+	for i in 2200:
+		var age:float = level.tide.surge_age()
+		if age < -8:
 			break
 		await physics_frame
-	send_key(KEY_D,true)
-	await frames(10)
-	await tap(KEY_U)
-	await frames(131)
-	send_key(KEY_D,false)
-	check(level.works.save.has_completed(level.works.RACE),"Floodgate crossed in time")
+	await move_to("tide",267,485)
+	await frames(8)
+	var first:int = level.works.settings.hammers.size()
+	if await hit_hammer(first) and await hit_hammer(first+1):
+		set_action("ui_right",true)
+		await frames(8)
+		await tap(KEY_U)
+		await frames(78)
+	release_inputs()
+	check(level.works.save.has_completed(level.works.RACE),"Chain the sluice hammers and reach the east bank")
 	if not level.works.save.has_completed(level.works.RACE):
+		route_ok = false
 		return
 	await move_to("keeper",612,520)
 	if not route_ok:
