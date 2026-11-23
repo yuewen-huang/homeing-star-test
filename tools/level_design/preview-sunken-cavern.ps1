@@ -1,10 +1,5 @@
 param(
     [string]$Godot,
-    [switch]$Toad,
-    [switch]$StakeChain,
-    [switch]$WestShafts,
-    [switch]$WestShaftReturn,
-    [switch]$HiddenDoor,
     [switch]$HiddenGateArt,
     [switch]$HiddenGeneral,
     [switch]$FlagDefense,
@@ -13,8 +8,7 @@ param(
     [switch]$ZhenxiSluiceReturn,
     [switch]$ZhenxiRoute,
     [switch]$TwinFish,
-    [switch]$FourSymbols,
-    [switch]$WideGraybox
+    [switch]$FourSymbols
 )
 $ErrorActionPreference = 'Stop'
 if (-not $Godot) {
@@ -28,7 +22,7 @@ if (-not $Godot -or -not (Test-Path -LiteralPath $Godot -PathType Leaf)) {
 }
 $cavernWorkspace = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $cavernGame = Join-Path $cavernWorkspace 'homeing-star-game'
-$cavernScriptName = if ($WideGraybox) { 'preview_sunken_cavern_wide.gd' } elseif ($TwinFish -or $FourSymbols) { 'preview_twin_fish_arena.gd' } elseif ($ZhenxiSluice) { 'preview_zhenxi_sluice.gd' } else { 'preview_sunken_cavern.gd' }
+$cavernScriptName = if ($TwinFish -or $FourSymbols) { 'preview_twin_fish_arena.gd' } elseif ($ZhenxiSluice) { 'preview_zhenxi_sluice.gd' } else { 'preview_sunken_cavern.gd' }
 $cavernScript = Join-Path $PSScriptRoot $cavernScriptName
 $cavernArtifacts = Join-Path $cavernWorkspace 'homeing-star-test/artifacts/sunken_cavern_graybox_20261101'
 New-Item -ItemType Directory -Path $cavernArtifacts -Force | Out-Null
@@ -41,13 +35,6 @@ elseif ($ZhenxiAftermath) { $cavernArgs += @('--', '--zhenxi-aftermath') }
 elseif ($FlagDefense) { $cavernArgs += @('--', '--flag-defense') }
 elseif ($HiddenGeneral) { $cavernArgs += @('--', '--hidden-general') }
 elseif ($HiddenGateArt) { $cavernArgs += @('--', '--gate-art') }
-elseif ($HiddenDoor) { $cavernArgs += @('--', '--hidden-door') }
-elseif ($WestShaftReturn) { $cavernArgs += @('--', '--west-shaft-return') }
-elseif ($WestShafts) { $cavernArgs += @('--', '--west-shafts') }
-elseif ($Toad -or $StakeChain) {
-    $cavernArgs += @('--', '--toad')
-    if ($StakeChain) { $cavernArgs += '--stake-chain' }
-}
 $cavernProcess = Start-Process -FilePath $Godot -ArgumentList $cavernArgs -WindowStyle Normal -PassThru
 Write-Output ('Sunken cavern preview PID: ' + $cavernProcess.Id)
 $cavernProcess.WaitForExit()

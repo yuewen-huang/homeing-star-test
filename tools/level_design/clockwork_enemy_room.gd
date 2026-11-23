@@ -6,7 +6,7 @@ const ENEMIES: Array[PackedScene] = [
 	preload("res://scenes/enemies/clockwork_bird/clockwork_bird.tscn"),
 	preload("res://scenes/enemies/clockwork_snake/clockwork_snake.tscn"),
 ]
-const BACKDROP := preload("res://assets/levels/chapter_2_underwater/cavern/environment/deep_cavern/deep_cavern_pool_1536x1024.png")
+const BACKDROP := preload("res://assets/levels/chapter_2_underwater/cavern/environment/listening_canal/river_vista.webp")
 const STONE := preload("res://assets/levels/chapter_2_underwater/city/environment/terrain/stone_masonry_1254x1254.png")
 
 var player: LanPlayer

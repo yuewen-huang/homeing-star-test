@@ -33,7 +33,8 @@ func make_recorder() -> OpeningRecorder:
 	return OpeningRecorder.new()
 
 func run() -> void:
-	use_memory_progress()
+	var progress := use_memory_progress()
+	progress.try_complete_fact(&"taiji_altar_farewell")
 	var args := OS.get_cmdline_user_args()
 	var option := args.find("--capture-dir")
 	if option >= 0:
@@ -45,7 +46,8 @@ func run() -> void:
 	var four_symbols := "--four-symbols" in args
 	if four_symbols:
 		level.twin_fish_encounter.opening_movement = TwinFishBoss.LightningDuel.Movement.FOUR_SYMBOLS
-	level.player.reset_after_map_fall(Vector2(8310, 5374))
+	var arena := level.twin_fish_encounter.arena
+	level.player.reset_after_map_fall(Vector2(arena.position.x + 440, arena.end.y - 2))
 	level.snap_camera()
 	root.title = "归航星 · 两仪生四象" if four_symbols else "归航星 · 双子正式战场 · 古城幻化"
 	await wait_frames(3)
@@ -153,7 +155,7 @@ func verify_opening() -> void:
 		check(is_equal_approx(paint.size.x, paint.size.y) and is_equal_approx(paint.end.y, back_edge), "Round field rests on the upper edge of the terrace")
 		check(absf(level.player.position.y + 2.0 - (back_edge + front_edge) * 0.5) < 1.0, "Lan stands on the paving centerline rather than the front lip")
 		check(is_equal_approx(opening.layers[1].to_global(Vector2(0, opening.MIDDLE_BASE_Y)).y, back_edge), "Middle balustrade bases meet the terrace back edge")
-		check(is_equal_approx(paint.size.x, 921.6), "Formal circle diameter is reduced by exactly ten percent")
+		check(is_equal_approx(paint.size.x, minf(arena.size.x, arena.size.y) * 0.90), "Formal circle diameter is reduced by exactly ten percent")
 		check(paint.position.y >= arena.position.y - 0.1, "Circle stays below the reserved battle ceiling")
 		check(is_equal_approx(field._circle.body_opacity, 0.90), "Only the array body receives subtle transparency")
 		check(field.active_core_positions().size() == 2 and is_equal_approx(field.modulate.a, 1.0), "Both eyes retain the original opacity while only the array body is softened")

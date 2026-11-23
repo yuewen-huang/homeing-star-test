@@ -1,10 +1,12 @@
 extends "../../support/harness.gd"
-## 第二章终关 · 水下沉城 step 2: oxygen on the blue bar (UnderwaterOxygen), real physics.
-const SCENE_PATH := "res://scenes/levels/chapter_2_underwater/chapter_2_underwater.tscn"
-const PLAYER := preload("res://scenes/player/lan/lan_player.tscn")
+## Oxygen and drowning on the current Sunken Cavern player.
+const SCENE_PATH := "res://scenes/levels/chapter_2_underwater/cavern/sunken_cavern.tscn"
 const PIECE := preload("res://scenes/levels/common/terrain_piece.tscn")
 const ACTIONS: Array[StringName] = [&"ui_left", &"ui_right", &"ui_up", &"ui_down", &"jump", &"instant_dash"]
-const OPEN_WATER := Vector2(640, 1500)  # R02 mid-water, far from floors, pockets and bubbles
+const TEST_POOL := Rect2(100, -8000, 2800, 1050)
+const OPEN_WATER := TEST_POOL.position + Vector2(1000, 400)
+const NEAR_SURFACE := TEST_POOL.position + Vector2(1000, 120)
+const POOL_FLOOR := TEST_POOL.position + Vector2(1000, 920)
 
 var level: Node2D
 var player: LanPlayer
@@ -18,8 +20,7 @@ func run() -> void:
 	await test_drain_while_swimming()
 	await test_hold_on_underwater_floor()
 	await test_surface_refill()
-	await test_pocket_refill()
-	await test_bubble_refill()
+	await test_bank_refill()
 	await test_skills_blocked_while_swimming()
 	await test_empty_damage()
 	await test_drowning_respawn()
@@ -57,13 +58,26 @@ func test_setup() -> void:
 	level = (load(SCENE_PATH) as PackedScene).instantiate() as Node2D
 	root.add_child(level)
 	current_scene = level
+	# Measure oxygen in still water, including when the chapter tide would normally surge.
+	level.tide.set_combat_suspended(true)
 	await step(40)
 	player = level.player
 	oxygen = level.oxygen
+	# A deep test pool above the quay gives us room to measure oxygen ticks.
+	var pool := UnderwaterVolume.new()
+	pool.position = TEST_POOL.position
+	pool.size = TEST_POOL.size
+	level.add_child(pool)
+	pool.register_to(player)
+	var floor_piece := PIECE.instantiate() as TerrainPiece
+	floor_piece.kind = "wall"
+	floor_piece.position = TEST_POOL.position + Vector2(0, 1000)
+	floor_piece.size = Vector2(TEST_POOL.size.x, 64)
+	level.add_child(floor_piece)
+	floor_piece.register_to(player)
 	stats = player.combat_stats
 	check(oxygen != null and oxygen.player == player, "Level adds the UnderwaterOxygen component")
 	check(near(stats.mana, stats.max_mana, 0.01), "Oxygen (blue bar) starts full: %.1f/%.1f" % [stats.mana, stats.max_mana])
-	check(level.bubbles.size() == 4, "Bubbles b1–b4 are real pickups: %d" % level.bubbles.size())
 	check(UnderwaterOxygen.FULL_BAR_SECONDS == 20.0 and UnderwaterOxygen.REFILL_SECONDS == 0.5, "Tunable constants (20 s / 0.5 s)")
 
 
@@ -78,7 +92,7 @@ func test_drain_while_swimming() -> void:
 
 
 func test_hold_on_underwater_floor() -> void:
-	await place(Vector2(1900, 2050), 50.0)  # R04 floor, inside the water
+	await place(POOL_FLOOR, 50.0)
 	var landed := false
 	for i in 300:
 		await physics_frame
@@ -93,7 +107,7 @@ func test_hold_on_underwater_floor() -> void:
 
 
 func test_surface_refill() -> void:
-	await place(Vector2(640, 420), 10.0)  # R01 just under the global surface
+	await place(NEAR_SURFACE, 10.0)
 	Input.action_press(&"ui_up")
 	var floated := false
 	for i in 240:
@@ -112,26 +126,11 @@ func test_surface_refill() -> void:
 	check(near(stats.mana, stats.max_mana, 0.01) and player.swim.is_floating(), "No drain while floating at the surface")
 
 
-func test_pocket_refill() -> void:
-	await place(Vector2(2300, 900), 10.0)  # R03 air pocket save ledge
+func test_bank_refill() -> void:
+	await place(level.start, 10.0)
 	await step(60)
-	check(not player.is_in_deep_water() and player.air_state == LanPlayer.AirState.GROUNDED, "Standing in the R03 air pocket: %s" % player.position)
-	check(near(stats.mana, stats.max_mana, 0.01), "Air pocket refills the bar: %.1f" % stats.mana)
-
-
-func test_bubble_refill() -> void:
-	var bubble: OxygenBubble = level.bubbles[0]
-	var at := bubble.global_position + Vector2(0.0, 29.0)
-	await place(at + Vector2(-120.0, 0.0), 10.0)
-	check(oxygen.mode == UnderwaterOxygen.Mode.SWIMMING, "Swimming next to bubble b1")
-	player.reset_after_map_fall(at)
-	player.air_state = LanPlayer.AirState.FALLING
-	await step(45)
-	check(not bubble.available, "Bubble b1 taken on touch")
-	check(near(stats.mana, stats.max_mana, 2.5), "Bubble refills the bar under water: %.1f" % stats.mana)
-	await place(OPEN_WATER, stats.max_mana)
-	await step(int(OxygenBubble.RESPAWN_SECONDS * 60.0) + 10)
-	check(bubble.available, "Bubble b1 respawns after %.0f s" % OxygenBubble.RESPAWN_SECONDS)
+	check(not player.is_in_deep_water() and player.air_state == LanPlayer.AirState.GROUNDED, "Standing on the dry quay: %s" % player.position)
+	check(near(stats.mana, stats.max_mana, 0.01), "Dry quay refills the bar: %.1f" % stats.mana)
 
 
 func test_skills_blocked_while_swimming() -> void:
@@ -162,7 +161,7 @@ func test_empty_damage() -> void:
 	var expected := 3 * UnderwaterOxygen.DAMAGE_PER_TICK
 	check(hits[0] == 3 and hp - stats.health == expected, "Empty bar: %d hp per %.0f s (%d ticks, -%d)" % [UnderwaterOxygen.DAMAGE_PER_TICK, UnderwaterOxygen.DAMAGE_INTERVAL, hits[0], hp - stats.health])
 	check(not reaction and player.air_state == LanPlayer.AirState.SWIMMING, "No hurt reaction/stunlock: keeps swimming")
-	await place(Vector2(640, 420), 0.0)
+	await place(NEAR_SURFACE, 0.0)
 	Input.action_press(&"ui_up")
 	for i in 240:
 		await physics_frame
@@ -176,10 +175,10 @@ func test_empty_damage() -> void:
 
 func test_drowning_respawn() -> void:
 	stats.restore_health()
-	await place(Vector2(2300, 900), 100.0)
+	await place(level.start, 100.0)
 	await step(30)
 	var breath: Vector2 = level.breath_point
-	check(breath.distance_to(Vector2(2300, 930)) < 40.0, "Breath point follows the last air: %s" % breath)
+	check(breath.distance_to(level.start) < 40.0, "Breath point follows the last air: %s" % breath)
 	await place(OPEN_WATER, 0.0)
 	var assist := stats.refill_health_on_depletion
 	stats.refill_health_on_depletion = false  # BattleAssist invincibility would refill instead
@@ -196,7 +195,7 @@ func test_no_oxygen_outside_level() -> void:
 	var world := Node2D.new()
 	root.add_child(world)
 	current_scene = world
-	var other := PLAYER.instantiate() as LanPlayer
+	var other := (load("res://scenes/player/lan/lan_player.tscn") as PackedScene).instantiate() as LanPlayer
 	other.world_min_x = 0
 	other.world_max_x = 3000
 	other.fallback_ground_y = 3000

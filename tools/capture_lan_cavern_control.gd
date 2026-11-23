@@ -9,8 +9,8 @@ func run() -> void:
 	current_scene=level
 	player=level.player
 	await step(18)
-	var gate: Vector2=level.marker("gate")
-	player.reset_after_map_fall(Vector2(1900,gate.y))
+	var gate: Vector2=level.start
+	player.reset_after_map_fall(gate)
 	await step(3)
 	var origin: Vector2=player.position
 	Input.action_press(&"jump")

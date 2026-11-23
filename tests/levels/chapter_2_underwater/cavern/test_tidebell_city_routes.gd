@@ -1,5 +1,5 @@
 extends "../../../support/harness.gd"
-## Replay the two routes with normal player inputs and in-memory progress. Use --upper for the guardian route.
+## Exercise the two fork entrances.
 var level:SunkenCavern
 var player:LanPlayer
 var route_ok := true
@@ -41,7 +41,7 @@ func advance_dialogue() -> void:
 		await frames(10)
 
 func room_position(id:String,x:float,y:float) -> Vector2:
-	return level.works.room_point(id,x,y)
+	return level.vector(level.works.settings.rooms[id]) + Vector2(x*1.5,y*1.25)
 
 func move_to(id:String,x:float,y:float,mode := "land",limit := 950) -> bool:
 	if not route_ok:
@@ -83,23 +83,10 @@ func move_to(id:String,x:float,y:float,mode := "land",limit := 950) -> bool:
 func waypoint(v:Array) -> void:
 	await move_to(v[0],v[1],v[2],v[3] if v.size()>3 else "land")
 
-func hear_fragment(id: String) -> void:
-	if not route_ok:
-		return
-	for i in 850:
-		if player.input_frozen:
-			await advance_dialogue()
-		if level.chapter_story.save.has_completed(level.chapter_story._heard_fact(id)):
-			return
-		if i%30==0:
-			await tap(KEY_E)
-		await physics_frame
-	route_ok=false
-	print("NO ECHO ",id," ",player.position)
-
-
 func run() -> void:
-	use_memory_progress()
+	var save := use_memory_progress()
+	save.try_complete_fact(&"sunken_cavern_bell_awake")
+	save.try_complete_fact(&"story_c2_revised_cavern_bell")
 	level=load("res://scenes/levels/chapter_2_underwater/cavern/sunken_cavern.tscn").instantiate()
 	root.add_child(level)
 	current_scene=level
@@ -109,243 +96,37 @@ func run() -> void:
 		check(false,"map ready")
 		finish("CITY")
 		return
-	for stop in [["quay",384,519],["quay",648,519],["fork",69,520]]:
-		await waypoint(stop)
-	if "--upper" in OS.get_cmdline_user_args():
-		await upper()
-	else:
-		await lower()
+	await fork_doors()
 	check(route_ok,"Route through the room graph")
 	expect_save_untouched()
 	finish("CITY")
 
-func hit_hammer(index:int) -> bool:
-	var target:Node2D = level.works.tips[index]
-	if player.air_state in [player.AirState.GROUNDED,player.AirState.LANDING]:
-		await tap(KEY_W)
-	var bridge:bool = index < level.works.settings.hammers.size()
-	var before:int = level.works.relay_hits
-	for i in 145:
-		var d := target.position - player.position
-		set_action("ui_right",d.x>3)
-		set_action("ui_left",d.x< -3)
-		if bridge and level.works.ringing.has(index) or not bridge and level.works.relay_hits > before:
-			return true
-		if d.x>240 and d.y>58 and not player.aerial_dash_used:
-			await tap(KEY_U)
-		elif d.y < 55 and player.velocity.y > -170 and not player.double_jump_used and absf(d.x)>35:
-			await tap(KEY_W)
-		elif absf(d.x)<32 and d.y>5 and player.attack_state==player.AttackState.NONE:
-			await tap(KEY_X)
-		await physics_frame
-	print("Missed hammer ",index," at ",player.position," target ",target.position," relay ",level.works.relay_hits)
-	return false
-
-func return_dart(high:bool) -> void:
-	for i in 510:
-		if level.works.opened.reed_gate or (not high and level.works.low_reed_returned):
-			return
-		var distance:float = level.works.bolt_source.position.x - player.position.x
-		if level.works.bolt_dir < 0 and distance > 0 and distance < 70:
-			await tap(KEY_K)
-		await physics_frame
-
-func upper() -> void:
-	for v in [["fork",185,436],["fork",282,358],["fork",195,279],["fork",257,199],["fork",152,118],["fork",140,45,"climb"],["teeth",140,484,"climb"],["teeth",185,485],["teeth",202,485]]:
-		await waypoint(v)
-	if not route_ok:
-		return
-	for i in level.works.settings.hammers.size():
-		if not await hit_hammer(i):
-			break
-	release_inputs()
-	check(level.works.opened.chain_gate,"Follow all four ringing hammers without landing")
-	if not level.works.opened.chain_gate:
-		route_ok = false
-		return
+func fork_doors() -> void:
+	for stop in [["quay",384,519],["quay",648,519],["fork",69,520],["fork",848,520]]:
+		await waypoint(stop)
+	if not route_ok: return
 	set_action("ui_right",true)
-	await frames(4)
-	await tap(KEY_U)
-	await frames(30)
+	await frames(45)
 	release_inputs()
-	await move_to("bolt",70,520)
-	if not route_ok:
-		return
-	await frames(8)
-	await tap(KEY_D)
-	send_key(KEY_D,true)
-	await frames(14)
-	send_key(KEY_S,true)
-	await frames(12)
-	await frames(20)
-	send_key(KEY_S,false)
-	await frames(95)
-	send_key(KEY_D,false)
-	await move_to("bolt",460,520)
-	await move_to("bolt",487,250,"climb")
-	set_action("ui_up",true)
-	await frames(75)
-	release_inputs()
-	send_key(KEY_D,true)
-	await tap(KEY_W)
-	await frames(48)
-	send_key(KEY_D,false)
-	if not route_ok:
-		return
-	for v in [["bolt",565,520],["bolt",764,520]]:
-		await waypoint(v)
-	if not route_ok:
-		return
-	await return_dart(false)
-	if level.works.low_reed_returned:
-		await move_to("bolt",794,410)
-		await return_dart(true)
-	check(level.works.opened.reed_gate,"Return the low and high reeds from their landings")
-	if not level.works.opened.reed_gate:
-		route_ok = false
-		return
-	await move_to("tide",85,520)
-	if not route_ok:
-		return
-	for i in 2200:
-		var age:float = level.tide.surge_age()
-		if age < -8:
-			break
-		await physics_frame
-	await move_to("tide",267,485)
-	await frames(8)
-	var first:int = level.works.settings.hammers.size()
-	if await hit_hammer(first) and await hit_hammer(first+1):
-		set_action("ui_right",true)
-		await frames(8)
-		await tap(KEY_U)
-		await frames(78)
-	release_inputs()
-	check(level.works.save.has_completed(level.works.RACE),"Chain the sluice hammers and reach the east bank")
-	if not level.works.save.has_completed(level.works.RACE):
-		route_ok = false
-		return
-	await move_to("keeper",612,520)
-	if not route_ok:
-		return
-	var boss=level.bronze_toad
-	for i in 27000:
-		if boss.defeated:
-			break
-		set_action("ui_right",true)
-		if absf(player.position.x-(boss.position.x+34))>120 and i%100==1:
-			await tap(KEY_U)
-		if i%12==1:
-			await tap(KEY_J)
-		if boss.ball==boss.Ball.GOLD and i%20==5:
-			await tap(KEY_K)
-		await physics_frame
-	release_inputs()
-	check(boss.defeated,"Defeat the guard with Lan's attacks")
-	if boss.defeated:
-		await move_to("door",416,520)
-		await tap(KEY_E)
-		await frames(14)
-		await advance_dialogue()
-		check(level.chapter_story.save.has_completed(level.chapter_story.PASSAGE),"Open the cicada door from above")
-
-func lower() -> void:
-	for v in [["fork",880,520],["bell",45,518],["bell",66,448],["bell",166,505,"swim"],["bell",345,517],["bell",332,450]]:
-		await waypoint(v)
-	if not route_ok:
-		return
+	var east_wall := level.get_node("Districts/fork/Geometry/Rock/Fork9") as Control
+	var distance := east_wall.global_position.x - player.global_position.x
+	check(level.current_space == "fork" and distance > 0 and distance < 32, "Walking past the pavilion stops at the east wall")
+	await move_to("fork",588,520)
+	if not route_ok: return
 	await tap(KEY_E)
-	await frames(90)
-	await advance_dialogue()
-	check(level.resonance.awake,"Ring bell by hand")
-	for v in [["bell",453,389],["bell",586,323],["bell",728,263],["bell",850,209]]:
-		await waypoint(v)
-	await hear_fragment("outer_waterway")
-	if route_ok:
-		await wait_ebb()
-	for v in [["bell",200,510,"swim"],["sump",166,153,"swim"],["sump",275,242,"swim"],["sump",279,407,"swim"],["sump",290,468,"swim"],["sump",85,464,"swim"]]:
-		await waypoint(v)
-	await hear_fragment("vault")
-	if route_ok:
-		await wait_ebb()
-	for v in [["sump",290,464,"swim"],["sump",440,470,"swim"],["sump",800,470,"swim"],["pipe",285,466,"swim"],["pipe",660,466,"swim"],["grotto",416,456,"swim"],["grotto",880,453,"swim"],["grotto",852,377,"swim"]]:
-		await waypoint(v)
-	if route_ok:
-		set_action("ui_up",true)
-		await frames(140)
-		release_inputs()
-		await frames(8)
-		await tap(KEY_W)
-		await move_to("grotto",854,230,"climb")
-	await hear_fragment("archive")
-	if not route_ok:
-		return
-	for v in [["grotto",748,297],["grotto",664,451,"swim"],["grotto",435,475,"swim"],["grotto",144,463,"swim"],["grotto",148,269,"swim"],["grotto",150,109,"swim"],["beast",150,492,"swim"],["beast",259,516]]:
-		await waypoint(v)
-	if not route_ok:
-		return
-	await move_to("beast",560,520)
-	var lion=level.stone_lion
-	for i in 900:
-		if lion.hammer_inspected:
-			break
-		if i%20==0:
-			await tap(KEY_J)
-		if is_instance_valid(lion._hammer_dialogue):
-			await tap(KEY_E)
-		await physics_frame
-	check(lion.hammer_inspected,"Test the counterweight with a sword strike")
-	await move_to("beast",320,520)
+	await frames(44)
+	check(level.current_space == "listening_entry", "Enter the listening canal through its door")
 	await tap(KEY_E)
-	await move_to("beast",582,520)
-	for i in 1250:
-		if lion.broken:
-			break
-		if lion.state==lion.State.CHARGE and lion.position.distance_to(player.position)<275:
-			await tap(KEY_W)
-		await physics_frame
-	check(lion.broken,"Lure the stone lion into the counterweight")
-	if not lion.broken:
-		return
-	await move_to("beast",805,520)
-	await hear_fragment("sealed_street")
-	await move_to("beast",842,520)
-	await tap(KEY_E)
-	check(level.works.opened.side_gate,"Acquire tidebell tongue and open the side shaft")
-	for v in [["side",260,450],["side",440,377],["side",594,301],["side",760,226],["side",867,148],["side",780,73],["door",770,511,"climb"],["door",431,520]]:
-		await waypoint(v)
-	if not route_ok:
-		return
-	await tap(KEY_E)
-	await frames(15)
-	await advance_dialogue()
-	check(level.chapter_story.save.has_completed(level.chapter_story.PASSAGE) and not level.bronze_toad.defeated,"Open the shared door while the guard lives")
-	await frames(78)
-	await tap(KEY_E)
-	var enc  :=  level.twin_fish_encounter
-	check(player.position.x>enc.arena.position.x,"Step through the open arch into the west landing")
-	for i in 1800:
-		if enc.battle_ready:
-			break
-		set_action("ui_right",not enc.engaged)
-		if player.input_frozen and not enc.engaged:
-			await advance_dialogue()
+	await frames(44)
+	check(level.current_space == "fork", "Return through the listening door")
+	await move_to("fork",365,520)
+	await move_to("fork",365,430)
+	await move_to("fork",260,343)
+	if not route_ok: return
+	set_action("ui_left",true)
+	for i in 120:
+		if level._crossing_door: break
 		await physics_frame
 	release_inputs()
-	check(enc.battle_ready,"Reach the formal Twin Fish fight")
-	if enc.battle_ready:
-		var reduced  :=  true
-		for fish_body in [enc.fish.xuan,enc.fish.zhao]:
-			var stats = fish_body.combat_stats
-			print("FISH HEALTH ",stats.health,"/",stats.max_health)
-			reduced = reduced and absf(float(stats.health)/stats.max_health-0.8)<0.01
-		check(reduced,"Both fish begin at eighty percent with the tidebell tongue")
-
-
-
-func wait_ebb() -> void:
-	release_inputs()
-	for i in 2400:
-		if level.tide.surge_age()>5.55 and level.tide.surge_age()<6.45:
-			break
-		await physics_frame
+	await frames(44)
+	check(level.upper_route.room_at(player.position) == level.upper_route.rooms[0], "Cross the upper workshop threshold")

@@ -10,8 +10,7 @@ func run() -> void:
 	root.add_child(level)
 	current_scene = level
 	if connected_route:
-		level.player.reset_after_map_fall(level.marker("pool_bank"))
-		level.snap_camera()
+		await level._cross_hidden_door()
 		root.title = "归航星 · 镇西门 · 正式美术试玩"
 		print("ZHENXI_CONNECTED_ROUTE_READY")
 		return
@@ -54,43 +53,7 @@ func run() -> void:
 		root.title = "归航星 · 镇西门美术试玩"
 		print("ZHENXI_ART_PLAYTEST_READY")
 		return
-	if "--hidden-door" in OS.get_cmdline_user_args():
-		level.player.reset_after_map_fall(level.marker("pool_bank"))
-		level.snap_camera()
-		root.title = "归航星 · A18 水下隐藏入口试玩"
-		print("A18_HIDDEN_DOOR_PLAYTEST_READY")
-		return
-	if "--west-shaft-return" in OS.get_cmdline_user_args():
-		level.player.reset_after_map_fall(level.marker("dry_base"))
-		level.snap_camera()
-		root.title = "归航星 · A22 正式美术试玩"
-		print("WEST_SHAFT_RETURN_PLAYTEST_READY")
-		return
-	if "--west-shafts" in OS.get_cmdline_user_args():
-		level.player.reset_after_map_fall(level.marker("w60"))
-		level.snap_camera()
-		root.title = "归航星 · A4–A19 / A22 西井试玩"
-		print("WEST_SHAFTS_PLAYTEST_READY")
-		return
-	if "--toad" in OS.get_cmdline_user_args():
-		if "--stake-chain" in OS.get_cmdline_user_args():
-			level.bronze_toad.engagement_changed.connect(func(active: bool) -> void:
-				if active:
-					# Pop order: throw, fracture slam, then the other two normal combinations.
-					level.bronze_toad._bag.assign([1, 2, 3, 0])
-					level.bronze_toad._fracture_next = true)
-		level.player.reset_after_map_fall(level.bronze_toad.retry_at)
-		level.snap_camera()
-		root.title = "归航星 · A25 青铜金蟾试玩"
-		print("A25_PLAYTEST_READY")
-		return
-	if "--edges" in OS.get_cmdline_user_args():
-		await capture_edges(level)
-		await close_capture(level)
-		return
-	if "--routes" in OS.get_cmdline_user_args():
-		await capture_routes(level)
-	if not "--overview" in OS.get_cmdline_user_args() and not "--routes" in OS.get_cmdline_user_args():
+	if not "--overview" in OS.get_cmdline_user_args():
 		root.title = "归航星 · 沉没古城 · 全图试玩 · F3 设计图"
 		level.works.survey.visible = true
 		print("SUNKEN_CAVERN_PLAYTEST_READY")
@@ -118,13 +81,13 @@ func run() -> void:
 
 
 static func stage_court(level: SunkenCavern) -> void:
-	await level._cover_zhenxi_crossing()
+	await level._cover_door_crossing()
 	if level._hidden_gallery == null:
 		level._prepare_hidden_gallery()
 	level._inside_gallery = true
 	level._set_gallery_music(true)
 	level._arrive_at_zhenxi_court(^"Arrival")
-	await level._uncover_zhenxi_crossing()
+	await level._uncover_door_crossing()
 
 
 func preview_return_cut(level: SunkenCavern) -> void:
@@ -135,7 +98,7 @@ func preview_return_cut(level: SunkenCavern) -> void:
 	gallery._on_general_defeated()
 	gallery.place_at_victory_return()
 	var departure: Marker2D = level._gallery_exit
-	var a18_bank: Vector2 = level.marker("pool_bank")
+	var quay_spawn: Vector2 = level.start
 	level.snap_camera()
 	root.title = "归航星 · 镇西门战后回程预演"
 	print("ZHENXI_SLUICE_RETURN_READY")
@@ -176,42 +139,10 @@ func preview_return_cut(level: SunkenCavern) -> void:
 			break
 		await physics_frame
 	check(not level._inside_gallery and level.player == lan, "The real departure interaction returns the same Lan to A18")
-	check(lan.position.distance_to(a18_bank) <= 24.0 and not lan.is_in_deep_water(),
+	check(lan.position.distance_to(quay_spawn) <= 24.0 and not lan.is_in_deep_water(),
 		"The return lands on the A18 dry bank, clear of the submerged entrance")
 	expect_save_untouched()
 	finish("ZHENXI SLUICE RETURN")
-
-
-func capture_routes(level: Node2D) -> void:
-	var output := OS.get_environment("HOMING_STAR_TEST_OUTPUT")
-	DirAccess.make_dir_recursive_absolute(output)
-	var nav: Dictionary = level.layout.navigation.points
-	var west: Vector2 = level.vector(nav.route_1_3).lerp(level.vector(nav.route_1_4),0.5)
-	var east: Vector2 = level.vector(nav.route_20_4).lerp(level.vector(nav.route_20_5),0.5)
-	for sample in [["west_loft",west],["central_atrium",level.marker("c41")],["east_street",east],["foundation",level.marker("w60")]]:
-		# These resets are render samples, never evidence of route reachability.
-		level.player.reset_after_map_fall(sample[1])
-		for i in 12: await physics_frame
-		level.snap_camera()
-		await process_frame
-		await RenderingServer.frame_post_draw
-		root.get_texture().get_image().save_png(output.path_join(sample[0]+".png"))
-
-
-func capture_edges(level: Node2D) -> void:
-	var output := ProjectSettings.globalize_path("res://../homeing-star-test/artifacts/cavern_edges_20261101")
-	DirAccess.make_dir_recursive_absolute(output)
-	for sample in [["central", "c37"], ["gate", "gate"], ["lower", "dry_base"], ["water", "vault"]]:
-		level.player.reset_after_map_fall(level.marker(sample[1]))
-		for i in 18: await physics_frame
-		level.snap_camera()
-		for enabled in [false, true]:
-			level.rock_edges_enabled = enabled
-			level.queue_redraw()
-			await process_frame
-			await RenderingServer.frame_post_draw
-			var suffix := "soft" if enabled else "hard"
-			root.get_texture().get_image().save_png(output.path_join(sample[0] + "_" + suffix + ".png"))
 
 
 func close_capture(level: Node2D) -> void:

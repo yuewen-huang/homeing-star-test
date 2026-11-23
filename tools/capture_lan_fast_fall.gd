@@ -10,12 +10,12 @@ func run() -> void:
 	current_scene=level
 	player=level.player
 	await step(18)
-	var floor_y: float=level.marker("gate").y
+	var floor_y: float=level.start.y
 	for height in [80.0,220.0,400.0]:
 		release()
 		Input.action_release(&"jump")
 		# This column has clearance above the full 400 px drop on the gate floor.
-		player.reset_after_map_fall(Vector2(2100,floor_y-height))
+		player.reset_after_map_fall(Vector2(level.start.x,floor_y-height))
 		player.air_state=player.AirState.FALLING
 		player.play_air_animation(&"fall")
 		var key := InputEventKey.new()

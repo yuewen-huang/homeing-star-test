@@ -12,7 +12,6 @@ func run() -> void:
 	root.add_child(level)
 	current_scene = level
 	player = level.player
-	player.reset_after_map_fall(level.marker("pool_bank"))
 	await step(12)
 	if "--garrison-only" in OS.get_cmdline_user_args():
 		await check_garrison()
@@ -85,7 +84,7 @@ func check_garrison() -> void:
 
 
 func check_route(save: SaveProgressService) -> void:
-	var gallery := await start_fight_from_a18(save)
+	var gallery := await start_chapter_fight(save)
 	if gallery == null:
 		return
 	var layout := gallery.get_node("ChapterLayout") as Node2D

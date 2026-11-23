@@ -1,7 +1,15 @@
-extends "../../tests/levels/chapter_2_underwater/cavern/test_sunken_cavern_graybox.gd"
-## Real-time route from the dry A18 bank through the hidden chapter and back.
+extends "../../tests/support/harness.gd"
+## Standalone route from the flooded entrance to the lamp court and back.
 ## The actual boss must start from the main lamp. Only victory is injected to
 ## isolate the postfight route from the separate combat playtest.
+
+const SCENE := "res://scenes/levels/chapter_2_underwater/cavern/sunken_cavern.tscn"
+const ACTIONS := [&"ui_left", &"ui_right", &"ui_up", &"ui_down", &"jump", &"interact"]
+var level: Node2D
+var player: LanPlayer
+var frames := 0
+var min_oxygen := 1.0
+var output := ""
 
 const HELMET_FACT := &"zhenxi_xiaowu_helmet"
 const SLUICE_PREVIEW := preload("preview_zhenxi_sluice.gd")
@@ -35,7 +43,6 @@ func run() -> void:
 	root.add_child(level)
 	current_scene = level
 	player = level.player
-	player.reset_after_map_fall(level.marker("pool_bank"))
 	level.snap_camera()
 	await step(12)
 	if shadow_only:
@@ -71,7 +78,7 @@ func run() -> void:
 
 
 func play_route(save: SaveProgressService) -> void:
-	var gallery := await start_fight_from_a18(save)
+	var gallery := await start_chapter_fight(save)
 	if gallery == null:
 		return
 	print("Route-only fixture: injecting victory after proving the actual battle starts")
@@ -82,17 +89,7 @@ func play_route(save: SaveProgressService) -> void:
 
 
 func enter_chapter() -> Node2D:
-	await interact()
-	check(not level._inside_gallery, "A18 cannot be entered from the dry bank")
-	if not await swim_to(Vector2(8960, 2880), "swim") \
-			or not await swim_to(Vector2(9088, 3328), "swim") \
-			or not await swim_to(Vector2(9472, 3435), "swim"):
-		return null
-	await interact()
-	await step(35)
-	check(level._inside_gallery and player == level.player, "A18 opens with E for the same Lan")
-	if not level._inside_gallery:
-		return null
+	await level._cross_hidden_door()
 	var music := level.get_node_or_null("ZhenxiGateMusic") as AudioStreamPlayer
 	check(music != null and music.playing, "The gallery starts its own music")
 	if is_instance_valid(level.sluice) and not await cross_sluice(level.sluice):
@@ -142,7 +139,7 @@ func resolve_passage(id: StringName) -> void:
 	await step(32)
 
 
-func start_fight_from_a18(save: SaveProgressService) -> Node2D:
+func start_chapter_fight(save: SaveProgressService) -> Node2D:
 	var gallery := await enter_chapter()
 	if gallery == null:
 		return null
@@ -287,7 +284,7 @@ func interact_at_lamp(gallery: Node2D, expect_dialogue: bool, approach := false)
 
 
 func verify_gate_entry(save: SaveProgressService) -> void:
-	var gallery := await start_fight_from_a18(save)
+	var gallery := await start_chapter_fight(save)
 	if gallery == null:
 		return
 	level._retry_hidden_battle()
@@ -361,9 +358,9 @@ func leave_after_victory(gallery: Node2D, save: SaveProgressService) -> void:
 	check(not is_instance_valid(gallery.general), "Walking back does not restart the fight")
 	await interact()
 	await resolve_passage(level.DEPARTURE_COMIC_ID)
-	var bank: Vector2 = level.marker("pool_bank")
+	var bank: Vector2 = level.start
 	check(not level._inside_gallery and not player.is_in_deep_water() and player.position.distance_to(bank) < 24.0,
-		"The main gate returns to the A18 dry bank")
+		"The main gate returns to the quay")
 	if level._inside_gallery:
 		return
 	check(music == null or not music.playing, "The gallery track releases when Lan leaves")
@@ -462,3 +459,42 @@ func capture(label: String) -> void:
 	await process_frame
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(output.path_join(label + ".png"))
+
+
+func step(count: int) -> void:
+	for i in count:
+		await physics_frame
+		frames += 1
+		min_oxygen = minf(min_oxygen, level.oxygen.fraction())
+
+func standing() -> bool:
+	return player.air_state in [LanPlayer.AirState.GROUNDED, LanPlayer.AirState.LANDING, LanPlayer.AirState.ROLL_LANDING]
+
+func release() -> void:
+	for action in ACTIONS: Input.action_release(action)
+
+func walk_plain(target: Vector2) -> bool:
+	release()
+	var seconds := absf(player.position.x - target.x) / 150.0 + 5
+	for i in int(seconds * 60):
+		var dx := target.x - player.position.x
+		if absf(dx) < 9 and absf(player.position.y - target.y) < 9 and standing():
+			release()
+			await step(4)
+			return true
+		if absf(dx) > 5: Input.action_press(&"ui_right" if dx > 0 else &"ui_left")
+		else:
+			Input.action_release(&"ui_left")
+			Input.action_release(&"ui_right")
+		await step(1)
+	release()
+	check(false, "Walk stuck toward %s at %s state=%s" % [target, player.position, player.air_state])
+	await capture("stuck_walk")
+	return false
+
+func end_test() -> void:
+	release()
+	level.queue_free()
+	await wait_frames(5)
+	expect_save_untouched()
+	finish("ZHENXI CHAPTER")

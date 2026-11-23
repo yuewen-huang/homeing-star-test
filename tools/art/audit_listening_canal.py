@@ -54,13 +54,7 @@ def art_inputs(source):
 
 # Gameplay objects that can disappear completely even when interactions still work.
 # A live draw site must consume the declared texture, in addition to its existing file.
-def check_mechanism(refs):
-    required = {
-        "entry": {"TROUGH": "pivot_trough.png", "BELL": "canal_bell.png"},
-        "rig": {"WHEEL": "scoop_wheel.png", "DRUM": "rope_drum.png",
-                "BLOCK": "sheave_block.png", "EYE": "lashed_eye.png",
-                "HEMP": "quay_hemp_rope.svg", "BOARDS": "drawbridge_boards.webp"},
-    }
+def check_mechanism(refs, required):
     missing = []
     for script, parts in required.items():
         source = resource(refs[script]).read_text(encoding="utf-8-sig") if script in refs else ""
@@ -71,9 +65,9 @@ def check_mechanism(refs):
             if binding and resource(uri).is_file():
                 declared[binding[1]] = Path(uri).name
         used = set()
-        for call in re.finditer(r"^[ \t]*(?:\w+\.)?(draw_texture_rect|draw_polygon)\(", source, re.M):
+        for call in re.finditer(r"^[ \t]*(?:\w+\.)?(draw_texture_rect|draw_polygon|_draw_link)\(", source, re.M):
             args = arguments(source, call.end())
-            slot = 0 if call[1] == "draw_texture_rect" else 3
+            slot = 3 if call[1] == "draw_polygon" else 0
             if len(args) > slot:
                 used.add(args[slot])
         missing.extend(name for key, name in parts.items() if declared.get(key) != name or key not in used)
@@ -158,10 +152,43 @@ def main():
                      and resource(HANDLE).is_file() and all(nodes.get(key, {}).get("visible") != "false"
                      for key in ("ListeningEntry", "TroughPivot", "TroughPivot/TroughLever")))
             print("  水槽把手独立贴图及场景挂接：" + ("通过" if valid else "缺失或隐藏"))
-            missing = check_mechanism(refs)
+            missing = check_mechanism(refs, {
+                "entry": {"TROUGH": "pivot_trough.png", "BELL": "canal_bell.png"},
+                "rig": {"WHEEL": "scoop_wheel.png", "DRUM": "rope_drum.png",
+                        "BLOCK": "sheave_block.png", "EYE": "lashed_eye.png",
+                        "HEMP": "hoist_hemp.png", "BOARDS": "drawbridge_boards.webp"},
+            })
             print("  水槽、钟、槽轮、卷筒、滑轮、吊耳、绳股、桥板的贴图与绘制引用：" +
                   ("缺少 " + "、".join(missing) if missing else "齐全"))
             valid = valid and not missing
+            fittings = ("hoist_trestle", "sheave_bracket", "wheel_stand", "trough_stand",
+                       "clapper_hanger", "bell_pushrod", "bell_crank", "clapper_arm",
+                       "bridge_fascia", "bridge_strap", "hinge_pin", "sling_shackle")
+            parts = {name.upper(): name + ".png" for name in fittings}
+            parts.update(BEARING="quay_bearing.png", STRIKER="bell_striker.png")
+            missing = check_mechanism(refs, {
+                "scenery": {"FEEDER": "feeder_flume.png", "POST": "flume_post.png"},
+                "rig": parts,
+            })
+            print("  供水木槽与立柱、支架、吊环、桥端、箍带、轴销和钟槌传动：" +
+                  ("缺少 " + "、".join(missing) if missing else "齐全"))
+        else:
+            missing = check_mechanism(refs, {"lock": {"SALT_CART": "salt_cart_wreck.png",
+                                                       "CART_RUTS": "cart_ruts.png"}})
+            print("  西岸运盐残车与车辙绘制引用：" + ("缺失" if missing else "通过"))
+            valid = valid and not missing
+            pieces = ("iron_leaf", "rust_bolt", "lintel", "pennant", "chain_link",
+                      "anchor_eye", "scorched_cloth", "tidal_water", "gatehouse")
+            parts = {name.upper(): name + ".png" for name in pieces}
+            parts.update(QUAY="quay_lockwork.webp", SEATED_RIG="quay_seated_rig.webp",
+                         TIMBER="quay_gate_timber.png",
+                         HATCH="quay_hatch.png", HULL="quay_hull.png",
+                         UPPER_STAY="quay_upper_stay.png", LOWER_STAY="quay_lower_stay.png",
+                         KEY_TIP="quay_key_tip.png", KEY_HEEL="quay_key_heel.png")
+            missing = check_mechanism(refs, {"lock": parts})
+            print("  检修井、横栓两态、船与锚链、闸门三闩及闸后遗物：" +
+                  ("缺少 " + "、".join(missing) if missing else "齐全"))
+        valid = valid and not missing
         for name, node in nodes.items():
             if name.startswith("BackstageBay/"):
                 continue  # The theatre begins well beyond the first lock.

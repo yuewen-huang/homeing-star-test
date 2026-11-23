@@ -1,7 +1,7 @@
 extends "../../tests/support/harness.gd"
 
 const LAN := preload("res://scenes/player/lan/lan_player.tscn")
-const BACKDROP := preload("res://assets/levels/chapter_2_underwater/cavern/environment/deep_cavern/deep_cavern_pool_1536x1024.png")
+const BACKDROP := preload("res://assets/levels/chapter_2_underwater/cavern/environment/zhenxi_rebuilt/skyline.png")
 const STONE := preload("res://assets/levels/chapter_2_underwater/city/environment/terrain/stone_masonry_1254x1254.png")
 
 const STEP_IN_SWEEP := &"step_in_sweep"

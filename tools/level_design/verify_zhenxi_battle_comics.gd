@@ -18,10 +18,9 @@ func run() -> void:
 	root.add_child(level)
 	current_scene = level
 	player = level.player
-	player.reset_after_map_fall(level.marker("pool_bank"))
 	level.snap_camera()
 	await step(12)
-	var gallery := await start_fight_from_a18(save)
+	var gallery := await start_chapter_fight(save)
 	var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
 	var previous := assist.difficulty
 	assist.set_difficulty(BattleAssistSettingsService.Difficulty.EASY)

@@ -133,47 +133,12 @@ func lake() -> void:
 func cavern() -> void:
 	var map := current_scene as SunkenCavern
 	var story = map.chapter_story
-	check(story != null and map.resonance.echoes.size() == 4, "The story route installs all four bell echoes")
+	check(story != null and map.quay_repair != null, "Arrival installs the quay bell and chapter dialogue")
 	if story == null: return
-	map.resonance._on_bell_struck()
+	map.resonance.sound_quay_bell(map.quay_repair.wave)
 	await wait_frames(3)
 	await read(story.beat.dialogue, Text.CAVERN_ENTRY, "cavern_bell")
-	await stand_at(map, story._gate_prompt.target.position)
-	press(KEY_E)
-	await read(story.beat.dialogue, Text.CICADA_LOCKED, "cicada_locked")
-	check(not save.has_completed(CavernStory.PASSAGE) and not story._gate.get_child(0).disabled, "Cicada physically bars the hall on missing echoes")
-	check(save.try_complete_fact(map.resonance.WALL_BROKEN), "Fixture restores the wall puzzle before testing its follow-on")
-	map.stone_lion._wall_shape.disabled = true
-	map.stone_lion.broken = true
-	map.resonance.awake = true
-	for id: String in CavernStory.ECHO_ROWS:
-		var target: Vector2 = map.resonance.echoes[id]
-		await stand_at(map, target + Vector2(0.0, 31.0))
-		map.resonance._on_echo_arrived(id)
-		await wait_frames(4)
-		await read(story.beat.dialogue, CavernStory.ECHO_ROWS[id], "echo_" + id)
-		check(map.resonance.collected.has(id) and save.has_completed(story._heard_fact(id)), "Collected and heard " + id)
-	await stand_at(map, story._memory_prompt.target.position)
-	press(KEY_E)
-	await read(story.beat.dialogue, Text.GENERAL_MEMORY, "general_memory")
-	check(save.has_completed(CavernStory.GENERAL), "The optional general memory can be read at its existing branch")
-	await stand_at(map, story._gate_prompt.target.position)
-	press(KEY_E)
-	await read(story.beat.dialogue, Text.CICADA_OPEN, "cicada_open")
-	check(save.has_completed(CavernStory.PASSAGE) and not story._gate.get_child(0).disabled,
-		"The finished blessing commits progress while the stone leaves still block the entrance")
-	for frame in 65:
-		if story._gate.get_child(0).disabled: break
-		await physics_frame
-	check(story._gate.get_child(0).disabled, "The actual passage opens after the guard folds and the leaves have slid away")
-	await stand_at(map, map.vector(map.layout.markers.boss))
-	await read(story.beat.dialogue, Text.FISH_PREBATTLE, "fish_prebattle")
-	check(save.has_completed(CavernStory.FISH) and not paused and map.player.can_process(), "The chapter ends its revised story at prebattle with controls restored")
-
-func stand_at(map: SunkenCavern, at: Vector2) -> void:
-	map.player.reset_after_map_fall(at)
-	map.snap_camera()
-	await wait_frames(3)
+	check(save.has_completed(CavernStory.ENTRY), "Finishing the quay dialogue records the cavern entrance")
 
 func wait_for(path: String) -> void:
 	for tick in 250:

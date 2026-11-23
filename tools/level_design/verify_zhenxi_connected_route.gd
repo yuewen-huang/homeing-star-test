@@ -14,13 +14,12 @@ func run() -> void:
 	root.add_child(level)
 	current_scene = level
 	player = level.player
-	player.reset_after_map_fall(level.marker("pool_bank"))
 	level.snap_camera()
 	await step(12)
 	if "--legacy-victory" in OS.get_cmdline_user_args():
 		await check_legacy_visit(save)
 	elif "--layout-only" in OS.get_cmdline_user_args():
-		var gallery := await start_fight_from_a18(save)
+		var gallery := await start_chapter_fight(save)
 		if gallery != null:
 			gallery._on_general_defeated()
 			gallery.place_at_victory_return()
@@ -33,35 +32,11 @@ func run() -> void:
 	await end_test()
 
 
-func start_fight_from_a18(save: SaveProgressService) -> Node2D:
-	await interact()
-	check(not level._inside_gallery, "The real A18 dry bank is outside the hidden arch")
-	if not await swim_to_arch():
-		check(false, "Lan can dive from the A18 bank to the hidden arch")
-		return null
-	await interact()
-	await step(35)
+func start_chapter_fight(save: SaveProgressService) -> Node2D:
+	await level._cross_hidden_door()
 	var section: ZhenxiSluiceSection = level.sluice
-	var entered := is_instance_valid(section) and section.lan == player and player.is_in_deep_water()
-	check(entered and section.camera.is_current(), "The arch brings the same Lan to the flooded end of the new route")
-	if not entered:
-		return null
-	await capture("02_arch_into_sluice")
-
-	await interact()
-	await step(35)
-	check(not level._inside_gallery and not is_instance_valid(level.sluice) and player.is_in_deep_water(),
-		"Retreating through the entrance restores the original submerged arch and camera")
-	check(level.camera.is_current() and not save.has_completed(level._hidden_gallery.CHAPTER_VICTORY),
-		"Retreating leaves the original route available without setting victory")
-	if level._inside_gallery or not await swim_to(Vector2(9472, 3435), "swim"):
-		check(false, "Lan can approach the arch again after retreating")
-		return null
-	await interact()
-	await step(35)
-	section = level.sluice
-	check(is_instance_valid(section) and section.lan == player, "Reentering opens a fresh approach with the same player")
 	if not is_instance_valid(section):
+		check(false, "Standalone chapter opens in the sluice")
 		return null
 	var pool := section.player_rect(ZhenxiSluiceSection.POOL)
 	var track := level.get_node("ZhenxiGateMusic") as AudioStreamPlayer
@@ -122,20 +97,16 @@ func leave_after_victory(gallery: Node2D, save: SaveProgressService) -> void:
 	check(level._can_use_hidden_door(), "Lan can still use the main gate from the far jamb")
 	await interact()
 	await resolve_passage(level.DEPARTURE_COMIC_ID)
-	var bank: Vector2 = level.marker("pool_bank")
+	var bank: Vector2 = level.start
 	check(not level._inside_gallery and level.player == player and not player.is_in_deep_water()
-		and player.position.distance_to(bank) < 24.0, "The completed route returns the same Lan directly to the A18 dry bank")
+		and player.position.distance_to(bank) < 24.0, "The completed route returns the same Lan directly to the quay")
 	var track := level.get_node("ZhenxiGateMusic") as AudioStreamPlayer
-	check(not track.playing, "The gallery theme releases on the A18 bank")
+	check(not track.playing, "The gallery theme releases on the quay")
 	await capture("07_back_on_a18")
 	if level._inside_gallery:
 		return
 
-	if not await swim_to_arch():
-		check(false, "The arch is still reachable after the completed visit")
-		return
-	await interact()
-	await step(35)
+	await level._cross_hidden_door()
 	check(level._inside_gallery and level.sluice == null and gallery.won and not is_instance_valid(gallery.general),
 		"A post-victory revisit goes directly to the lamp and does not replay the approach or combat")
 	check(save.get_item_count(HELMET_FACT) == 1 and save.has_completed(gallery.ARCHIVE_READ),
@@ -182,11 +153,7 @@ func resolve_passage(id: StringName) -> void:
 
 func check_legacy_visit(save: SaveProgressService) -> void:
 	save.try_complete_fact(&"zhenxi_last_lamp_chapter_defended")
-	if not await swim_to_arch():
-		check(false, "The legacy save can reach the original arch")
-		return
-	await interact()
-	await step(35)
+	await level._cross_hidden_door()
 	var gallery: Node2D = level._hidden_gallery
 	check(gallery != null and gallery.won and level.sluice == null and level._passage_comic == null,
 		"An existing victory enters the restored court without forcing the new approach")
@@ -194,14 +161,8 @@ func check_legacy_visit(save: SaveProgressService) -> void:
 		return
 	await interact()
 	await step(35)
-	check(not level._inside_gallery and player.position.distance_to(level.marker("pool_bank")) < 24.0,
+	check(not level._inside_gallery and player.position.distance_to(level.start) < 24.0,
 		"The existing victory can use the new short return")
 	for id: StringName in [level.ARRIVAL_COMIC_ID, level.DEPARTURE_COMIC_ID]:
 		check(save.get_cinematic_status(id) == SaveProgressService.CinematicStatus.UNHANDLED,
 			"Loading or departing on the old save does not claim to have played %s" % id)
-
-
-func swim_to_arch() -> bool:
-	return await swim_to(Vector2(8960, 2880), "swim") \
-		and await swim_to(Vector2(9088, 3328), "swim") \
-		and await swim_to(Vector2(9472, 3435), "swim")
