@@ -159,7 +159,7 @@ func run() -> void:
 	arena._settle_yin()
 	check(is_equal_approx(arena.yin_weak_seconds, 3.5), "parrying every 笔走龙蛇 strike still gives at most 3.5 s")
 	enter_yin(0)
-	arena.interrupt_for_throw()
+	arena.interrupt_for_pulse_burst()
 	check(arena.state == PandaGoArena.STATE_YIN_WEAK and is_equal_approx(arena.yin_weak_seconds, 0.8),
 		"throwing during a skill leaves only a short recovery after the throw")
 	# --- 泼墨惊鸿 / 一笔山河
@@ -209,7 +209,7 @@ func run() -> void:
 		"committed gold stroke shows the shared gold flash")
 	player.pulse_duel.player_energy = 100
 	player.pulse_duel.detonate()
-	check(arena.panda.blocks_boss_throw() and player.pulse_duel.player_energy == 100, "gold windup locks the burst without spending energy")
+	check(arena.panda.blocks_pulse_burst() and player.pulse_duel.player_energy == 100, "gold windup locks the burst without spending energy")
 	player.start_parry()
 	var health := player.combat_stats.health
 	arena.tick(0.12)
@@ -232,7 +232,7 @@ func run() -> void:
 	var panda_x := arena.panda.global_position.x
 	var duel := player.pulse_duel
 	duel.player_energy = 100
-	duel.boss_internal_hp = 100
+	duel.boss.pulse_wound = 100
 	player.cast_shadow_claw_storm(arena.panda)
 	for tick in 110: await physics_frame
 	check(duel.pushes == 1 and arena.panda.combat_stats.health == full_hp - 140,

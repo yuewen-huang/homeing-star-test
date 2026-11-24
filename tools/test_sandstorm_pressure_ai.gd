@@ -41,14 +41,13 @@ func run() -> void:
 					crossed=true
 				if spec[2] in ["reset","defeat"]:
 					if spec[2]=="reset": actor.set_combat_enabled(false)
-					else: actor.receive_hit(999,Vector2.ZERO)
+					else: actor.receive_hit(actor.combat_stats.health,Vector2.ZERO)
 					abort=true
 					break
 			if is_instance_valid(actor.melee): saw_melee=true
 			if saw_melee and actor.looping_idle:
 				check(actor._skill_wait>=.80,"Melee punish window missing: "+spec[2])
-				actor.set_counter_progress(6)
-				check(actor.can_offer_break_empower(),"Six-parry reward blocked during recovery: "+spec[2])
+				check(not actor.blocks_pulse_burst(),"Melee recovery blocks detonation: "+spec[2])
 				break
 			if crossed and actor.looping_idle:
 				check(not saw_melee,"Immediate turn-hit after crossing")

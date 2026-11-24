@@ -28,7 +28,7 @@ func run() -> void:
 		lan.reset_after_map_fall(Vector2(1320, 555))
 		check(duel == lan.pulse_duel and duel.boss == boss and boss.pulse_duel == duel, "Form %d binds the same duel" % phase)
 		check(boss.combat_stats.max_health == [350, 500, 800, 550][phase-1], "Form %d uses its declared health budget" % phase)
-		check(duel.boss_internal_hp == 0 and not boss.boss_counter_enabled(), "Fresh wound segment and retired counter")
+		check(duel.boss.pulse_wound == 0, "Fresh wound segment and retired counter")
 		await check_action(duel, boss, lan)
 		if phase == 1:
 			lan.combat_stats.set_health_ratio(0.1)
@@ -54,16 +54,16 @@ func check_action(duel: LanPlayer.PulseDuel, boss: DeerDuelBoss, lan: LanPlayer)
 	lan.parry_resolved.emit(normal, false)
 	lan.parry_resolved.emit(normal, false)
 	lan.parry_resolved.emit(CombatAttackData.new(&"fast", boss, 10, 0, 0, 0), false)
-	check(duel.player_energy == initial + 14 and duel.boss_internal_hp == 15, "Fast contacts respect both cooldowns")
+	check(duel.player_energy == initial + 14 and duel.boss.pulse_wound == 15, "Fast contacts respect both cooldowns")
 	var finisher := CombatAttackData.new(&"last", boss, 10, 0, 0, 0)
 	finisher.combo_finisher = true
 	lan.parry_resolved.emit(finisher, true)
 	check(duel.player_energy == initial + 14, "Assisted parry grants no energy")
 	lan.parry_resolved.emit(finisher, false)
-	check(duel.player_energy == initial + 39 and duel.boss_internal_hp == 50 and boss.combat_stats.health == hp, "Manual finisher bypasses cooldown without direct damage")
+	check(duel.player_energy == initial + 39 and duel.boss.pulse_wound == 50 and boss.combat_stats.health == hp, "Manual finisher bypasses cooldown without direct damage")
 	for i in 3:
 		lan.parry_resolved.emit(CombatAttackData.new(&"red", boss,18,0,0,0,CombatAttackData.DangerType.COUNTERABLE_DANGER),false)
-	check(duel.player_energy == 100 and duel.boss_internal_hp == 100, "Both stores cap at 100")
+	check(duel.player_energy == 100 and duel.boss.pulse_wound == 100, "Both stores cap at 100")
 	lan.position.x = 830
 	check(lan.get_ready_throw_target() == null, "Range gates E")
 	lan.position.x = 1320
@@ -71,6 +71,6 @@ func check_action(duel: LanPlayer.PulseDuel, boss: DeerDuelBoss, lan: LanPlayer)
 	await physics_frame
 	await physics_frame
 	Input.action_release(&"interact")
-	check(boss.is_throw_controlled() and boss.combat_stats.health == hp and duel.player_energy == 0, "E reserves energy and delays damage to the blast")
+	check(boss.is_pulse_controlled() and boss.combat_stats.health == hp and duel.player_energy == 0, "E reserves energy and delays damage to the blast")
 	for i in 118: await physics_frame
-	check(boss.combat_stats.health == hp - 140 and not boss.is_throw_controlled(), "One burst settles 40 plus 100 and releases control")
+	check(boss.combat_stats.health == hp - 140 and not boss.is_pulse_controlled(), "One burst settles 40 plus 100 and releases control")

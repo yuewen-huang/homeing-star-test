@@ -54,6 +54,9 @@ func verify_opening() -> void:
 		finish("TWIN FISH LIGHTNING")
 		return
 	var fish := encounter.fish
+	var pulse := level.player.pulse_duel
+	check(pulse != null and fish.xuan.pulse_duel == pulse and fish.zhao.pulse_duel == pulse, "Both fish share Lan's attempt")
+	check(fish.xuan.combat_stats.max_health == 800 and fish.zhao.combat_stats.max_health == 800 and fish.combat_stats.max_health == 1600 and fish.combat_stats.health == fish.xuan.combat_stats.health + fish.zhao.combat_stats.health, "Each real bar has its own full budget")
 	var duel := fish.lightning
 	var last := -1
 	var detached := false
@@ -177,6 +180,9 @@ func verify_opening() -> void:
 	check(individual_hit, "A sword on Zhao changes only Zhao's health and its matching HUD")
 	check(clash_stop and stopped and flashed and impact_seen and flinched, "Clash and sword hits stop on contact; real sword contact flashes the fish, spawns the impact and plays its flinch")
 	check(protected_after, "Recovery closes the punish window")
+	pulse.player_energy = 87
+	pulse.wave_stock = 3
+	pulse.ultimate_used = true
 	encounter.reset_attempt()
 	await wait_frames(3)
 	check(not is_instance_valid(duel) and not encounter.battle_ready, "Retry retires the old duel and every active projectile")
@@ -192,6 +198,8 @@ func verify_parry_and_exit(encounter: CavernTwinFishEncounter) -> void:
 		if encounter.battle_ready: break
 	var boss := encounter.fish
 	var duel := boss.lightning
+	var pulse := level.player.pulse_duel
+	check(pulse.player_energy == 0 and pulse.wave_stock == 1 and not pulse.ultimate_used and level.player.heal.charges == 2 and boss.xuan.pulse_wound == 0 and boss.zhao.pulse_wound == 0, "Retry resets resources for both fish and Lan")
 	# Isolate the new return during the stationary coil. Real input removes the
 	# hostile hitbox; the player projectile must leave both fish protected.
 	for i in 1000:
@@ -213,8 +221,10 @@ func verify_parry_and_exit(encounter: CavernTwinFishEncounter) -> void:
 			separate = separate and not duel.orb.flying and duel.orb.hitbox.attack == null and heading.is_equal_approx(duel.counters.return_velocity)
 		if boss.zhao.combat_stats.health < hp: break
 	Input.action_release(&"parry")
-	check(returned and separate and boss.defense_credit == 1, "Parry consumes the enemy orb once and launches a separate straight return")
+	check(returned and separate and duel.sea.charge[duel.sea.Side.YANG] == 1 and boss.xuan.pulse_wound > 0 and boss.zhao.pulse_wound == 0, "Parry consumes the enemy orb once and launches a separate straight return")
 	check(boss.zhao.combat_stats.health == hp - duel.counters.HIT_DAMAGE and boss.xuan.combat_stats.health == boss.xuan.combat_stats.max_health and duel.clashes == 0 and boss.invulnerable, "Only Zhao takes return damage; neither fish enters shared vulnerability")
+	pulse.player_energy = pulse.MAX_ENERGY
+	check(not pulse.can_burst() and pulse.player_energy == 100, "Liangyi protection blocks E without spending energy")
 	# The following independent-health/exit fixture needs the normal punish window.
 	for i in 180:
 		await physics_frame
@@ -226,8 +236,26 @@ func verify_parry_and_exit(encounter: CavernTwinFishEncounter) -> void:
 	var zhao_first := "--zhao-first" in OS.get_cmdline_user_args()
 	var first := boss.zhao if zhao_first else boss.xuan
 	var survivor := boss.xuan if zhao_first else boss.zhao
+	# Bring Lan to the exposed body and seed unequal wounds to detect cross-settlement.
+	for tick in 135:
+		level.player.global_position.x = first.global_position.x
+		if level.player.get_ready_throw_target() == boss and pulse.burst_body == first: break
+		await physics_frame
+	first.pulse_wound = 55.0
+	survivor.pulse_wound = 20.0
+	var first_hp := first.combat_stats.health
 	var other_hp := survivor.combat_stats.health
-	first.receive_attack_hit(AttackHitContext.new(&"first_final_hit", 900, 0, 1), level.player.global_position)
+	Input.action_press(&"interact")
+	await physics_frame
+	await physics_frame
+	Input.action_release(&"interact")
+	check(pulse.performing and pulse.burst_body == first, "E locks the near living fish")
+	for i in 180:
+		await physics_frame
+		if i == 14: await capture("pulse-cast")
+		if not pulse.performing: break
+	check(pulse.pushes == 1 and first.combat_stats.health == first_hp - 95 and first.pulse_wound == 0 and survivor.pulse_wound == 20 and survivor.combat_stats.health == other_hp, "E consumes only its fish's wound and settles once")
+	first.receive_attack_hit(AttackHitContext.new(&"first_final_hit", first.combat_stats.health, 0, 1), level.player.global_position)
 	await physics_frame
 	check(first.combat_stats.health == 0 and survivor.combat_stats.health == other_hp and encounter.engaged and not encounter.cleared, "First fish falls independently while the other stays in battle")
 	var solo_attack := false
@@ -237,6 +265,6 @@ func verify_parry_and_exit(encounter: CavernTwinFishEncounter) -> void:
 			solo_attack = true
 			break
 	check(solo_attack, "The surviving fish continues to use its own attack")
-	survivor.receive_attack_hit(AttackHitContext.new(&"survivor_final_hit", 900, 0, 1), level.player.global_position)
+	survivor.receive_attack_hit(AttackHitContext.new(&"survivor_final_hit", survivor.combat_stats.health, 0, 1), level.player.global_position)
 	await wait_frames(4)
 	check(encounter.cleared and not encounter.engaged and encounter.seals.is_empty() and not level.player.input_frozen, "Depleting the current encounter releases the arena and player")

@@ -52,7 +52,7 @@ func run() -> void:
 			Input.action_press("ui_right" if side>0 else "ui_left")
 			if room.player.get_ready_throw_target()==actor:
 				before_throw = CombatHitQuery.shape_rect(duel.hurt_shape).get_center()
-				expected_damage = duel.BASE_PULSE_DAMAGE + floori(duel.boss_internal_hp)
+				expected_damage = duel.BASE_PULSE_DAMAGE + floori(duel.boss.pulse_wound)
 				Input.action_release("ui_left")
 				Input.action_release("ui_right")
 				Input.action_press("interact")

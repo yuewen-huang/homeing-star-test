@@ -89,7 +89,7 @@ func run()->void:
 				root.get_texture().get_image().save_png(out.path_join("%s_%04d.png"%[fixture[0],tick]))
 			if actor.looping_idle: break
 		release_inputs()
-		var row:Dictionary={"case":fixture[0],"minimum_hp":min_hp,"immunity_frames":immunity_frames,"distance":room.player.position.x-initial.x,"hits":hits,"samples":samples,"defense_credit":actor.defense_credit}
+		var row:Dictionary={"case":fixture[0],"minimum_hp":min_hp,"immunity_frames":immunity_frames,"distance":room.player.position.x-initial.x,"hits":hits,"samples":samples,"energy":room.player.pulse_duel.player_energy if room.player.pulse_duel else 0}
 		report.append(row);print("FIRE PLAY ",fixture[0]," hp=",min_hp," immunity=",immunity_frames," hits=",hits)
 		room.free();await process_frame
 	FileAccess.open(out.path_join("playtest"+("_"+only if not only.is_empty() else "")+".json"),FileAccess.WRITE).store_string(JSON.stringify(report,"  "))

@@ -74,7 +74,7 @@ func run() -> void:
 		for tick in (720 if move == SINGLES.Move.MIRAGE else 360):
 			await physics_frame
 			if move == SINGLES.Move.RICOCHET and p.red_parry_source == actor:
-				broken = p.pulse_duel.boss_internal_hp > 0 and actor.red_parry_hold and actor.singles.move == -1
+				broken = p.pulse_duel.boss.pulse_wound > 0 and actor.red_parry_hold and actor.singles.move == -1
 			if actor.singles.move!=move: break
 			if move==SINGLES.Move.RICOCHET and trio.age>=1.32 and not tried:
 				p.facing_direction = signf(trio.props[0].global_position.x-p.global_position.x)
@@ -98,7 +98,7 @@ func run() -> void:
 			check(broken,"real combat counter %d"%move)
 		if move==SINGLES.Move.BIND:
 			var maximum: int = actor.combat_stats.max_health
-			check(actor.combat_stats.health == maximum and p.pulse_duel.boss_internal_hp > 0, "breaking the cage stores injury for the burst")
+			check(actor.combat_stats.health == maximum and p.pulse_duel.boss.pulse_wound > 0, "breaking the cage stores injury for the burst")
 		if move==SINGLES.Move.RICOCHET:
 			check(actor.combat_stats.health == actor.combat_stats.max_health, "manual red counter stores injury without HP damage")
 			for tick in 120:

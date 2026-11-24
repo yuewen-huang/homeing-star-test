@@ -70,13 +70,13 @@ func run() -> void:
 		var hit := CombatAttackData.new(&"contract_normal", child, 10, 0, 0, 0)
 		room.player.parry_resolved.emit(hit, false)
 		room.player.parry_resolved.emit(hit, false)
-		check(duel.player_energy == 14 and duel.boss_internal_hp == 15, "Child contact deposits once: " + str(index))
+		check(duel.player_energy == 14 and duel.boss.pulse_wound == 15, "Child contact deposits once: " + str(index))
 		for n in 4:
 			var finisher := CombatAttackData.new(&"contract_finish", boss, 10, 0, 0, 0)
 			finisher.combo_finisher = true
 			room.player.parry_resolved.emit(finisher, false)
-		check(duel.player_energy == 100 and duel.boss_internal_hp == 100, "Shared caps: " + str(index))
-		check(not boss.boss_counter_enabled() and room.player.heal.charges == 2, "Only the encounter resource is active")
+		check(duel.player_energy == 100 and duel.boss.pulse_wound == 100, "Shared caps: " + str(index))
+		check(boss.pulse_duel == duel and room.player.heal.charges == 2, "Only the encounter resource is active")
 		var blade := AttackHitContext.new(&"attack_2x", 27, 0)
 		var before_blade := duel.boss_stats.health
 		var feedback := root.get_node("CombatFeedback") as CombatFeedbackService

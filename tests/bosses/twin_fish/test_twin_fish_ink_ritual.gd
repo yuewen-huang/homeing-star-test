@@ -42,7 +42,8 @@ func verify_opening() -> void:
 			check(field.active_core_positions().size()==count, "Written stage %d has %d cores" % [settled,count])
 			if settled == 1:
 				first_rim = field.painted_bounds()
-				check(is_equal_approx(first_rim.size.x,921.6), "The open rim has the A27 first-array diameter")
+				var diameter := minf(encounter.arena.size.x, encounter.arena.size.y) * encounter.FIELD_FRACTION
+				check(is_equal_approx(first_rim.size.x, diameter), "The open rim has the A27 first-array diameter")
 			if settled == 3 or settled == 4:
 				check(d.clashes == (2 if settled == 3 else 4), "The duel's orb interception advanced the array")
 			if settled == 4:

@@ -199,13 +199,14 @@ func run() -> void:
 		"Real duel uses swept dash contact against Lan")
 	check(await _until(func(): return absf(general.global_position.x - general._guard_x) > 60.0),
 		"Outbound dash leaves the guard post")
-	var control := Node2D.new()
-	room.add_child(control)
-	general.begin_boss_throw_control(control)
+	var pulse := room.player.pulse_duel
+	room.player.position.x = general.position.x - 100.0
+	pulse.player_energy = pulse.MAX_ENERGY
+	pulse.detonate()
 	for tick in 20:
 		await physics_frame
-	check(general.move == General.IDLE and general.is_throw_controlled(), "Throw control holds the interrupted general")
-	control.queue_free()
+	check(general.move == General.IDLE and general.is_pulse_controlled(), "Detonation holds the interrupted general")
+	await _until(func(): return not pulse.performing, 180)
 	check(await _until(func(): return general._dash_leg == General.DashLeg.FORCED_RETURN, 25),
 		"Releasing control orders a forced return")
 	check(await _until(func(): return general.move == General.IDLE and absf(general.global_position.x - general._guard_x) < 1.0, 145),

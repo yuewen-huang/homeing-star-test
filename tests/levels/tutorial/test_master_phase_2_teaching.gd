@@ -22,13 +22,13 @@ func run() -> void:
 	var duel := lan.pulse_duel
 	check(master.combat_stats.max_health == 1200, "First master bar uses the standard budget")
 	duel.player_energy = 37
-	duel.boss_internal_hp = 30
+	duel.boss.pulse_wound = 30
 	teaching._offer(&"gold_dodge")
 	master._enter_phase_2()
 	if master.phase == 1: master._start_phase_2_transformation() # Advance the spoken intro cue with AI paused.
 	check(master.combat_stats.health == 1500 and master.combat_stats.max_health == 1500,
 		"Master transformation restores a full second bar")
-	check(lan.pulse_duel == duel and duel.player_energy == 37 and duel.boss_internal_hp == 0,
+	check(lan.pulse_duel == duel and duel.player_energy == 37 and duel.boss.pulse_wound == 0,
 		"Master transformation keeps Lan's energy and clears the former wound")
 	check(teaching._pending.is_empty(), "Transformation removes stale first-form demonstrations")
 	teaching._offer(&"phase_2_slash")

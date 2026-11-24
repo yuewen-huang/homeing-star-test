@@ -25,7 +25,7 @@ func setup_at(boss_x: float, player_x: float) -> void:
 	deer.restart_duel()
 	if lan.pulse_duel:
 		lan.pulse_duel.player_energy = 0
-		lan.pulse_duel.boss_internal_hp = 0
+		lan.pulse_duel.boss.pulse_wound = 0
 		lan.pulse_duel.next_parry = 0
 		lan.pulse_duel.next_injury = 0
 	deer.position=Vector2(boss_x,555)
@@ -72,7 +72,7 @@ func plow_route(boss_x: float, player_x: float, guard: bool, difficulty: int) ->
 	check(source_frames.size()==32, "Combat samples every authored cell including recovery")
 	if guard:
 		check(lan.combat_stats.health==100 and contacts.size()>=2, "Both real horn contacts can be parried: %.0f -> %.0f" % [boss_x,player_x])
-		check(lan.pulse_duel.player_energy >= 14 and lan.pulse_duel.boss_internal_hp >= 15, "Manual horn contact stores energy and a wound")
+		check(lan.pulse_duel.player_energy >= 14 and lan.pulse_duel.boss.pulse_wound >= 15, "Manual horn contact stores energy and a wound")
 	else: check(lan.combat_stats.health<100, "Unguarded charge really damages the player")
 	check(deer.position.x>=deer.world_min_x+80 and deer.position.x<=deer.world_max_x-80, "Charge remains inside arena bounds")
 	print("PLOW_ROUTE "+JSON.stringify({"boss":boss_x,"player":player_x,"guard":guard,"hp":lan.combat_stats.health,"contacts":contacts,"frames":source_frames.keys()}))
@@ -198,8 +198,8 @@ func leaf_route(boss_x: float, player_x: float, guard: bool, red: bool) -> void:
 		if deer.opening>0: break
 	check(moves.has(&"leaf") and emitted and travelled and deer.opening>0, "Leaf is a moving independent projectile, not only a casting animation")
 	check(lan.combat_stats.health==100 if guard else lan.combat_stats.health<100, "Restored leaf uses real player damage and K settlement")
-	if red: check(reflected and deer.combat_stats.health==hp and lan.pulse_duel.boss_internal_hp >= 35, "Red leaf returns and stores a wound without direct damage")
-	elif guard: check(lan.pulse_duel.boss_internal_hp >= 15, "Ordinary leaf parry stores a wound")
+	if red: check(reflected and deer.combat_stats.health==hp and lan.pulse_duel.boss.pulse_wound >= 35, "Red leaf returns and stores a wound without direct damage")
+	elif guard: check(lan.pulse_duel.boss.pulse_wound >= 15, "Ordinary leaf parry stores a wound")
 	check(deer.pressure.projectiles.is_empty() and not deer.poise_broken, "Leaf finishes or is consumed cleanly")
 
 func ultimate_route() -> void:
@@ -316,7 +316,7 @@ func run() -> void:
 	check(lan.pulse_duel.player_energy==0 and deer.combat_stats.health==hp-140, "Real E settles the full wound once")
 	check(deer.stagger_remaining<=0 and not deer.poise_broken, "Execution never creates a five-second dummy")
 	deer.restart_duel()
-	check(not deer.counter_ready and deer.defense_credit==0 and deer.arena.hazards.is_empty(), "Retry clears reward and hazards")
+	check(deer.pulse_wound == 0 and deer.arena.hazards.is_empty(), "Retry clears reward and hazards")
 	current_scene=null
 	room.free()
 	await process_frame

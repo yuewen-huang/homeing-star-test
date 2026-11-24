@@ -500,7 +500,7 @@ func ai_route() -> void:
 	check(not tornado_lifetimes.is_empty() and complete_lifetimes and roots_intact,"Full AI retains every tornado until natural retirement and roots until their release beat")
 	print("WIND_AI_REFILL "+JSON.stringify({"refills":refills,"tornadoes":tornado_lifetimes.size(),"complete_lifetimes":complete_lifetimes,"roots_intact":roots_intact}))
 	deer.restart_duel()
-	check(deer.spells.is_empty() and not deer.counter_ready,"Retry clears all spell contacts and rewards")
+	check(deer.spells.is_empty() and deer.pulse_wound == 0,"Retry clears all spell contacts and rewards")
 	(root.get_node("BattleAssist") as BattleAssistSettingsService).set_player_invincible(false)
 
 func core_pause_route() -> void:
@@ -612,7 +612,7 @@ func leaf_routes() -> void:
 		await step(20)
 		check(obj.reflected if red else obj.dead,"Real K reflects red / clears green blade: red=%s"%red)
 		await step(70)
-		if red: check(deer.combat_stats.health==hp and lan.pulse_duel.boss_internal_hp>=35,"Reflected blade reaches the caster with a stored wound")
+		if red: check(deer.combat_stats.health==hp and lan.pulse_duel.boss.pulse_wound>=35,"Reflected blade reaches the caster with a stored wound")
 
 func overlap_profile() -> void:
 	setup_at()

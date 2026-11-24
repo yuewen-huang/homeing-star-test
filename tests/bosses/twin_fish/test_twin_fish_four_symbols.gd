@@ -24,11 +24,11 @@ func verify_opening() -> void:
 
 	var fish := encounter.fish
 	var duel := fish.lightning
-	var progress_bar := fish._taichi_array._conversion_bar
-	check(duel.movement == Duel.Movement.FOUR_SYMBOLS and is_equal_approx(fish._taichi_array.stage, 3.0)
+	var painting := fish._taichi_array._circle as TwinFishBoss.TaichiArray.InkPainting
+	check(duel.movement == Duel.Movement.FOUR_SYMBOLS and fish._taichi_array.stage >= 2.0 and fish._taichi_array.stage < 3.0
 		and duel.clashes == 0, "The four-symbol entry starts at its first speed pair")
-	check(is_instance_valid(progress_bar) and progress_bar.is_visible_in_tree()
-		and progress_bar.max_value == 5.0 and progress_bar.value == 0.0, "Four Symbols starts with a visible empty five-step bar")
+	check(painting.is_visible_in_tree()
+		and painting.conversion_steps == 5 and painting._conversion_fraction == 0.0, "Four Symbols starts with a ink focused on the two starting signs")
 	var first_pursuit := 0.0
 	var first_dash := 0.0
 	var observed_punish := false
@@ -66,8 +66,8 @@ func verify_opening() -> void:
 	check(is_equal_approx(first_pursuit, 150.0) and is_equal_approx(first_dash, 750.0), "The first four-symbol exchange uses the starting speed pair")
 	check(lightning_matches and shot_during_lock, "The gold lightning follows the clash window and the orb can launch during aim")
 	check(launched_at_lan, "The first orb launches at 235 px/s directly toward Lan")
-	check(observed_punish and duel.clashes == 1 and progress_bar.value == 1.0,
-		"A real clash opens the punish window and fills one progress segment")
+	check(observed_punish and duel.clashes == 1 and is_equal_approx(painting._conversion_fraction, 0.2),
+		"A real clash opens the punish window and advances the light on the original four signs by one step")
 	check(is_equal_approx(next_pursuit, 230.0) and is_equal_approx(speed_while_flying, next_pursuit)
 		and is_equal_approx(duel._four_dash_speed(), 650.0), "The next exchange keeps the new speed pair throughout its attacks")
 	check_conversion_speed_steps(duel)
@@ -158,7 +158,7 @@ func verify_debug_phase_switches(encounter: CavernTwinFishEncounter) -> void:
 	press_debug_phase_key(KEY_2)
 	await wait_frames(3)
 	check(not is_instance_valid(duel) and fish.lightning.movement == Duel.Movement.FOUR_SYMBOLS
-		and is_equal_approx(fish._taichi_array.stage, 3.0) and not fish.lightning._preview_only,
+		and fish._taichi_array.stage >= 2.0 and not fish.lightning._preview_only,
 		"Alt+2 restarts Four Symbols without replaying the arrival")
 	check(encounter.battle_ready and encounter.engaged and level.player.combat_stats.health == hp
 		and fish.combat_stats.health == fish_hp, "Phase switching keeps the live arena and current health")

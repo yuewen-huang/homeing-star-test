@@ -89,7 +89,7 @@ func run() -> void:
 	boss.age=boss.RUSH_PREP+boss._rush_duration*.8
 	boss._duel_rush()
 	check(power.triggered and is_equal_approx(boss.position.x,1280),"Only real swept rush crossing trips at the vine")
-	check(boss.pressure.active and boss.pressure.step==1 and boss.opening==0 and boss.defense_credit==0,"Trip keeps the next combo, grants no beads or long weak state")
+	check(boss.pressure.active and boss.pressure.step==1 and boss.opening==0 and boss.pulse_wound == 0,"Trip keeps the next combo, grants no wound or long weak state")
 	boss.cancel_duel()
 	room.encounter.core_power_state.cooldown=0.0
 	check(power.use_power(),"Second setup can place after reset")
@@ -199,7 +199,7 @@ func run() -> void:
 		spell.advance(1.0/60)
 		power.advance(1.0/60)
 	check(spell.tornado_x(wall)>stopped_x and absf(float(wall.anchor_delay)-1.0)<.02,"After one second wall resumes without jumping to the original timeline")
-	check(power.effect_phase==0 and boss.defense_credit==0,"Root breaks after hold, granting no parry beads")
+	check(power.effect_phase==0 and boss.pulse_wound == 0,"Root breaks after hold, granting no wound")
 	spell.retire()
 	room.encounter.core_power_state.cooldown=12.0
 	boss.transform_left=2
