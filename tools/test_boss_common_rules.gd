@@ -2,7 +2,7 @@ extends SceneTree
 ## Component contract on every production boss, followed by real Lan input at Thomas.
 var failures := 0
 var room: BossDevelopmentRoom
-var out := "D:/HomingStar/homeing-star-test/artifacts/boss-common-rules"
+var out := OS.get_environment("HOMING_STAR_TEST_OUTPUT")
 var reports: Array = []
 func _initialize() -> void: call_deferred("run")
 func check(ok: bool, message: String) -> void:
@@ -62,26 +62,35 @@ func run() -> void:
 		room.player.air_state=LanPlayer.AirState.FALLING
 		check(not spacing.eligible(room.player),"Aerial path blocked")
 		room.player.air_state=LanPlayer.AirState.GROUNDED
-		var feedback:=root.get_node("CombatFeedback") as CombatFeedbackService
-		boss.reset_boss_counter()
-		var child:=DamageReceiver2D.new()
+		var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
+		assist.begin_boss_attempt(room, room.player, boss, false)
+		var duel := room.player.pulse_duel
+		var child := DamageReceiver2D.new()
 		boss.add_child(child)
-		for n in 6:
-			var source: DamageReceiver2D=boss if n%2==0 else child
-			var attack:=CombatAttackData.new(StringName("contract_%d"%n),source,1,0,0,0,CombatAttackData.DangerType.NORMAL)
-			feedback.parry_landed.emit(source,attack,Vector2.ZERO,false)
-			feedback.parry_landed.emit(source,attack,Vector2.ZERO,false)
-			check(boss.defense_credit==n+1,"Count/duplicate/child ownership failed: "+str(index))
-			if n==4: check(not boss.can_offer_break_empower(),"Five parries unlocked throw")
-		check(boss.can_offer_break_empower(),"Six parries did not unlock recovery throw: "+str(index))
-		boss.combat_stats.apply_health_damage(1)
-		check(boss.defense_credit==6,"Being hit erased progress")
-		boss.consume_break_empower()
-		check(boss.defense_credit==0 and not boss.can_offer_break_empower(),"Throw did not consume credit")
-		boss.set_counter_progress(4)
-		boss.reset_boss_counter()
-		check(boss.defense_credit==0,"Reset did not clear credit")
-		reports.append({"boss":index,"body_gap":gap,"six_parry_contract":true})
+		var hit := CombatAttackData.new(&"contract_normal", child, 10, 0, 0, 0)
+		room.player.parry_resolved.emit(hit, false)
+		room.player.parry_resolved.emit(hit, false)
+		check(duel.player_energy == 14 and duel.boss_internal_hp == 15, "Child contact deposits once: " + str(index))
+		for n in 4:
+			var finisher := CombatAttackData.new(&"contract_finish", boss, 10, 0, 0, 0)
+			finisher.combo_finisher = true
+			room.player.parry_resolved.emit(finisher, false)
+		check(duel.player_energy == 100 and duel.boss_internal_hp == 100, "Shared caps: " + str(index))
+		check(not boss.boss_counter_enabled() and room.player.heal.charges == 2, "Only the encounter resource is active")
+		var blade := AttackHitContext.new(&"attack_2x", 27, 0)
+		var before_blade := duel.boss_stats.health
+		var feedback := root.get_node("CombatFeedback") as CombatFeedbackService
+		feedback.settle_attack_hit(boss, blade, room.player.global_position)
+		check(duel.boss_stats.health == before_blade - 10 and blade.health_damage == 27,
+			"Sword hit settles for ten without mutating the move: " + str(index))
+		var hp := duel.boss_stats.health
+		check(duel.can_burst(), "Near exposed body accepts E: " + str(index))
+		duel.detonate()
+		for tick in 112: await physics_frame
+		check(duel.pushes == 1 and duel.boss_stats.health == hp - 140 and not duel.performing, "One settled pulse on actor: " + str(index))
+		assist.end_boss_attempt(room)
+		check(room.player.pulse_duel == null and boss.pulse_duel == null, "Exit unbinds both actors")
+		reports.append({"boss":index,"body_gap":gap,"pulse_damage":hp - int(boss.combat_stats.health)})
 		print("BOSS CONTRACT ",index," gap=",gap," failures=",failures)
 	# These fixtures set spawn positions once, then use only ordinary real input.
 	for mode in ["hug_left","hug_right","hug_hold","walk_out"]:
@@ -105,9 +114,15 @@ func run() -> void:
 			if mode=="hug_hold" and not held:
 				Input.action_press("ui_right")
 				held=true
-			if mode=="walk_out" and skill.elapsed>.5:
-				var goal:=285.0+maxf(0,skill.elapsed-1.848)*70.0
-				if absf(room.player.global_position.x-skill.global_position.x)<goal: Input.action_press("ui_left")
+			if mode=="walk_out" and not skill.waves.is_empty():
+				# Walk in the gap between the first two rings. Each ring expands from its spawn point.
+				var first: Dictionary = skill.emission_log[0]
+				var travel := clampf(skill.elapsed - float(first.time) - float(skill.config.warning_time), 0.0, float(skill.config.active_time))
+				var gap := (float(skill.config.ring_radii[0]) + float(skill.config.ring_radii[1])) * 0.5
+				var target_x := float(first.origin.x) - gap - travel * float(skill.config.ring_speed)
+				if skill.elapsed >= float(first.time) + float(skill.config.warning_time) + float(skill.config.active_time):
+					target_x = room.player.world_min_x
+				if room.player.global_position.x > target_x: Input.action_press("ui_left")
 				else: Input.action_release("ui_left")
 			await physics_frame
 			minimum=mini(minimum,room.player.combat_stats.health)

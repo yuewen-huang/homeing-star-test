@@ -277,7 +277,7 @@ func run() -> void:
 		"Queued archers still fire before phase transition")
 	check(await _until(func(): return general.move == General.KINDLE, 300), "An empty first bar begins the transformation")
 	check(await _until(func(): return general.phase == 2, 270), "Actual duel reaches flaming phase")
-	check(general.combat_stats.health == 880 and general.combat_stats.max_health == 880 and not general.invulnerable,
+	check(general.combat_stats.health == general.pulse_duel.FINAL_HP and general.combat_stats.max_health == general.pulse_duel.FINAL_HP and not general.invulnerable,
 		"Phase two opens at full health on a new bar")
 	general.combat_stats.set_health_ratio(0.60)
 	general.combat_stats.set_health_ratio(0.30)
@@ -555,7 +555,7 @@ func _check_uppercut_ground_fire() -> void:
 	general._next_action_in = 99.0
 	var landed := await _until(func(): return absf(player.global_position.y - FLOOR) <= 1.0, 75)
 	var burned := await _until(func(): return player.combat_stats.health < player.combat_stats.max_health, 8)
-	check(landed and burned and player.combat_stats.health == player.combat_stats.max_health - General.GROUND_FIRE_DAMAGE,
+	check(landed and burned and player.combat_stats.health == player.combat_stats.max_health - player.pulse_duel.LIGHT_DAMAGE,
 		"Landing on the fire takes one burn tick")
 	var after_first := player.combat_stats.health
 	await wait_frames(12)

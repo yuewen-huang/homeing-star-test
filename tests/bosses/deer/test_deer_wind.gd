@@ -291,10 +291,10 @@ func run() -> void:
 	await overlap_profile()
 	setup_at()
 	deer.opening=0
-	for i in DeerDuelBoss.COUNTER_PARRIES:
-		deer.on_attack_parried(CombatAttackData.new(StringName("bead_%d" % i),deer,0,0,0,0),deer.position)
+	for i in 4:
+		lan.parry_resolved.emit(CombatAttackData.new(&"finish",deer,18,0,0,0,CombatAttackData.DangerType.COUNTERABLE_DANGER), false)
 	deer.opening=.62
-	check(deer.counter_ready and not deer.poise_broken,"Six successful parries offer a throw without poise stun")
+	check(lan.pulse_duel.player_energy==100 and not deer.poise_broken,"Energy fills without poise stun")
 	deer.position.x=700
 	lan.reset_after_map_fall(Vector2(640,555))
 	lan.facing_direction=1
@@ -304,7 +304,7 @@ func run() -> void:
 	await step(3)
 	key(KEY_E,false)
 	await step(80)
-	check(not deer.counter_ready and deer.combat_stats.health==hp-200,"Real E consumes the earned throw for 200 damage")
+	check(lan.pulse_duel.player_energy==0 and deer.combat_stats.health==hp-140,"Real E settles the full wound once")
 	check(not deer.poise_broken and deer.stagger_remaining<=0,"E does not turn the human boss into a long stun dummy")
 	await spell_limit_route()
 	await tornado_manual_route()
@@ -612,7 +612,7 @@ func leaf_routes() -> void:
 		await step(20)
 		check(obj.reflected if red else obj.dead,"Real K reflects red / clears green blade: red=%s"%red)
 		await step(70)
-		if red: check(deer.combat_stats.health==hp-24,"Reflected blade reaches the caster for the existing 24 damage")
+		if red: check(deer.combat_stats.health==hp and lan.pulse_duel.boss_internal_hp>=35,"Reflected blade reaches the caster with a stored wound")
 
 func overlap_profile() -> void:
 	setup_at()

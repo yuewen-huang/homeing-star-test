@@ -37,7 +37,7 @@ func run() -> void:
 				Input.action_release(&"jump")
 		Input.action_release(&"jump")
 		check(seated_frames > 250, "Moon gaze holds the seated drawing")
-		check(player.combat_stats.health == (initial_hp if jump else initial_hp - 16), "Floor bloom resolves once and a normal jump clears it")
+		check(player.combat_stats.health == (initial_hp if jump else initial_hp - player.PulseDuel.HEAVY_DAMAGE), "Floor bloom resolves once and a normal jump clears it")
 	check(not dancer.singles.garden.visible and not stage.get_node("WaterOpera/Moonlight").visible and dancer.attack_hitbox.attack == null, "Recovery clears flowers, moonlight and contact")
 
 	root.get_node("BattleAssist").set_player_invincible(false)
@@ -48,7 +48,7 @@ func run() -> void:
 	for i in 5: await physics_frame
 	check(is_instance_valid(stage.dancer), "Re-entering starts a fresh fight")
 	if is_instance_valid(stage.dancer):
-		stage.dancer.combat_stats.apply_health_damage(1000)
+		stage.dancer.combat_stats.apply_health_damage(stage.dancer.combat_stats.health)
 		await wait_frames(8)
 		check(save.has_completed(stage.VICTORY) and not is_instance_valid(stage.dancer), "Victory clears and records this encounter")
 	city.queue_free()

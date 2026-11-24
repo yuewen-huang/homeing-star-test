@@ -186,7 +186,7 @@ func test_encounter() -> void:
 	check(room.player.world_max_x < 1800, "road remains blocked until frog defeat")
 	var normal := SkillHitContext.new(&"sword_wave_ground", CombatTuning.LAN_SWORD_WAVE_DAMAGE)
 	# Before learning I, ordinary damage preserves the last HP; no break is needed.
-	for hit in 100: frog.receive_hit(1, Vector2.ZERO)
+	for hit in ceili(float(frog.combat_stats.max_health) / CombatTuning.BOSS_LIGHT_HIT_HEALTH): frog.receive_hit(1, Vector2.ZERO)
 	check(frog.combat_stats.health == 1 and not frog.poise_broken, "Tutorial death protection does not create a break state")
 	frog.receive_skill_hit(normal, Vector2.ZERO)
 	check(progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_NORMAL_USED), "Actual I contact records the demonstration")
@@ -210,7 +210,7 @@ func test_encounter() -> void:
 	await create_timer(1.0).timeout
 	frog = encounter.frog_boss
 	frog.set_physics_process(false)
-	check(room.player.combat_stats.health == 100 and frog.combat_stats.health == CombatTuning.FROGGER_HEALTH and not frog.tutorial_protected, "retry rebuilds clean boss while retaining completed lesson")
+	check(room.player.combat_stats.health == 100 and frog.combat_stats.health == frog.pulse_duel.STANDARD_HP and not frog.tutorial_protected, "retry rebuilds clean boss while retaining completed lesson")
 	# Production AI and shared player damage/guard/parry contracts, outside preview.
 	frog.combat_target = room.player
 	frog._cooldown = 0.0
@@ -332,7 +332,7 @@ func test_native_alley() -> void:
 	check(progress.has_completed(SaveProgressService.STORY_BACK_ALLEY_SPECIAL_NORMAL_USED), "available I attack advances the beginner lesson")
 	var light := LanAttackEffectCatalog.attack_1x().attack_hit_context
 	var hits := 0
-	while frog.combat_stats.health>0 and hits<100:
+	while frog.combat_stats.health>0 and hits<ceili(float(frog.combat_stats.max_health)/light.health_damage):
 		frog.receive_attack_hit(light, alley.player.global_position)
 		hits+=1
 	check(not frog.poise_broken and frog.stagger_remaining==0, "Beginner attacks never require or trigger default break")

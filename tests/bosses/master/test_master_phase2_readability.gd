@@ -61,6 +61,7 @@ func run() -> void:
 		FileAccess.open(record_dir.path_join("events.json"), FileAccess.WRITE).store_string("[]")
 	else:
 		await check_counter_and_failed_defense()
+		await check_uppercut_wave()
 	current_scene = null
 	room.free()
 	expect_save_untouched()
@@ -165,8 +166,8 @@ func check_counter_and_failed_defense() -> void:
 	await wait_frames(20)
 	boss.start_phase_2_body_action(TRIPLE)
 	await defend(boss.phase_2_body_action, false, false)
-	check(lan.combat_stats.health == lan.combat_stats.max_health - CombatTuning.BOSS_PLAYER_NORMAL_DAMAGE,
-		"K alone fails at the gold claw, with the original standalone damage")
+	check(lan.combat_stats.health == lan.combat_stats.max_health - lan.pulse_duel.HEAVY_DAMAGE,
+		"K alone takes the gold finisher's heavy damage in the formal duel")
 
 	prepare(BattleAssistSettingsService.Difficulty.NORMAL)
 	boss.start_phase_2_body_action(FIVE)
@@ -176,6 +177,20 @@ func check_counter_and_failed_defense() -> void:
 		"Sobering lowers the rate without interrupting five or removing the circle")
 	action.advance(float(action.data.duration))
 	check(is_equal_approx(boss.phase_2_idle_remaining, 1.5), "A sober near five gives the existing low-stack window")
+
+
+func check_uppercut_wave() -> void:
+	prepare(BattleAssistSettingsService.Difficulty.HARD)
+	boss._start_phase_2_attack(&"phase_2_uppercut")
+	boss.animated_sprite.frame = 5
+	var torso := lan.hurtbox.get_node("CollisionShape2D") as CollisionShape2D
+	lan.global_position += boss.attack_collision_shape.global_position - torso.global_position
+	lan.start_parry()
+	check(boss.attack_hitbox.resolve_nearby_parries() and not boss.red_parry_hold, "Uppercut takes an ordinary parry")
+	for frame in 90:
+		await physics_frame
+		if boss.phase_2_wave_launched: break
+	check(room.get_children().any(func(node: Node): return node is MasterGroundWave), "Parried uppercut still releases its ground wave")
 
 
 func _on_parry(source: DamageReceiver2D, _attack: CombatAttackData, _at: Vector2, red: bool) -> void:

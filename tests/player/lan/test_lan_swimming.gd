@@ -468,12 +468,12 @@ func test_surface_air_actions() -> void:
 	for i in 20:
 		if player.can_start_double_jump(): break
 		await step(1)
-	var stamina_before := player.combat_stats.stamina
+	var breath_before := player.oxygen.remaining
 	Input.action_press(&"jump")
 	await step(1)
 	Input.action_release(&"jump")
 	check(player.air_state == LanPlayer.AirState.DOUBLE_JUMPING and anim() == &"double_jump_vertical" and player.double_jump_used, "Surface jump accepts the existing vertical double jump")
-	check(player.combat_stats.stamina < stamina_before, "Surface double jump consumes the normal stamina cost")
+	check(is_equal_approx(breath_before - player.oxygen.remaining, UnderwaterOxygen.AIR_JUMP_COST), "Surface double jump spends the blue traversal gauge")
 	await step(3)
 	Input.action_press(&"jump")
 	await step(1)

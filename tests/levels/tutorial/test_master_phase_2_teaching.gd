@@ -19,8 +19,17 @@ func run() -> void:
 	master.attack_hitbox.set_physics_process(false)
 	lan.set_physics_process(false)
 	teaching.set_process(false)
+	var duel := lan.pulse_duel
+	check(master.combat_stats.max_health == 1200, "First master bar uses the standard budget")
+	duel.player_energy = 37
+	duel.boss_internal_hp = 30
 	teaching._offer(&"gold_dodge")
 	master._enter_phase_2()
+	if master.phase == 1: master._start_phase_2_transformation() # Advance the spoken intro cue with AI paused.
+	check(master.combat_stats.health == 1500 and master.combat_stats.max_health == 1500,
+		"Master transformation restores a full second bar")
+	check(lan.pulse_duel == duel and duel.player_energy == 37 and duel.boss_internal_hp == 0,
+		"Master transformation keeps Lan's energy and clears the former wound")
 	check(teaching._pending.is_empty(), "Transformation removes stale first-form demonstrations")
 	teaching._offer(&"phase_2_slash")
 	teaching._process(0)
@@ -140,8 +149,12 @@ func run() -> void:
 	teaching._process(0)
 	await process_frame
 	teaching._process(0)
-	check(paused and teaching.lesson_player.lesson_id == &"ultimate", "Actual ultimate unlock triggers the second-form demonstration")
-	check(teaching.key_hint.pending_labels == ["O"], "Full mana prompts O in an open punish window")
+	check(teaching.lesson_player.lesson_id == &"ultimate" and paused, "The unlocked once-per-fight ultimate gets its lesson")
+	teaching.lesson_player.close_lesson(true)
+	lan.pulse_duel.player_energy = 100
+	lan.position = master.position + Vector2(64, 0)
+	teaching._process(0)
+	check(teaching.key_hint.pending_labels == [KeyHint.resolve_action_key_label(&"interact")], "Full energy prompts a nearby burst in an open punish window")
 	teaching.lesson_player.close_lesson(true)
 	check(not save.has_completed(SaveProgressService.STORY_MASTER_PHASE_2_DEFEATED), "Watching does not settle victory")
 	current_scene = null

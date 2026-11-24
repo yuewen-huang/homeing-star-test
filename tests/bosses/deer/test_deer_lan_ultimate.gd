@@ -14,6 +14,11 @@ func run() -> void:
 	var player:=room.player
 	player.set_physics_process(false)
 	for phase in range(1,5):
+		if phase > 1:
+			room.encounter._spawn_phase(phase,1420)
+			player.arm_ultimate()
+			check(not player.ultimate_armed, "A phase change retains the spent ultimate")
+			room.encounter.restart()
 		room.encounter._spawn_phase(phase,1420)
 		room.encounter.start()
 		var boss:=room.deer
@@ -37,6 +42,7 @@ func run() -> void:
 		check(boss.combat_stats.health<hp,"Phase %d ultimate deals actual health damage (%d)"%[phase,hp-boss.combat_stats.health])
 		check(not player.ultimate_active and player.collision_mask!=0,"Stage two finishes and restores collision")
 		await wait_frames(40)
+	room.encounter.restart()
 	player.reset_after_map_fall(Vector2(1200,555))
 	player.arm_ultimate()
 	player.update_ultimate_activation(7.5)
@@ -48,6 +54,7 @@ func run() -> void:
 		root.get_texture().get_image().save_png(OS.get_environment("HOMING_STAR_TEST_OUTPUT").path_join("lan_haste_circle.png"))
 	player.update_ultimate_activation(.51)
 	check(player.ultimate_active and not player.ultimate_magic_circle.visible and player.get_action_time_scale()==1,"Expiry automatically releases stage two and stops circle/haste")
+	room.encounter.restart()
 	player.reset_after_map_fall(Vector2(1200,555))
 	player.arm_ultimate()
 	player.reset_after_map_fall(Vector2(1200,555))

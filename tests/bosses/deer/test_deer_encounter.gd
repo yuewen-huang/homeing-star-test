@@ -103,6 +103,11 @@ func run() -> void:
 	await read_ending([Dialogue.ROAD_OPENS, Dialogue.LAN_RECALLS, Dialogue.LAN_RESOLVES,
 		Dialogue.LAN_TO_WIND, Dialogue.LAN_STEPS_FORWARD], {0: "old_route_opens", 1: "old_route_recall", 4: "old_route_departure"})
 	var transition := root.get_node("SceneTransition") as SceneTransitionService
+	if is_instance_valid(room.story.comic):
+		for frame in 120:
+			if not room.story.comic._changing_panel: break
+			await process_frame
+		press(KEY_ESCAPE)
 	for frame in 900:
 		if current_scene is Chapter2SaltField and not transition.is_transitioning: break
 		await process_frame

@@ -179,9 +179,12 @@ func run() -> void:
 	crab.set_physics_process(false)
 	player.reset_after_map_fall(crab.position+Vector2(150,0))
 	crab.combat_stats.health = 1
+	player.pulse_duel.player_energy = 100
 	player.cast_shadow_claw_storm(crab)
-	var storm := crab.get_node("LanShadowClawStorm")
-	storm._physics_process(0.31)
+	var storm := player.pulse_duel.burst_effect
+	for frame in 100:
+		if crab.combat_stats.health == 0: break
+		await physics_frame
 	check(crab.combat_stats.health == 0 and field.has_node("BossFinisherEffect"),
 		"Detached skill kills start the finishing blow on contact")
 	await crab.wait_for_boss_finisher()

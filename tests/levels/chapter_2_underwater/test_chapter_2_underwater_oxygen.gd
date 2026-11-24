@@ -26,7 +26,7 @@ func run() -> void:
 	await test_drowning_respawn()
 	level.queue_free()
 	await process_frame
-	await test_no_oxygen_outside_level()
+	await test_swimming_outside_level()
 	expect_save_untouched()
 	finish("CHAPTER 2 UNDERWATER OXYGEN")
 
@@ -46,7 +46,7 @@ func place(at: Vector2, mana: float) -> void:
 	await step(2)
 	player.reset_after_map_fall(at)
 	player.air_state = LanPlayer.AirState.FALLING
-	stats.mana = mana
+	oxygen.remaining = mana
 	await step(3)
 
 
@@ -76,18 +76,18 @@ func test_setup() -> void:
 	level.add_child(floor_piece)
 	floor_piece.register_to(player)
 	stats = player.combat_stats
-	check(oxygen != null and oxygen.player == player, "Level adds the UnderwaterOxygen component")
-	check(near(stats.mana, stats.max_mana, 0.01), "Oxygen (blue bar) starts full: %.1f/%.1f" % [stats.mana, stats.max_mana])
+	check(oxygen != null and oxygen.player == player, "Cavern tracks the player-owned traversal gauge")
+	check(near(oxygen.remaining, oxygen.CAPACITY, 0.01), "Oxygen (blue bar) starts full: %.1f/%.1f" % [oxygen.remaining, oxygen.CAPACITY])
 	check(UnderwaterOxygen.FULL_BAR_SECONDS == 20.0 and UnderwaterOxygen.REFILL_SECONDS == 0.5, "Tunable constants (20 s / 0.5 s)")
 
 
 func test_drain_while_swimming() -> void:
-	await place(OPEN_WATER, stats.max_mana)
+	await place(OPEN_WATER, oxygen.CAPACITY)
 	check(player.air_state == LanPlayer.AirState.SWIMMING and oxygen.mode == UnderwaterOxygen.Mode.SWIMMING, "Swimming in open water")
-	var before := stats.mana
+	var before := oxygen.remaining
 	await step(180)
-	var expected := stats.max_mana * 3.0 / UnderwaterOxygen.FULL_BAR_SECONDS
-	check(near(before - stats.mana, expected, 1.5), "3 s swimming drains ≈%.0f (%.1f)" % [expected, before - stats.mana])
+	var expected := oxygen.CAPACITY * 3.0 / UnderwaterOxygen.FULL_BAR_SECONDS
+	check(near(before - oxygen.remaining, expected, 1.5), "3 s swimming drains ≈%.0f (%.1f)" % [expected, before - oxygen.remaining])
 	check(stats.health == stats.max_health, "No damage while oxygen remains")
 
 
@@ -100,10 +100,10 @@ func test_hold_on_underwater_floor() -> void:
 			landed = true
 			break
 	check(landed and player.is_in_deep_water(), "Standing on a floor inside the water (%s, deep %s)" % [player.position, player.is_in_deep_water()])
-	var before := stats.mana
+	var before := oxygen.remaining
 	await step(120)
 	check(oxygen.mode == UnderwaterOxygen.Mode.HOLDING, "Mode HOLDING on the underwater floor: %s" % UnderwaterOxygen.Mode.keys()[oxygen.mode])
-	check(near(stats.mana, before, 0.01), "No drain (and no refill) on the floor: %.1f → %.1f" % [before, stats.mana])
+	check(near(oxygen.remaining, before, 0.01), "No drain (and no refill) on the floor: %.1f → %.1f" % [before, oxygen.remaining])
 
 
 func test_surface_refill() -> void:
@@ -117,25 +117,25 @@ func test_surface_refill() -> void:
 			break
 	release_all()
 	check(floated, "Swims up and floats at the surface")
-	var low := stats.mana
+	var low := oxygen.remaining
 	await step(6)
-	check(stats.mana > low and stats.mana < stats.max_mana, "Refill is gradual, not a pop (%.1f after 0.1 s)" % stats.mana)
+	check(oxygen.remaining > low and oxygen.remaining < oxygen.CAPACITY, "Refill is gradual, not a pop (%.1f after 0.1 s)" % oxygen.remaining)
 	await step(30)
-	check(near(stats.mana, stats.max_mana, 0.01), "Full again within ~0.6 s at the surface: %.1f" % stats.mana)
+	check(near(oxygen.remaining, oxygen.CAPACITY, 0.01), "Full again within ~0.6 s at the surface: %.1f" % oxygen.remaining)
 	await step(120)
-	check(near(stats.mana, stats.max_mana, 0.01) and player.swim.is_floating(), "No drain while floating at the surface")
+	check(near(oxygen.remaining, oxygen.CAPACITY, 0.01) and player.swim.is_floating(), "No drain while floating at the surface")
 
 
 func test_bank_refill() -> void:
 	await place(level.start, 10.0)
 	await step(60)
 	check(not player.is_in_deep_water() and player.air_state == LanPlayer.AirState.GROUNDED, "Standing on the dry quay: %s" % player.position)
-	check(near(stats.mana, stats.max_mana, 0.01), "Dry quay refills the bar: %.1f" % stats.mana)
+	check(near(oxygen.remaining, oxygen.CAPACITY, 0.01), "Dry quay refills the bar: %.1f" % oxygen.remaining)
 
 
 func test_skills_blocked_while_swimming() -> void:
 	await place(OPEN_WATER, 60.0)
-	var before := stats.mana
+	var before := oxygen.remaining
 	for action in [&"attack", &"parry", &"dodge", &"ultimate"]:
 		if InputMap.has_action(action):
 			Input.action_press(action)
@@ -144,7 +144,7 @@ func test_skills_blocked_while_swimming() -> void:
 	await step(20)
 	check(player.air_state == LanPlayer.AirState.SWIMMING and player.attack_state == LanPlayer.AttackState.NONE,
 		"Combat inputs do nothing while swimming")
-	check(stats.mana < before and stats.mana > before - 3.0, "Only oxygen changes the bar under water: %.1f → %.1f" % [before, stats.mana])
+	check(oxygen.remaining < before and oxygen.remaining > before - 3.0, "Only oxygen changes the bar under water: %.1f → %.1f" % [before, oxygen.remaining])
 
 
 func test_empty_damage() -> void:
@@ -188,10 +188,10 @@ func test_drowning_respawn() -> void:
 	check(level.drowned_count == drowned + 1, "Out of health under water → drowned")
 	check(player.position.distance_to(breath) < 40.0, "Respawned at the breath point: %s" % player.position)
 	stats.refill_health_on_depletion = assist
-	check(stats.health == stats.max_health and near(stats.mana, stats.max_mana, 0.01), "Health and oxygen restored")
+	check(stats.health == stats.max_health and near(oxygen.remaining, oxygen.CAPACITY, 0.01), "Health and oxygen restored")
 
 
-func test_no_oxygen_outside_level() -> void:
+func test_swimming_outside_level() -> void:
 	var world := Node2D.new()
 	root.add_child(world)
 	current_scene = world
@@ -213,10 +213,10 @@ func test_no_oxygen_outside_level() -> void:
 	await step(3)
 	other.reset_after_map_fall(Vector2(1200, 700))
 	other.air_state = LanPlayer.AirState.FALLING
-	other.combat_stats.mana = 40.0
+	other.oxygen.remaining = 40.0
 	await step(240)
 	check(other.air_state == LanPlayer.AirState.SWIMMING, "Swimming in another level's deep water")
-	check(near(other.combat_stats.mana, 40.0, 0.01) and other.combat_stats.health == other.combat_stats.max_health,
-		"Outside the underwater level the blue bar is untouched (%.1f), no damage" % other.combat_stats.mana)
-	check(world.find_children("*", "", true, false).all(func(n): return not n is UnderwaterOxygen), "No oxygen component outside the level")
+	check(near(other.oxygen.remaining, 20.0, 0.5) and other.combat_stats.health == other.combat_stats.max_health,
+		"Swimming in another map drains the same blue gauge (%.1f)" % other.oxygen.remaining)
+	check(other.oxygen.get_parent() == other, "Each player owns their traversal gauge")
 	world.queue_free()

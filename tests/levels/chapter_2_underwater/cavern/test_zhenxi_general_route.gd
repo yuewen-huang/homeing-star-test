@@ -107,7 +107,7 @@ func check_route(save: SaveProgressService) -> void:
 	check(not save.has_completed(gallery.VICTORY), "Defeat does not grant victory")
 	if not await walk_to_mark(layout, "LampInspect") or not await interact_at_lamp(gallery, false):
 		return
-	check(is_instance_valid(gallery.general) and gallery.general.phase == 1 and gallery.general.combat_stats.health == 720,
+	check(is_instance_valid(gallery.general) and gallery.general.phase == 1 and gallery.general.combat_stats.health == 1200,
 		"Retry starts at full health in phase one")
 	if not is_instance_valid(gallery.general): return
 	var right_edge := player.world_max_x
@@ -131,6 +131,8 @@ func check_route(save: SaveProgressService) -> void:
 		await read_story(gallery)
 		check(is_instance_valid(gallery._flag_defense), "Lan defeats both dueling phases with normal attacks on Easy")
 	else:
+		var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
+		assist.set_difficulty(BattleAssistSettingsService.Difficulty.EASY)
 		# The guard post is now on the far side of the plaza. Give the real input
 		# driver enough time to reach it and strike through the opening volley.
 		await attack_general(boss, 1050)
@@ -138,19 +140,17 @@ func check_route(save: SaveProgressService) -> void:
 		# The route fixture verifies phase settlement separately from survival.
 		# Reset damage already accumulated by the deliberately simple attack driver.
 		player.combat_stats.restore_health()
-		boss.combat_stats.set_health_ratio(0.0)
+		boss.combat_stats.apply_health_damage(boss.combat_stats.health)
 		for i in 1100:
 			if is_instance_valid(gallery._phase_comic): await read_story(gallery)
 			await step(1)
 			if not is_instance_valid(boss) or gallery.general.phase == 2: break
 		check(is_instance_valid(boss) and gallery.general.phase == 2, "Empty first health bar plays the production phase handoff")
 		if not is_instance_valid(boss) or gallery.general.phase != 2: return
-		check(boss.combat_stats.health == 880 and boss.combat_stats.max_health == 880, "Phase two begins with a fresh full bar")
+		check(boss.combat_stats.health == 1800 and boss.combat_stats.max_health == 1800, "Phase two begins with a fresh full bar")
 		await capture("02_zhenxi_phase_two")
 		# Use the production Easy retry rules while the stationary health fixture
 		# waits through both reinforcing companies and the flag scenario runs.
-		var assist := root.get_node("BattleAssist") as BattleAssistSettingsService
-		assist.set_difficulty(BattleAssistSettingsService.Difficulty.EASY)
 		boss.combat_stats.apply_health_damage(boss.combat_stats.health)
 		for i in 1800:
 			if not is_instance_valid(boss) or is_instance_valid(gallery._flag_defense): break

@@ -23,6 +23,11 @@ func capture(label: String) -> void:
 func setup_at(boss_x: float, player_x: float) -> void:
 	release()
 	deer.restart_duel()
+	if lan.pulse_duel:
+		lan.pulse_duel.player_energy = 0
+		lan.pulse_duel.boss_internal_hp = 0
+		lan.pulse_duel.next_parry = 0
+		lan.pulse_duel.next_injury = 0
 	deer.position=Vector2(boss_x,555)
 	deer.wait_left=999
 	lan.reset_after_map_fall(Vector2(player_x,555))
@@ -67,7 +72,7 @@ func plow_route(boss_x: float, player_x: float, guard: bool, difficulty: int) ->
 	check(source_frames.size()==32, "Combat samples every authored cell including recovery")
 	if guard:
 		check(lan.combat_stats.health==100 and contacts.size()>=2, "Both real horn contacts can be parried: %.0f -> %.0f" % [boss_x,player_x])
-		check(deer.defense_credit==2, "Two actual parries immediately break two beads")
+		check(lan.pulse_duel.player_energy >= 14 and lan.pulse_duel.boss_internal_hp >= 15, "Manual horn contact stores energy and a wound")
 	else: check(lan.combat_stats.health<100, "Unguarded charge really damages the player")
 	check(deer.position.x>=deer.world_min_x+80 and deer.position.x<=deer.world_max_x-80, "Charge remains inside arena bounds")
 	print("PLOW_ROUTE "+JSON.stringify({"boss":boss_x,"player":player_x,"guard":guard,"hp":lan.combat_stats.health,"contacts":contacts,"frames":source_frames.keys()}))
@@ -96,7 +101,7 @@ func crossing_route(boss_x: float, player_x: float) -> void:
 	check(moves.has(&"rush") and moves.has(&"vine_return") and not moves.has(&"plow"), "Original crossing rush keeps its own animation and low return")
 	check(crossed and deer.opening>0, "Original rush crosses to the far side and completes its return")
 	check(lan.combat_stats.health==100 and contacts.any(func(c): return c.result==CombatHitResult.Type.PARRY_SUCCESS), "K then jump answers the restored original rush in both directions")
-	check(deer.defense_credit==1, "Parry plus low-vine avoidance earns one defended exchange")
+	check(lan.pulse_duel.player_energy >= 14, "Parry plus low-vine avoidance earns energy")
 
 func other_group(kind: int, expected: StringName) -> void:
 	setup_at(820,630)
@@ -193,8 +198,8 @@ func leaf_route(boss_x: float, player_x: float, guard: bool, red: bool) -> void:
 		if deer.opening>0: break
 	check(moves.has(&"leaf") and emitted and travelled and deer.opening>0, "Leaf is a moving independent projectile, not only a casting animation")
 	check(lan.combat_stats.health==100 if guard else lan.combat_stats.health<100, "Restored leaf uses real player damage and K settlement")
-	if red: check(reflected and deer.combat_stats.health==hp-24, "Red leaf retains one real reflection hit on its caster")
-	elif guard: check(deer.defense_credit==1, "Ordinary leaf parry earns defense credit without restoring poise break")
+	if red: check(reflected and deer.combat_stats.health==hp and lan.pulse_duel.boss_internal_hp >= 35, "Red leaf returns and stores a wound without direct damage")
+	elif guard: check(lan.pulse_duel.boss_internal_hp >= 15, "Ordinary leaf parry stores a wound")
 	check(deer.pressure.projectiles.is_empty() and not deer.poise_broken, "Leaf finishes or is consumed cleanly")
 
 func ultimate_route() -> void:
@@ -294,8 +299,9 @@ func run() -> void:
 	skill.poise_damage=500
 	deer.receive_skill_hit(skill,lan.position)
 	check(deer.combat_stats.health==hp-45 and not deer.poise_broken and deer.pressure.active, "Skill damage stays full without deleting the exchange or causing a long break")
-	for i in DeerDuelBoss.COUNTER_PARRIES: deer.on_attack_parried(CombatAttackData.new(StringName("bead_%d" % i),deer,0,0,0,0),deer.position)
-	check(deer.counter_ready and not deer.poise_broken and deer.opening==0, "Six successful parries store one reward without stunning the boss")
+	for i in 4:
+		lan.parry_resolved.emit(CombatAttackData.new(&"finish",deer,18,0,0,0,CombatAttackData.DangerType.COUNTERABLE_DANGER), false)
+	check(lan.pulse_duel.player_energy==100 and not deer.poise_broken and deer.opening==0, "Energy fills without stunning the boss")
 	check(deer.can_offer_break_empower(), "Stored throw is ready during a normal exchange")
 	deer.pressure.active=false
 	deer.move=&"pursuit_rest"
@@ -306,8 +312,8 @@ func run() -> void:
 	key(KEY_E,true)
 	for f in 3: await physics_frame
 	key(KEY_E,false)
-	for f in 50: await physics_frame
-	check(not deer.counter_ready and deer.combat_stats.health==hp-200, "Real E consumes one reward for 200 damage, without break amplification")
+	for f in 100: await physics_frame
+	check(lan.pulse_duel.player_energy==0 and deer.combat_stats.health==hp-140, "Real E settles the full wound once")
 	check(deer.stagger_remaining<=0 and not deer.poise_broken, "Execution never creates a five-second dummy")
 	deer.restart_duel()
 	check(not deer.counter_ready and deer.defense_credit==0 and deer.arena.hazards.is_empty(), "Retry clears reward and hazards")

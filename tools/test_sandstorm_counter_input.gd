@@ -3,7 +3,7 @@ extends SceneTree
 var failures:=0
 var room: BossDevelopmentRoom
 var pressed: Dictionary={}
-var out:="D:/HomingStar/homeing-star-test/artifacts/boss-common-rules"
+var out := OS.get_environment("HOMING_STAR_TEST_OUTPUT")
 func _initialize() -> void: call_deferred("run")
 func check(ok: bool,message: String) -> void:
 	if not ok:
@@ -23,12 +23,15 @@ func run() -> void:
 	var actor: SandstormFighter=room.adapter.boss
 	var thrown:=false
 	var throw_age:=0.0
-	var max_credit:=0
+	var duel := room.player.pulse_duel
+	var max_energy := 0
+	var expected_damage := 0
 	var hp:=actor.combat_stats.health
 	var minimum:=room.player.combat_stats.health
 	var before_throw:=Vector2.ZERO
-	var seals_captured:=false
-	for tick in 2400:
+	var charged_captured := false
+	var effect_checked := false
+	for tick in 4800:
 		var skill: SandstormAmbush=actor.ambush
 		if is_instance_valid(skill) and not thrown:
 			var key:=str(skill.get_instance_id())+":"+str(skill.count)
@@ -40,15 +43,16 @@ func run() -> void:
 				Input.action_press("parry")
 			else: Input.action_release("parry")
 		else: Input.action_release("parry")
-		if actor.counter_ready and not seals_captured and DisplayServer.get_name()!="headless":
-			seals_captured=true
+		if duel.player_energy == 100 and not charged_captured and DisplayServer.get_name()!="headless":
+			charged_captured=true
 			await RenderingServer.frame_post_draw
-			root.get_texture().get_image().save_png(out.path_join("six_seals_ready.png"))
-		if actor.counter_ready and actor.looping_idle and not thrown:
+			root.get_texture().get_image().save_png(out.path_join("pulse_ready.png"))
+		if duel.player_energy == 100 and actor.looping_idle and not thrown:
 			var side:=signf(actor.get_throw_anchor().x-room.player.global_position.x)
 			Input.action_press("ui_right" if side>0 else "ui_left")
 			if room.player.get_ready_throw_target()==actor:
-				before_throw=actor.get_counter_slash_point()
+				before_throw = CombatHitQuery.shape_rect(duel.hurt_shape).get_center()
+				expected_damage = duel.BASE_PULSE_DAMAGE + floori(duel.boss_internal_hp)
 				Input.action_release("ui_left")
 				Input.action_release("ui_right")
 				Input.action_press("interact")
@@ -56,22 +60,24 @@ func run() -> void:
 		else: Input.action_release("interact")
 		await physics_frame
 		minimum=mini(minimum,room.player.combat_stats.health)
-		max_credit=maxi(max_credit,actor.defense_credit)
+		max_energy = maxi(max_energy, duel.player_energy)
 		if thrown:
 			throw_age+=1.0/60.0
-			if throw_age>.45:
-				check(actor.defense_credit==0,"Actual E did not consume six parries")
-				check(actor.combat_stats.health==hp-LanPlayer.SPECIAL_ATTACK_MAX_DAMAGE,"Throw damage failed at authored world position")
-				var storm:=actor.get_node_or_null("LanShadowClawStorm") as Node2D
-				check(is_instance_valid(storm) and storm.global_position.distance_to(before_throw)<15,"Throw visual missed the body")
+			var fx := duel.burst_effect
+			if not effect_checked and is_instance_valid(fx):
+				check(fx.to_global(fx._boss_center).distance_to(before_throw)<15, "Burst visual missed the body")
+				effect_checked = true
+			if throw_age > 1.5:
+				check(duel.player_energy == 0, "Actual E did not spend the full energy bar")
+				check(actor.combat_stats.health == hp - expected_damage and effect_checked, "Burst must hit for base damage plus the stored wound")
 				if DisplayServer.get_name()!="headless":
 					await RenderingServer.frame_post_draw
-					root.get_texture().get_image().save_png(out.path_join("real_six_parry_throw.png"))
+					root.get_texture().get_image().save_png(out.path_join("real_input_burst.png"))
 				break
 	for action in ["parry","interact","ui_left","ui_right"]: Input.action_release(action)
-	check(thrown and max_credit==6,"Could not earn/execute six-parry reward through actual input")
+	check(thrown and max_energy == 100, "Could not earn and execute the burst through actual input")
 	check(minimum==100,"Parry fixture took damage")
-	check(room.player.heal.charges==3,"Six real K parries did not refill heal independently of E")
+	check(room.player.heal.charges == 2, "Parrying must preserve the opening flask count")
 	room.player.combat_stats.apply_health_damage(25)
 	var key := InputEventKey.new()
 	key.keycode = KEY_R
@@ -84,7 +90,7 @@ func run() -> void:
 	key.pressed = false
 	Input.parse_input_event(key)
 	await physics_frame
-	check(room.adapter.boss==actor and room.player.heal.charges==2,"R should heal during combat without restarting")
+	check(room.adapter.boss==actor and room.player.heal.charges==1,"R should spend a flask during combat without restarting")
 	key = key.duplicate() as InputEventKey
 	key.shift_pressed = true
 	key.pressed = true
@@ -95,8 +101,8 @@ func run() -> void:
 	key.pressed = false
 	Input.parse_input_event(key)
 	check(not is_instance_valid(actor) and room.player.heal.charges==2,"Shift+R should restart with two fresh charges")
-	check(room.adapter.boss.defense_credit==0,"Development retry retained old credit")
-	print("SIX PARRY REAL INPUT: ",failures," failures; presses=",pressed.size()," max_credit=",max_credit," hp=",minimum," thrown=",thrown)
-	FileAccess.open(out.path_join("counter_input.json"),FileAccess.WRITE).store_string(JSON.stringify({"failures":failures,"presses":pressed.size(),"max_credit":max_credit,"minimum_health":minimum,"thrown":thrown},"\t"))
+	check(room.player.pulse_duel.player_energy == 0, "Development retry retained energy")
+	print("PULSE REAL INPUT: ",failures," failures; presses=",pressed.size()," max_energy=",max_energy," hp=",minimum," thrown=",thrown)
+	FileAccess.open(out.path_join("counter_input.json"),FileAccess.WRITE).store_string(JSON.stringify({"failures":failures,"presses":pressed.size(),"max_energy":max_energy,"minimum_health":minimum,"thrown":thrown},"\t"))
 	room.free()
 	quit(0 if failures==0 else 1)

@@ -50,6 +50,7 @@ func run() -> void:
 	await process_frame
 	player = scene.player as LanPlayer
 	arena = scene.panda_arena
+	scene.chapter_story.save.try_complete_fact(scene.chapter_story.PANDA)
 	player.combat_stats.refill_health_on_depletion = true
 	player.position = Vector2(PandaGoArena.TRIGGER_X + 10, MirrorLake.STAND_Y)
 	arena.tick(0.016)
@@ -206,25 +207,38 @@ func run() -> void:
 	var gold := CombatAttackData.DangerType.UNPARRYABLE_DANGER
 	check(arena.skills.strikes[4].danger == gold and arena._danger_flash.visible and arena._danger_flash.kind == &"gold",
 		"committed gold stroke shows the shared gold flash")
-	check(arena.panda.blocks_boss_throw(), "gold windup locks the shared throw without spending it")
+	player.pulse_duel.player_energy = 100
+	player.pulse_duel.detonate()
+	check(arena.panda.blocks_boss_throw() and player.pulse_duel.player_energy == 100, "gold windup locks the burst without spending energy")
 	player.start_parry()
 	var health := player.combat_stats.health
 	arena.tick(0.12)
 	check(player.combat_stats.health < health and arena.skills.parries == 0, "standing in gold with an active guard takes damage")
 	prepare_gold()
-	arena.panda.set_counter_progress(4)
 	player.combat_stats.health = 1
 	arena.tick(0.12)
 	await process_frame
 	check(not arena.active and player.combat_stats.health == player.combat_stats.max_health \
-		and player.position.x < PandaGoArena.TRIGGER_X and arena.panda.defense_credit == 0,
-		"lethal gold clears the fight and resets Lan and the seals outside the arena")
+		and player.position.x < PandaGoArena.TRIGGER_X and player.pulse_duel == null,
+		"lethal gold clears the duel and resets Lan outside the arena")
 	arena.start_encounter()
 	side(MirrorLake.Side.YIN)
-	arena.panda.receive_hit(PandaBoss.MAX_HEALTH, player.global_position)
-	check(arena.panda.combat_stats.health == PandaBoss.MAX_HEALTH, "unsolved Yang stance protects the real health pool")
+	var full_hp: int = arena.panda.combat_stats.max_health
+	check(full_hp == 1200 and player.pulse_duel.player_energy == 0, "retry restores the standard health and a fresh resource pool")
+	arena.panda.receive_hit(full_hp, player.global_position)
+	check(arena.panda.combat_stats.health == full_hp, "unsolved Yang stance protects the real health pool")
 	arena._set_state(PandaGoArena.STATE_BROKEN)
-	arena.panda.receive_hit(PandaBoss.MAX_HEALTH, player.global_position)
+	player.reset_after_map_fall(Vector2(PandaGoArena.PANDA_X - 100, MirrorLake.STAND_Y))
+	var panda_x := arena.panda.global_position.x
+	var duel := player.pulse_duel
+	duel.player_energy = 100
+	duel.boss_internal_hp = 100
+	player.cast_shadow_claw_storm(arena.panda)
+	for tick in 110: await physics_frame
+	check(duel.pushes == 1 and arena.panda.combat_stats.health == full_hp - 140,
+		"exposed panda takes one shared burst")
+	check(is_equal_approx(arena.panda.global_position.x, panda_x), "burst leaves the panda anchored at the board")
+	arena.panda.receive_hit(full_hp, player.global_position)
 	await process_frame
 	check(arena.defeated and memory.has_completed(PandaGoArena.VICTORY_FACT) and not arena.panda.health_hud.visible,
 		"depletion during a real opening settles the encounter and saves victory")
