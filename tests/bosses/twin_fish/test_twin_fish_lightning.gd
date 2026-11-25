@@ -2,6 +2,8 @@ extends "../../../tools/level_design/preview_twin_fish_arena.gd"
 
 const Duel := preload("res://scripts/bosses/twin_fish/twin_fish_lightning_duel.gd")
 
+func initial_movement() -> int: return Duel.Movement.LIANGYI
+
 class TeachingRecorder extends OpeningRecorder:
 	func _process(delta: float) -> void:
 		var encounter := (get_parent() as SunkenCavern).twin_fish_encounter

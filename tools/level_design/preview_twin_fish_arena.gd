@@ -32,6 +32,9 @@ func verifying() -> bool:
 func make_recorder() -> OpeningRecorder:
 	return OpeningRecorder.new()
 
+func initial_movement() -> int:
+	return -1
+
 func run() -> void:
 	var progress := use_memory_progress()
 	progress.try_complete_fact(&"taiji_altar_farewell")
@@ -44,6 +47,7 @@ func run() -> void:
 	root.add_child(level)
 	current_scene = level
 	var four_symbols := "--four-symbols" in args
+	level.twin_fish_encounter.opening_movement = initial_movement()
 	if four_symbols:
 		level.twin_fish_encounter.opening_movement = TwinFishBoss.LightningDuel.Movement.FOUR_SYMBOLS
 	var arena := level.twin_fish_encounter.arena
@@ -155,7 +159,7 @@ func verify_opening() -> void:
 		check(is_equal_approx(paint.size.x, paint.size.y) and is_equal_approx(paint.end.y, back_edge), "Round field rests on the upper edge of the terrace")
 		check(absf(level.player.position.y + 2.0 - (back_edge + front_edge) * 0.5) < 1.0, "Lan stands on the paving centerline rather than the front lip")
 		check(is_equal_approx(opening.layers[1].to_global(Vector2(0, opening.MIDDLE_BASE_Y)).y, back_edge), "Middle balustrade bases meet the terrace back edge")
-		check(is_equal_approx(paint.size.x, minf(arena.size.x, arena.size.y) * 0.90), "Formal circle diameter is reduced by exactly ten percent")
+		check(level.get_viewport_rect().encloses(level.get_canvas_transform() * paint), "The full painted rim fits the playing camera")
 		check(paint.position.y >= arena.position.y - 0.1, "Circle stays below the reserved battle ceiling")
 		check(is_equal_approx(field._circle.body_opacity, 0.90), "Only the array body receives subtle transparency")
 		check(field.active_core_positions().size() == 2 and is_equal_approx(field.modulate.a, 1.0), "Both eyes retain the original opacity while only the array body is softened")

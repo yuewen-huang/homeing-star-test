@@ -3,6 +3,8 @@ extends "../../../tools/level_design/preview_twin_fish_arena.gd"
 ## the duel owns the clash, and only its normal cues can advance the painting.
 const Duel := preload("res://scripts/bosses/twin_fish/twin_fish_lightning_duel.gd")
 
+func initial_movement() -> int: return Duel.Movement.LIANGYI
+
 func verifying() -> bool: return true
 
 func verify_opening() -> void:
