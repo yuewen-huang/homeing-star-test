@@ -60,9 +60,9 @@ func run() -> void:
 	check_turn_registration()
 	check(twin.white_swimmer != twin.black_swimmer, "each fish owns an independent motion and action controller")
 	check(twin.white_sprite.scale == Vector2.ONE * 0.91 and twin.black_sprite.scale == twin.white_sprite.scale, "both fish use the selected display scale")
-	check(rig_is_valid(twin.white_sprite) and rig_is_valid(twin.black_sprite), "both fish show one original painted sprite with five source guide bones")
+	check(rig_is_valid(twin.white_sprite) and rig_is_valid(twin.black_sprite), "both fish show one procedural mesh with five combat guide bones")
 	check(not twin.is_in_group(&"damageable") and twin.get_node("Hurtbox").collision_layer == 0, "specimen cannot be damaged by the observing player")
-	check(room.combo_button.visible and room.combo_button.text.contains("演阵") and room.charge_button.visible and room.charge_button.text.contains("冲刺") and room.ultimate_row.visible and room.blade_button.visible and not room.segment_row.visible, "the room offers the array showcase, lightning duet and thunder-sea preview")
+	check(room.combo_button.visible and room.combo_button.text.contains("演阵") and room.charge_button.visible and room.charge_button.text.contains("冲刺") and room.ultimate_row.visible and room.blade_button.visible and room.segment_row.visible and room.segment_picker.get_item_text(1).contains("破阵"), "the room offers the array showcase, lightning duet, thunder sea and playable Liangyi segment preview")
 	check(not room.dummy.visible, "cinematic fish preview hides the non-attacking dummy so it cannot cover the fish")
 	twin.phase_one_started.connect(func() -> void: handoffs += 1)
 	room.light_button.pressed.emit()
@@ -91,7 +91,7 @@ func run() -> void:
 	to_time(TwinFishBoss.FREE_SWIM_TIME + 0.01)
 	check(twin.state == TwinFishBoss.State.SWIM_OUT and twin.black_sprite.visible and twin.white_sprite.visible, "both fish finish their authored recovery and continue into independent swimming")
 	check(travel_position(twin.white_swimmer).distance_to(before_white) < 4.0 and travel_position(twin.black_swimmer).distance_to(before_black) < 4.0, "both action roots remain continuous as the fish swim apart")
-	check(rig_is_valid(twin.white_sprite) and rig_is_valid(twin.black_sprite), "the approach-to-release handoff retains one original painted sprite per fish")
+	check(rig_is_valid(twin.white_sprite) and rig_is_valid(twin.black_sprite), "the approach-to-release handoff retains one procedural mesh per fish")
 	var at := twin.black_sprite.position
 	var age := twin.idle_age
 	twin.advance_action(0.0)
@@ -253,21 +253,21 @@ func check_turn_registration() -> void:
 			check(swimmer.root_registration == Vector2.ZERO, label + " clears registration on replay")
 
 func rig_is_valid(sprite: TwinFishRigSprite) -> bool:
-	return sprite.visible and sprite.bones.size() == 5 and is_instance_valid(sprite.skeleton) and sprite.skin is Sprite2D and sprite.skin.visible and sprite.skin.texture != null and sprite.find_children("*", "MeshInstance2D", true, false).is_empty()
+	return sprite.visible and sprite.bones.size() == 5 and is_instance_valid(sprite.skeleton) and sprite.skin == null and sprite.procedural_body.body_texture != null and sprite.find_children("*", "MeshInstance2D", true, false).size() == 1
 
 func source_points_match(sprite: TwinFishRigSprite) -> bool:
 	var canvas := Vector2(twin.motion_data.canvas[0], twin.motion_data.canvas[1])
 	var pivot := canvas * 0.5
-	if sprite.skin.centered or sprite.skin.offset.distance_to(-pivot) > 0.001 or sprite.skin.position.length() > 0.001: return false
+	if sprite.skeleton.position.length() > 0.001: return false
 	var side := -1.0 if sprite.current_mirrored else 1.0
-	if sprite.skin.scale.distance_to(Vector2(side, 1.0)) > 0.001: return false
+	if sprite.skeleton.scale.distance_to(Vector2(side, 1.0)) > 0.001: return false
 	var source: Array = twin.motion_data.frames[sprite.current_frame].joints
 	var joints: PackedVector2Array = sprite.global_joints()
 	if joints.size() != source.size(): return false
 	for index in source.size():
 		var point := Vector2(source[index][0], source[index][1]) - pivot
 		point.x *= side
-		var expected := sprite.global_transform * point.rotated(sprite.skin.rotation)
+		var expected := sprite.global_transform * point.rotated(sprite.skeleton.rotation)
 		if joints[index].distance_to(expected) > 0.001: return false
 	return true
 
@@ -281,7 +281,7 @@ func check_fixed_canvas_playback() -> void:
 		var original_transform: Transform2D = sprite.transform
 		var original_frame: int = sprite.current_frame
 		var original_mirror: bool = sprite.current_mirrored
-		var original_rotation: float = sprite.skin.rotation
+		var original_rotation: float = sprite.skeleton.rotation
 		sprite.position = Vector2(37.0, -29.0)
 		var fixed_root: Vector2 = sprite.global_position
 		for clip_name in ["high_curl", "low_curl"]:
@@ -296,7 +296,7 @@ func check_fixed_canvas_playback() -> void:
 					var body_max := -Vector2.INF
 					for frame in int(clip.count):
 						sprite.show_pose(int(clip.first) + frame, mirrored, body_rotation, 1.0 / 12.0, frame == 0)
-						exact = exact and source_points_match(sprite) and absf(sprite.skin.rotation - body_rotation) < 0.001
+						exact = exact and source_points_match(sprite) and absf(sprite.skeleton.rotation - body_rotation) < 0.001
 						root_still = root_still and sprite.global_position.distance_to(fixed_root) < 0.001
 						var points: PackedVector2Array = sprite.global_joints()
 						var head: Vector2 = sprite.to_local(points[0])
@@ -327,7 +327,7 @@ func check_shared_library() -> void:
 		var clip: Dictionary = data.clips[name]
 		for index in int(clip.count): covered[int(clip.first) + index] = true
 	check(covered.size() == data.frames.size() and covered.has(0) and covered.has(239), "the shared action index covers every packed source frame")
-	check(twin.white_sprite.skin.texture != twin.black_sprite.skin.texture and twin.white_sprite.skin.texture.get_size() == twin.black_sprite.skin.texture.get_size(), "the same source frame index can render either color atlas")
+	check(twin.white_sprite.procedural_body.body_texture != twin.black_sprite.procedural_body.body_texture and twin.white_sprite.procedural_body.body_texture.get_size() == twin.black_sprite.procedural_body.body_texture.get_size(), "each fish uses its own straight texture")
 
 func capture_bones(label: String) -> void:
 	if output.is_empty(): return
