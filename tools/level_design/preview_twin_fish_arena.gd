@@ -95,7 +95,7 @@ func verify_opening() -> void:
 	var saved_mid := false
 	var saved_fish := false
 	var saved_chaos := false
-	var checked_origin := false
+	var fixed_field := true
 	var previous_camera := level.camera.position
 	var max_camera_step := 0.0
 	var previous_fish_age := -1.0
@@ -129,15 +129,12 @@ func verify_opening() -> void:
 		if is_instance_valid(opening.fish) and opening.fish._taichi_array.visible:
 			var twin := opening.fish
 			var field := twin._taichi_array
-			if not checked_origin:
-				checked_origin = true
-				var white := twin.white_sprite.joint_in_boss(1).lerp(twin.white_sprite.joint_in_boss(2), 0.35)
-				var black := twin.black_sprite.joint_in_boss(1).lerp(twin.black_sprite.joint_in_boss(2), 0.35)
-				check(field.position.distance_to((black + white) * 0.5) < 6.0, "First ink appears between the passing fish")
+			fixed_field = fixed_field and field.position.is_equal_approx(field.resting_center()) and field._circle.size.is_equal_approx(field.field_size())
 			if twin._array_age >= 0.54 and not saved_chaos:
 				saved_chaos = true
 				await capture("03_first_brushstrokes")
 		if opening.battle_ready: break
+	check(saved_chaos and fixed_field, "The opening brushwork stays centered at the final terrace position and diameter")
 	check(continuous, "All three reveal envelopes are continuous and monotonic")
 	check(max_camera_step < 20.0, "Camera approaches the field center without a positional cut")
 	check(level.camera.zoom.is_equal_approx(initial_zoom), "Opening preserves the original camera distance")
